@@ -73,3 +73,29 @@ attention. Design for both at once:
 - Keep example complexes small and fixed. One peptide plus one ligand plus one
   ion is enough to demonstrate the token abstraction, and small enough that real
   tensors stay shippable.
+
+## Git and GitHub
+
+Repo: https://github.com/gasredX09/af3-visualizer (public). Tracked branch: `main`.
+
+- Review `git status` and the staged diff before every commit. Scan for secrets,
+  API keys, and unexpectedly large files (precomputed tensors, model weights)
+  before staging.
+- Stage explicit paths when unrelated work is present rather than a blanket `git
+  add -A`.
+- Write a real commit message describing what changed and why, not a generic one.
+- Never force-push, never amend an existing commit, always create a new commit.
+- Never skip hooks or bypass signing.
+- Do not discard or rewrite changes outside the requested scope.
+- Do not create a new remote, a new branch, a PR, or a public release without the
+  user explicitly requesting it.
+- Never commit credentials, tokens, or environment files.
+- Given the "no gated weights" constraint above, double-check before committing
+  that nothing under a precomputed-tensor or model-output directory is actually
+  restricted/non-redistributable data before it goes into public Git history.
+- Standing authorization: commit and push meaningful completed work (a finished
+  screen, a passing feature slice, a doc update) on the tracked branch (`main`)
+  without waiting to be asked each time (2026-09-14). "Meaningful" means a
+  completed, coherent unit of work, not every intermediate edit. Still follow
+  every hygiene rule above first (review diff, real message, no force-push/amend,
+  no new remote/branch/PR/release without being asked).
