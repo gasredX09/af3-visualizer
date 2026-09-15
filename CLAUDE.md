@@ -6,7 +6,7 @@ AF3 paper at GenAI BioMed 2026 Fall
 (https://genaibiomed.github.io/GenAIBioMed2026Fall/).
 
 Read `SPEC.md` first. It holds the full screen-by-screen specification, the
-build priority, and the open data-source decision.
+build priority, and the data-source decision.
 
 ## What this project is and is not
 
@@ -54,22 +54,25 @@ attention. Design for both at once:
 
 ## Technical constraints
 
-- **No gated weights.** AF3's released weights are request-only from Google
-  DeepMind, non-commercial, and not redistributable. Nothing shipped to students
-  may depend on them. Use precomputed tensors from an open-weights
-  reimplementation (Protenix, Boltz, Chai), or a shape-faithful mock. See the
-  open decision in `SPEC.md`.
+- **AF3 weights, used directly, never redistributed.** As of 2026-07-23, AF3's
+  model parameters are a direct download from Google, no approval step, but
+  still non-commercial use only and the parameters file itself is still not
+  redistributable. Nothing shipped to students may include the weights file.
+  Ship only derived output (tensors dumped from a real AF3 run), each carrying
+  conspicuous notice under the AF3 Output Terms of Use. See `DECISIONS.md`
+  (2026-09-15 entry) for the full decision and `SPEC.md` for the constraints it
+  imposes.
 - **Browser-based, no install.** Students should open a link. Publishing as a
   web artifact is the likely delivery route.
 - **Screens that need no model output come first.** Several planned screens
   (triangle inequality sandbox, attention mask picture, tokenization, the
-  atom-token-atom hourglass) involve no model run at all. Build those before the
-  data-source question is settled.
+  atom-token-atom hourglass) involve no model run at all. Build those first,
+  ahead of anything gated on the AF3 tensor dump.
 
 ## Conventions
 
 - Record architectural choices in `DECISIONS.md` as they are made. The first
-  entry will be the data-source decision above.
+  entry is the data-source decision above (2026-09-15).
 - Keep example complexes small and fixed. One peptide plus one ligand plus one
   ion is enough to demonstrate the token abstraction, and small enough that real
   tensors stay shippable.
@@ -90,9 +93,11 @@ Repo: https://github.com/gasredX09/af3-visualizer (public). Tracked branch: `mai
 - Do not create a new remote, a new branch, a PR, or a public release without the
   user explicitly requesting it.
 - Never commit credentials, tokens, or environment files.
-- Given the "no gated weights" constraint above, double-check before committing
-  that nothing under a precomputed-tensor or model-output directory is actually
-  restricted/non-redistributable data before it goes into public Git history.
+- The model parameters file itself must never enter Git history (see the AF3
+  weights constraint above). Double-check before committing that nothing under
+  a precomputed-tensor or model-output directory is the weights file itself,
+  and that shipped derived-output assets carry the required AF3 Output Terms
+  of Use notice.
 - Standing authorization: commit and push meaningful completed work (a finished
   screen, a passing feature slice, a doc update) on the tracked branch (`main`)
   without waiting to be asked each time (2026-09-14). "Meaningful" means a

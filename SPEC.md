@@ -21,29 +21,31 @@ may get screenshotted into slides.
 covers all 31 supplementary algorithms with pseudocode boxes and provenance
 citations. Use it as the reference for any mechanism described here.
 
-## Open decision: where the numbers come from
+## Data source: real AlphaFold 3 output (decided)
 
-This choice shapes everything else, so settle it before building.
+Full rationale and options considered are in `DECISIONS.md` (2026-09-15 entry).
 
-AF3's own weights are gated (request-only from Google DeepMind, non-commercial,
-not redistributable), so a student-facing tool must not depend on them.
+Run AF3 directly: download the official model parameters, run inference once
+offline on the fixed example complex(es), dump every intermediate tensor, and
+ship those as static assets. No GPU or model at runtime; the tool is a player
+over real AF3 numbers.
 
-**Option A, precomputed real data (recommended).** Run an open-weights
-reimplementation (Protenix, Boltz, or Chai) once on two or three fixed example
-complexes, dump every intermediate tensor, ship those as static assets. The tool
-becomes a player over real numbers. No GPU at runtime, no license problem, works
-from a link in a browser.
+Constraints this imposes on the build:
 
-**Option B, shape-faithful mock.** Implement the real operations with randomly
-initialized weights at toy scale. Shapes and data flow are honest, outputs are
-meaningless. Cheaper to build, but students notice that the structures are
-garbage.
+- Non-commercial use only.
+- Never ship the model parameters file itself, only derived output (dumped
+  tensors, visualizations). Redistributing the weights is still prohibited
+  even though downloading them no longer requires approval.
+- Every asset derived from AF3 output needs conspicuous notice that it is
+  provided under AF3's Output Terms of Use, and must note any modifications
+  made to it.
 
-Recommendation is Option A for anything showing model output, with Option B
-acceptable for screens that only illustrate shape and flow. Several screens
-listed below need no model output at all and are unaffected either way.
+A shape-faithful mock (randomly initialized weights at toy scale, correct
+shapes but meaningless numbers) remains the fallback if the real dump proves
+impractical for a given screen, but is not the plan.
 
-When this gets decided, record it in `DECISIONS.md`.
+Several screens listed below need no model output at all and are unaffected by
+this decision either way.
 
 ## Core screens
 
@@ -188,8 +190,8 @@ interesting result and a good closing note.
    and they carry the most conceptual weight per pixel.
 2. Tokenization sandbox. Also needs no model output, and works as the tool's
    entry screen.
-3. Input flow tracer and diffusion sampler scrubber, once the data-source
-   decision is settled and tensors are dumped.
+3. Input flow tracer and diffusion sampler scrubber, once AF3 tensors are
+   dumped for the example complex(es).
 4. Curves (noise schedule, blending coefficients, compute budget). Cheap, add
    whenever.
 5. Pair representation explorer, AF2/AF3 comparison, failure-mode screens.
