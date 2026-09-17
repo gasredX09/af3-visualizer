@@ -5,6 +5,29 @@ CLAUDE.md change-logging rules for the format and when a new entry is
 required. Past entries are never rewritten; a reversal gets a new entry that
 links back with `**Supersedes:**`.
 
+## 2026-09-17 — Screen delivery architecture: one Artifact per screen
+
+**Decision:** Each of the ~15 planned screens ships as its own
+self-contained Artifact with its own URL and its own HTML file, rather than
+one growing multi-screen Artifact with in-page navigation.
+
+**Options considered:**
+- One Artifact per screen (chosen).
+- One growing multi-screen Artifact (tabs or a sidebar, single URL for the
+  whole tool, shared styling/state in one place).
+
+**Why:** Per-screen artifacts are simple to build and iterate on
+independently, without touching other screens; easy to link or screenshot
+one screen into a talk slide; no shared build system to maintain. The
+accepted trade-off is some duplication of shared CSS/JS/diagram code across
+screens, a larger total surface area to keep visually consistent by hand,
+and a need for a lightweight index/landing artifact later to link them all
+together, rather than one cohesive app shell.
+
+Full design context for the first screen built under this decision (the
+triangle inequality sandbox) is in
+`docs/superpowers/specs/2026-09-17-triangle-inequality-sandbox-design.md`.
+
 ## 2026-09-15 — Data source: real AlphaFold 3 output, run directly
 
 **Decision:** Use real AlphaFold 3 model output, not a reimplementation and
