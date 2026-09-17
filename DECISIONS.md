@@ -26,7 +26,7 @@ together, rather than one cohesive app shell.
 
 Full design context for the first screen built under this decision (the
 triangle inequality sandbox) is in
-`docs/superpowers/specs/2026-09-17-triangle-inequality-sandbox-design.md`.
+`specs/2026-09-17-triangle-inequality-sandbox-design.md`.
 
 ## 2026-09-15 — Data source: real AlphaFold 3 output, run directly
 

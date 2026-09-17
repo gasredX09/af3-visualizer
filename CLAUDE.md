@@ -73,6 +73,11 @@ attention. Design for both at once:
 
 - Record architectural choices in `DECISIONS.md` as they are made. The first
   entry is the data-source decision above (2026-09-15).
+- Per-screen design docs (from the brainstorming skill or otherwise) go in
+  `specs/YYYY-MM-DD-<topic>-design.md` at the project root, not the
+  skill's own default `docs/superpowers/specs/`. This project's git-tracked
+  context lives at the root (`DECISIONS.md`, `FLOW.md`, `specs/`) so a future
+  session finds it without knowing which tool produced it.
 - Keep example complexes small and fixed. One peptide plus one ligand plus one
   ion is enough to demonstrate the token abstraction, and small enough that real
   tensors stay shippable.
