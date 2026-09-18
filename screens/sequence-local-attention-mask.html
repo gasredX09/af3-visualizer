@@ -1,0 +1,463 @@
+<title>Sequence-Local Attention Mask</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* ============================================================
+     TOKENS: same palette as the triangle inequality sandbox, the
+     project's shared visual identity across screens.
+     ============================================================ */
+  :root {
+    --bg: #f5f7f3;
+    --surface: #ffffff;
+    --surface-2: #eef3ea;
+    --text: #1b231f;
+    --text-secondary: #5b6b62;
+    --accent: #2b6e63;       /* teal: the local attention windows */
+    --accent-2: #8a5a12;     /* amber: the selected band */
+    --danger: #b23a22;       /* inherited from the shared palette; unused here (no invalid-state flash on this screen) */
+    --border: #d7e1d8;
+
+    --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10150e;
+      --surface: #171d15;
+      --surface-2: #1e2a1e;
+      --text: #e7ece4;
+      --text-secondary: #93a68e;
+      --accent: #5cb39e;
+      --accent-2: #d9a855;
+      --danger: #e2694c;
+      --border: #2a332a;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10150e;
+    --surface: #171d15;
+    --surface-2: #1e2a1e;
+    --text: #e7ece4;
+    --text-secondary: #93a68e;
+    --accent: #5cb39e;
+    --accent-2: #d9a855;
+    --danger: #e2694c;
+    --border: #2a332a;
+  }
+
+  /* ============================================================
+     BASE
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    padding-inline: clamp(16px, 4vw, 48px);
+    padding-block: clamp(24px, 5vw, 56px);
+  }
+
+  .page {
+    max-width: 720px;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 1.5rem + 1.6vw, 2.5rem);
+    font-weight: 600;
+    margin-top: 6px;
+  }
+
+  .subhead {
+    max-width: 62ch;
+    font-size: 1.02rem;
+    color: var(--text-secondary);
+  }
+
+  .subhead strong { color: var(--text); font-weight: 600; }
+
+  .takeaway {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 1rem + 0.7vw, 1.4rem);
+    font-style: italic;
+    color: var(--text);
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent-2);
+    border-radius: 4px;
+    padding: 16px 20px;
+    text-wrap: balance;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  /* ============================================================
+     DIAGRAM
+     ============================================================ */
+  figure { margin: 0; }
+
+  svg {
+    width: 100%;
+    max-width: 480px;
+    height: auto;
+    display: block;
+    margin-inline: auto;
+  }
+
+  .band-rect {
+    fill: var(--accent);
+    stroke: none;
+    cursor: pointer;
+    transition: fill-opacity 150ms ease, stroke-opacity 150ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .band-rect { transition: none; }
+  }
+
+  .band-rect.selected {
+    stroke: var(--accent-2);
+    stroke-width: 3;
+  }
+
+  .band-rect:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .axis-line { stroke: var(--border); stroke-width: 1; }
+
+  /* SVG text is sized in viewBox user units, so its on-screen size
+     depends on the SVG's actual rendered width, not the viewBox width.
+     This diagram is single-column at every viewport (unlike the
+     triangle sandbox's two-column layout), capped at 480px by the SVG's
+     own max-width. The narrowest real render is ~328px, at a 400px
+     viewport (16px body gutter each side, 20px panel padding each side).
+     Per DECISIONS.md's SVG label sizing rule: size text against that
+     narrowest render, not the viewBox, so one size holds everywhere.
+     viewBox width is 570; target >=12px effective at the 328px floor
+     gives 12 * 570 / 328 = 20.85, so 21px. */
+  .axis-label {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    fill: var(--text-secondary);
+  }
+
+  .axis-title {
+    font-family: var(--font-body);
+    font-size: 21px;
+    font-weight: 500;
+    fill: var(--text);
+  }
+
+  /* DECISIONS.md's other diagram-screen rule (a bounded getBBox()
+     clearance pass) isn't needed here: every label position is a fixed
+     offset from a fixed grid driven by a hardcoded TOTAL_ATOMS, so unlike
+     the triangle sandbox's draggable marker, there is no user-adjustable
+     geometry that could push two labels into an unpredictable overlap. */
+
+  .figcaption {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  /* ============================================================
+     CONTROLS
+     ============================================================ */
+  .controls { display: flex; flex-direction: column; gap: 16px; }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+    line-height: 1.2;
+  }
+
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+    font-weight: 500;
+  }
+
+  .chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .readout {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    min-height: 2.6em;
+  }
+
+  .readout strong {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+
+  .bias-note {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+
+  .bias-note code {
+    font-family: var(--font-mono);
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+</style>
+
+<div class="page">
+
+  <header>
+    <div class="eyebrow">AF3 Visualizer &middot; Supporting Visualization</div>
+    <h1>Sequence-Local Attention Mask</h1>
+    <p class="subhead">
+      A single small molecule can have thousands of atoms. Full attention,
+      every atom comparing itself to every other atom, costs
+      <strong>O(atoms squared)</strong>, too expensive to run at every one
+      of AF3's roughly 200 diffusion steps. AF3's atom-level attention
+      (<strong>AtomTransformer</strong> in machine-learning terms, the step
+      where an atom checks its own local <strong>3D geometry</strong> in
+      structural-biology terms) instead restricts each atom to a nearby
+      neighborhood.
+    </p>
+  </header>
+
+  <p class="takeaway">
+    Each atom only compares itself to a local neighborhood, not the whole
+    molecule, that is what keeps atom-level attention affordable.
+  </p>
+
+  <div class="panel">
+    <figure>
+      <svg id="mask-svg" viewBox="0 0 570 570" role="img"
+           aria-label="A 160 by 160 grid of atom indices. Five overlapping rectangular bands run along the diagonal: each band's 32 query atoms can see a key window up to 128 atoms wide, narrower the closer a band sits to either end of this range, so neighboring bands' key windows overlap.">
+        <line class="axis-line" x1="68" y1="28" x2="68" y2="508"></line>
+        <line class="axis-line" x1="68" y1="508" x2="548" y2="508"></line>
+        <g id="ticks"></g>
+        <g id="bands"></g>
+        <text class="axis-title" x="308" y="548" text-anchor="middle">Key atom index</text>
+        <text class="axis-title" x="24" y="268" text-anchor="middle" transform="rotate(-90, 24, 268)">Query atom index</text>
+      </svg>
+      <figcaption class="figcaption">
+        Rows are query atoms (the atom currently updating itself), columns
+        are key atoms (candidate neighbors it compares against). Click a
+        band below to isolate it.
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="panel controls">
+    <div class="chip-row" id="chip-row" role="group" aria-label="Select a query band to isolate"></div>
+    <p class="readout" id="readout" aria-live="polite"></p>
+    <p class="bias-note">
+      Masking is not a separate mechanism from ordinary attention biasing.
+      A disallowed pair just gets <code>-10^10</code> added to its
+      attention logit before the softmax, effectively <code>-infinity</code>,
+      so it comes out as exactly zero after it.
+    </p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    // AF3's sequence-local atom attention mask (Algorithm 7,
+    // AtomTransformer). Query "home" bands are non-overlapping, spaced
+    // exactly 32 atoms apart, centered at 15.5, 47.5, 79.5, ...; a pair
+    // (l, m) is allowed if l is within the band's query half-window
+    // (+-16 of center) and m is within its much wider key half-window
+    // (+-64 of center, 4x the query stride). See
+    // ~/research/src/alphafold3.typ line 504 for the derivation this
+    // implements.
+    const TOTAL_ATOMS = 160;
+    const QUERY_STRIDE = 32;
+    const QUERY_HALF_WIDTH = 16;
+    const KEY_HALF_WIDTH = 64;
+
+    function computeBands(totalAtoms) {
+      const bandCount = Math.ceil(totalAtoms / QUERY_STRIDE);
+      const bands = [];
+      for (let n = 0; n < bandCount; n++) {
+        const center = n * QUERY_STRIDE + (QUERY_STRIDE / 2 - 0.5);
+        const queryStart = Math.max(0, Math.ceil(center - QUERY_HALF_WIDTH));
+        const queryEnd = Math.min(totalAtoms, Math.floor(center + QUERY_HALF_WIDTH) + 1);
+        const keyStart = Math.max(0, Math.ceil(center - KEY_HALF_WIDTH));
+        const keyEnd = Math.min(totalAtoms, Math.floor(center + KEY_HALF_WIDTH) + 1);
+        bands.push({ index: n, queryStart, queryEnd, keyStart, keyEnd });
+      }
+      return bands;
+    }
+
+    // Grid drawing area inside the fixed 570x570 viewBox.
+    const GRID_X = 68, GRID_Y = 28, GRID_SIZE = 480;
+    const SCALE = GRID_SIZE / TOTAL_ATOMS;
+
+    const bands = computeBands(TOTAL_ATOMS);
+    const svg = document.getElementById('mask-svg');
+    const ticksGroup = document.getElementById('ticks');
+    const bandsGroup = document.getElementById('bands');
+    const chipRow = document.getElementById('chip-row');
+    const readout = document.getElementById('readout');
+
+    let selected = null;
+
+    function renderTicks() {
+      const step = 32;
+      for (let v = 0; v <= TOTAL_ATOMS; v += step) {
+        const x = GRID_X + v * SCALE;
+        const y = GRID_Y + v * SCALE;
+
+        const tickX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tickX.setAttribute('class', 'axis-label');
+        tickX.setAttribute('x', x);
+        tickX.setAttribute('y', GRID_Y + GRID_SIZE + 24);
+        tickX.setAttribute('text-anchor', 'middle');
+        tickX.textContent = v;
+        ticksGroup.appendChild(tickX);
+
+        const tickY = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tickY.setAttribute('class', 'axis-label');
+        tickY.setAttribute('x', GRID_X - 12);
+        tickY.setAttribute('y', y + 6);
+        tickY.setAttribute('text-anchor', 'end');
+        tickY.textContent = v;
+        ticksGroup.appendChild(tickY);
+      }
+    }
+
+    function renderBands() {
+      for (const b of bands) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('class', 'band-rect');
+        rect.setAttribute('data-band', b.index);
+        rect.setAttribute('x', GRID_X + b.keyStart * SCALE);
+        rect.setAttribute('y', GRID_Y + b.queryStart * SCALE);
+        rect.setAttribute('width', (b.keyEnd - b.keyStart) * SCALE);
+        rect.setAttribute('height', (b.queryEnd - b.queryStart) * SCALE);
+        rect.setAttribute('tabindex', '0');
+        rect.setAttribute('role', 'button');
+        rect.setAttribute('aria-label',
+          'Band ' + b.index + ': queries ' + b.queryStart + ' to ' + (b.queryEnd - 1) +
+          ', keys ' + b.keyStart + ' to ' + (b.keyEnd - 1));
+        rect.addEventListener('click', () => selectBand(b.index));
+        rect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectBand(b.index);
+          }
+        });
+        bandsGroup.appendChild(rect);
+      }
+    }
+
+    function renderChips() {
+      const showAll = document.createElement('button');
+      showAll.type = 'button';
+      showAll.className = 'chip';
+      showAll.textContent = 'Show all';
+      showAll.setAttribute('aria-pressed', 'false');
+      showAll.addEventListener('click', () => selectBand(null));
+      chipRow.appendChild(showAll);
+
+      for (const b of bands) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = 'Band ' + b.index + ' (' + b.queryStart + '-' + (b.queryEnd - 1) + ')';
+        chip.setAttribute('aria-pressed', 'false');
+        chip.addEventListener('click', () => selectBand(b.index));
+        chipRow.appendChild(chip);
+      }
+    }
+
+    function updateOpacity() {
+      const rects = bandsGroup.querySelectorAll('.band-rect');
+      rects.forEach((rect) => {
+        const idx = Number(rect.getAttribute('data-band'));
+        if (selected === null) {
+          rect.style.fillOpacity = 0.35;
+          rect.classList.remove('selected');
+        } else if (idx === selected) {
+          rect.style.fillOpacity = 0.85;
+          rect.classList.add('selected');
+        } else {
+          rect.style.fillOpacity = 0.06;
+          rect.classList.remove('selected');
+        }
+      });
+    }
+
+    function updateChips() {
+      const chips = chipRow.querySelectorAll('.chip');
+      chips.forEach((chip, i) => {
+        // i=0 is "Show all"; band chips start at i=1.
+        const isSelected = (i === 0 && selected === null) || (i - 1 === selected);
+        chip.setAttribute('aria-pressed', String(isSelected));
+      });
+    }
+
+    function updateReadout() {
+      if (selected === null) {
+        readout.innerHTML = 'Five bands shown together: every query atom belongs to exactly one <strong>32-atom</strong> home band, and each band\'s key window is up to <strong>128 atoms</strong> wide, 4x the query stride, narrower the closer a band sits to either end of this illustrative range (only the middle band, index 2, reaches the full width). Neighboring bands\' key windows overlap.';
+      } else {
+        const b = bands[selected];
+        readout.innerHTML = 'Band ' + b.index + ': queries <strong>' + b.queryStart + '-' + (b.queryEnd - 1) +
+          '</strong> can see keys <strong>' + b.keyStart + '-' + (b.keyEnd - 1) + '</strong> (' +
+          (b.keyEnd - b.keyStart) + ' atoms).';
+      }
+    }
+
+    function selectBand(index) {
+      selected = index;
+      updateOpacity();
+      updateChips();
+      updateReadout();
+    }
+
+    renderTicks();
+    renderBands();
+    renderChips();
+    selectBand(null);
+  })();
+</script>

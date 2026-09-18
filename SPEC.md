@@ -155,9 +155,18 @@ SVG label sizing and collision-avoidance follow the rules in `DECISIONS.md`
 (2026-09-18 entry), which future diagram screens should reuse rather than
 rediscover.
 
-**Sequence-local attention mask, drawn.** The 32-query by 128-key block-diagonal
-pattern with overlapping key windows. Confusing in prose, obvious as a picture.
-No model needed.
+**Sequence-local attention mask, drawn. Built:** https://claude.ai/artifact/8BjTwMd9Msg5KmqZGeewu3
+(source: `screens/sequence-local-attention-mask.html`). The 32-query by
+128-key block-diagonal pattern with overlapping key windows (AF3 Algorithm
+7, AtomTransformer; grounded against `~/research/src/alphafold3.typ`
+line 504's derivation, not an approximation). Confusing in prose, obvious
+as a picture. Five bands over an illustrative 160-atom range, shown
+together at rest with their overlap visible, click a band (or its chip)
+to isolate exactly which keys it sees. Note the real mechanism detail:
+only the interior band reaches the full 128-atom key width, the four
+others are progressively clipped near the range's ends, since there's no
+atom beyond either edge, a genuine, correctly-shown edge effect rather
+than a simplification. No model needed.
 
 **MSA plus OuterProductMean.** A stacked alignment with conservation coloring,
 then two columns co-varying and that co-variation becoming a pair feature. This
