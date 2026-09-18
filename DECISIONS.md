@@ -168,3 +168,27 @@ frame budget.
 
 Applies to the triangle inequality sandbox now and to the other diagram
 screens in `SPEC.md` as they are built.
+
+## 2026-09-18: Pages is the actual delivery channel; stop routinely publishing to Artifacts
+
+**Decision:** Stop calling the Artifact publish tool for every screen and
+every fix round. `git push` (which already triggers the existing
+`deploy-pages.yml` workflow, no separate step) is the whole publish step
+going forward. The self-contained-HTML-file-per-screen architecture from
+the 2026-09-17 entry is unchanged; what changes is only whether each one
+also gets pushed to a `claude.ai/artifact/...` URL as routine.
+
+**Supersedes:** the 2026-09-18 "Add GitHub Pages as a second delivery
+channel" entry's framing of Pages as secondary to Artifacts. That framing
+was based on a misunderstanding, surfaced when the user clarified they had
+conflated the two and intend to hand students the GitHub Pages link, not
+the Artifact link. Pages is the actual distribution channel; Artifacts are
+at most a development convenience now, not something to keep in sync per
+screen.
+
+**Why:** publishing to Artifacts on every fix round was adding a real,
+repeated manual step with no corresponding benefit once Pages already
+auto-deploys on every push, exactly the "taking a lot of time" the user
+flagged. Dropping it is a straightforward win: nothing else about the
+build process changes, and the link that actually matters keeps updating
+itself.

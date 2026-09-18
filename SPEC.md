@@ -236,8 +236,12 @@ interesting result and a good closing note.
 
 ## Delivery
 
-Browser-based, shareable by link, no install for students. Publishing as a web
-artifact is the likely route.
+Browser-based, shareable by link, no install for students. The link actually
+given to students is GitHub Pages (https://gasredx09.github.io/af3-visualizer/),
+which auto-deploys on every push to `main`, no separate publish step. Claude
+Artifact links (created while building each screen) are a development
+convenience, not the distribution channel; see `DECISIONS.md`
+(2026-09-18 entry, "Pages is the actual delivery channel").
 
 ## Presentation notes (separate deliverable, kept here for context)
 
