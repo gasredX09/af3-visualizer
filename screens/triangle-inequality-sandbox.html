@@ -166,6 +166,22 @@
     letter-spacing: 0.02em;
   }
 
+  /* At narrow viewports the SVG's rendered width (and therefore the
+     effective on-screen size of its user-space-unit text) shrinks well
+     below the base sizes above — down to roughly 0.59x at a 400px
+     viewport (328px rendered SVG width / 560 viewBox width), which would
+     put .svg-label at ~7.6px and .abstract-tspan at ~5.9px, both
+     illegible. Bump the user-space font-size specifically below the
+     point where that shrink starts eating legibility (empirically ~560px
+     viewport for .svg-label; the query below covers that with margin)
+     so the *effective rendered* size stays >=11px at the 400px
+     responsive floor, without touching the base sizes that render
+     correctly at normal desktop width. */
+  @media (max-width: 480px) {
+    .svg-label { font-size: 21px; }
+    .abstract-tspan { font-size: 20px; }
+  }
+
   figcaption {
     margin-top: 12px;
     font-size: 0.85rem;
@@ -334,7 +350,7 @@
     <h1>Triangle Inequality Sandbox</h1>
     <p class="subhead">
       AlphaFold 3's pair representation stores one distance estimate for every
-      pair of tokens &mdash; the model's internal notion of a
+      pair of tokens: the model's internal notion of a
       <strong>distance map</strong> (structural biology) built from
       <strong>pairwise attention</strong> (machine learning). Fix how far two
       residues each sit from a shared reference point, and the distance
@@ -359,7 +375,7 @@
 
           <text id="label-ik" class="svg-label edge-value" x="180" y="170">12.0 &#197;</text>
           <text id="label-jk" class="svg-label edge-value" x="380" y="170">9.0 &#197;</text>
-          <text id="dij-range-label" class="svg-label edge-range" x="280" y="252">3.0 &ndash; 21.0 &#197;</text>
+          <text id="dij-range-label" class="svg-label edge-range" x="280" y="252">3.0-21.0 &#197;</text>
 
           <circle id="node-i" class="node-i" cx="130" cy="270" r="9"></circle>
           <circle id="node-j" class="node-j" cx="430" cy="270" r="9"></circle>
@@ -380,7 +396,7 @@
         </svg>
         <figcaption>
           Solid edges are set directly by the sliders. The dashed edge shows
-          the full range Gly&#178;&ndash;Ser&#8309; could occupy &mdash; drag its
+          the full range Gly&#178; to Ser&#8309; could occupy: drag its
           marker past either end to see what happens outside that range.
         </figcaption>
       </figure>
@@ -389,7 +405,7 @@
     <div class="panel controls">
 
       <div class="slider-group">
-        <label for="dik-slider">d(i,k) <span class="abstract">&mdash; Gly&#178; to Mg&#178;&#8314;</span></label>
+        <label for="dik-slider">d(i,k) <span class="abstract">(Gly&#178; to Mg&#178;&#8314;)</span></label>
         <div class="slider-row">
           <input type="range" id="dik-slider" min="3" max="20" step="0.1" value="12.0">
           <output id="dik-readout" for="dik-slider" class="readout">12.0 &#197;</output>
@@ -397,7 +413,7 @@
       </div>
 
       <div class="slider-group">
-        <label for="djk-slider">d(j,k) <span class="abstract">&mdash; Ser&#8309; to Mg&#178;&#8314;</span></label>
+        <label for="djk-slider">d(j,k) <span class="abstract">(Ser&#8309; to Mg&#178;&#8314;)</span></label>
         <div class="slider-row">
           <input type="range" id="djk-slider" min="3" max="20" step="0.1" value="9.0">
           <output id="djk-readout" for="djk-slider" class="readout">9.0 &#197;</output>
@@ -408,7 +424,7 @@
 
       <div class="dij-control">
         <div class="dij-control-header">
-          <span>d(i,j) <span class="abstract">&mdash; Gly&#178; to Ser&#8309;</span></span>
+          <span>d(i,j) <span class="abstract">(Gly&#178; to Ser&#8309;)</span></span>
           <span id="dij-current-readout">12.0 &#197;</span>
         </div>
         <div class="dij-track" id="dij-track">
@@ -425,7 +441,7 @@
           <span>0 &#197;</span>
           <span>40 &#197;</span>
         </div>
-        <p id="invalid-flash" class="invalid-flash" role="status">Not a valid triangle &mdash; snapped back to the nearest bound.</p>
+        <p id="invalid-flash" class="invalid-flash" role="status">Not a valid triangle: snapped back to the nearest bound.</p>
       </div>
 
     </div>
@@ -604,6 +620,14 @@
     // to draw the triangle. Starts at the midpoint of the initial range.
     let dijValue = null;
 
+    // Tracks whether the previous attemptDijDrag call was already
+    // out-of-range, so the flash only (re)triggers on the transition from
+    // valid into invalid, not on every event tick while the marker is held
+    // past a bound (pointermove fires per pixel, keydown repeats while
+    // held — without this guard the animation would restart dozens of
+    // times a second and strobe instead of showing one clean pulse).
+    let wasOutOfRange = false;
+
     function currentRange() {
       return triangleRange(Number(dikSlider.value), Number(djkSlider.value));
     }
@@ -616,7 +640,7 @@
         // Automatic reflow on slider change: silently reclamp, no flash.
         dijValue = clampToRange(dijValue, min, max);
       }
-      rangeLabel.textContent = min.toFixed(1) + ' – ' + max.toFixed(1) + ' Å';
+      rangeLabel.textContent = min.toFixed(1) + '-' + max.toFixed(1) + ' Å';
       const { i, j, k } = layoutTriangle(Number(dikSlider.value), Number(djkSlider.value), dijValue);
       // Implementer: map i/j/k model-space coordinates to SVG viewBox
       // coordinates here (scale + center), then set the solid i-k / j-k
@@ -631,12 +655,22 @@
       if (candidateValue < min || candidateValue > max) {
         const clamped = clampToRange(candidateValue, min, max);
         dijValue = clamped;
-        flash.classList.remove('flash-active');
-        // Force reflow so the animation restarts on repeated out-of-range drags.
-        void flash.offsetWidth;
-        flash.classList.add('flash-active');
+        if (!wasOutOfRange) {
+          // Transition from valid (or first drag) into invalid: (re)start
+          // the flash exactly once. Force a reflow so the animation
+          // restarts cleanly even if a previous pulse's fade is still
+          // finishing.
+          flash.classList.remove('flash-active');
+          void flash.offsetWidth;
+          flash.classList.add('flash-active');
+        }
+        // Already out-of-range: leave the running animation alone. Continued
+        // out-of-range movement (holding a drag or a key past the bound)
+        // must not restart it.
+        wasOutOfRange = true;
       } else {
         dijValue = candidateValue;
+        wasOutOfRange = false;
       }
       redraw();
     }
