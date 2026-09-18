@@ -284,13 +284,13 @@
 
   <div class="panel">
     <figure>
-      <svg id="mask-svg" viewBox="0 0 582 570" role="img"
+      <svg id="mask-svg" viewBox="0 0 582 582" role="img"
            aria-label="A 320 by 320 grid of atom indices. Ten overlapping rectangular bands run along the diagonal: each band's 32 query atoms can see a key window up to 128 atoms wide. Six of the ten bands, everywhere away from the two ends of this range, reach that full width; only the outer two bands on each end are narrower, since there is no atom beyond either edge. Neighboring bands' key windows overlap.">
         <line class="axis-line" x1="80" y1="28" x2="80" y2="508"></line>
         <line class="axis-line" x1="80" y1="508" x2="560" y2="508"></line>
         <g id="ticks"></g>
         <g id="bands"></g>
-        <text class="axis-title" x="320" y="548" text-anchor="middle">Key atom index</text>
+        <text class="axis-title" x="320" y="568" text-anchor="middle">Key atom index</text>
         <text class="axis-title" x="14" y="268" text-anchor="middle" transform="rotate(-90, 14, 268)">Query atom index</text>
       </svg>
       <figcaption class="figcaption">
@@ -350,7 +350,13 @@
       return bands;
     }
 
-    // Grid drawing area inside the fixed 582x570 viewBox.
+    // Grid drawing area inside the fixed 582x582 viewBox. Bottom margin
+    // (508 -> 582, 74 units) is split: 26 to the tick-label row, 34 more
+    // to the "Key atom index" title row, 14 left below it -- the
+    // previous 16-unit gap between the tick row and the title row was
+    // too tight for two stacked 23px text rows and let "128"/"192"
+    // overlap the title, confirmed by measuring both elements'
+    // getBoundingClientRect() in the browser.
     const GRID_X = 80, GRID_Y = 28, GRID_SIZE = 480;
     const SCALE = GRID_SIZE / TOTAL_ATOMS;
 
@@ -372,7 +378,7 @@
         const tickX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         tickX.setAttribute('class', 'axis-label');
         tickX.setAttribute('x', x);
-        tickX.setAttribute('y', GRID_Y + GRID_SIZE + 24);
+        tickX.setAttribute('y', GRID_Y + GRID_SIZE + 26);
         tickX.setAttribute('text-anchor', 'middle');
         tickX.textContent = v;
         ticksGroup.appendChild(tickX);
