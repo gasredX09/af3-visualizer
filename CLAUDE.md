@@ -82,7 +82,9 @@ attention. Design for both at once:
   dated entries.
 - Keep example complexes small and fixed. One peptide plus one ligand plus one
   ion is enough to demonstrate the token abstraction, and small enough that real
-  tensors stay shippable.
+  tensors stay shippable. The actual complex (Ala-Gly-Val-Leu-Ser-Lys + ATP +
+  Mg2+, 71 atoms / 38 tokens) is fixed in `DECISIONS.md` (2026-09-18 entry) --
+  reuse it, don't invent a different one per screen.
 
 ## Git and GitHub
 

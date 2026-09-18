@@ -192,3 +192,62 @@ auto-deploys on every push, exactly the "taking a lot of time" the user
 flagged. Dropping it is a straightforward win: nothing else about the
 build process changes, and the link that actually matters keeps updating
 itself.
+
+## 2026-09-18: The fixed example complex
+
+**Decision:** The one example complex `CLAUDE.md` calls for ("one peptide
+plus one ligand plus one ion... small enough that real tensors stay
+shippable"), reused across every screen that needs real numbers, is:
+
+- Peptide: Ala-Gly-Val-Leu-Ser-Lys (6 residues, standard tokenization: one
+  token per residue).
+- Ligand: ATP (one token per heavy atom, AF3's rule for anything
+  non-standard).
+- Ion: Mg2+ (one atom, one token).
+
+**Atom counts, heavy atoms only** (no hydrogens; AF3 filters them out,
+confirmed against the reference codebase's `pipeline.py`
+`filter_hydrogens=True` and `atom_types.py`'s "excluding hydrogen" residue
+atom lists):
+
+| Residue/entity | Heavy atoms | Source |
+|---|---|---|
+| Ala | 5 | `atom_types.RESIDUE_ATOMS` |
+| Gly | 4 | `atom_types.RESIDUE_ATOMS` |
+| Val | 7 | `atom_types.RESIDUE_ATOMS` |
+| Leu | 8 | `atom_types.RESIDUE_ATOMS` |
+| Ser | 6 | `atom_types.RESIDUE_ATOMS` |
+| Lys | 9 | `atom_types.RESIDUE_ATOMS` |
+| ATP | 31 | RCSB CCD definition (`files.rcsb.org/ligands/download/ATP.cif`), counted directly: 3 P + 13 O + 10 C + 5 N |
+| Mg2+ | 1 | monoatomic ion |
+
+**Totals: 71 atoms, 38 tokens** (6 peptide tokens + 31 ATP tokens + 1 ion
+token).
+
+**Options considered:**
+- Inventing round placeholder numbers (e.g. `SPEC.md`'s original "for
+  instance 12,000 atoms collapsing to 800 tokens" placeholder text for the
+  hourglass screen) rather than a real, fixed complex.
+- A different peptide/ligand combination.
+
+**Why:** `SPEC.md`'s own Input flow tracer screen already suggested "a
+6-residue peptide, an ATP ligand, and a magnesium ion" as an example, and
+the triangle inequality sandbox already put two residues from a 6-mer on
+screen (Gly at position 2, Ser at position 5) without ever pinning down
+the other four positions or verifying real atom counts. Building the
+atom-token-atom hourglass screen needs real counts to be accurate rather
+than illustrative-and-wrong, which forced finally making this decision
+instead of continuing to defer it. Every number above is checked against
+a primary source (the reference codebase's residue atom tables, the real
+RCSB CCD ligand definition for ATP) rather than estimated from memory or
+general chemistry knowledge, per this project's own accuracy standard.
+
+Note the resulting compression ratio (71 atoms to 38 tokens, about 1.9x)
+is far less dramatic than the paper's own stated motivation for this
+architecture ("tens of thousands of atoms for a large complex, vs.
+hundreds of tokens," `~/research/src/alphafold3.typ`, *Two-level atom to
+token to atom architecture*) — expected, since this complex is
+deliberately small per `CLAUDE.md`'s shippability constraint. Screens
+using these numbers should show the real small-scale figures plus that
+larger-scale citation, not let the modest ratio understate why the
+architecture exists.
