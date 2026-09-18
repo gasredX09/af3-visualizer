@@ -160,13 +160,17 @@ rediscover.
 128-key block-diagonal pattern with overlapping key windows (AF3 Algorithm
 7, AtomTransformer; grounded against `~/research/src/alphafold3.typ`
 line 504's derivation, not an approximation). Confusing in prose, obvious
-as a picture. Five bands over an illustrative 160-atom range, shown
-together at rest with their overlap visible, click a band (or its chip)
-to isolate exactly which keys it sees. Note the real mechanism detail:
-only the interior band reaches the full 128-atom key width, the four
-others are progressively clipped near the range's ends, since there's no
-atom beyond either edge, a genuine, correctly-shown edge effect rather
-than a simplification. No model needed.
+as a picture. Ten bands over an illustrative 320-atom range, shown together at rest
+with their overlap visible, click a band (or its chip) to isolate exactly
+which keys it sees. Note the real mechanism detail: 6 of the 10 bands
+reach the full 128-atom key width, only the outer two on each end are
+clipped, since there's no atom beyond either edge, a genuine,
+correctly-shown edge effect rather than a simplification. Picked 320
+(not a smaller range) deliberately: at 160 (5 bands), only the single
+center band would be unclipped, overrepresenting the edge case as if it
+were typical; at 320, most of what's shown is the actual repeating
+pattern, matching what any real molecule looks like regardless of size.
+No model needed.
 
 **MSA plus OuterProductMean.** A stacked alignment with conservation coloring,
 then two columns co-varying and that co-variation becoming a pair feature. This

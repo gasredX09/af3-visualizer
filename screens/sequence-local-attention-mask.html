@@ -154,30 +154,42 @@
      depends on the SVG's actual rendered width, not the viewBox width.
      This diagram is single-column at every viewport (unlike the
      triangle sandbox's two-column layout), capped at 480px by the SVG's
-     own max-width. The narrowest real render is ~328px, at a 400px
-     viewport (16px body gutter each side, 20px panel padding each side).
-     Per DECISIONS.md's SVG label sizing rule: size text against that
-     narrowest render, not the viewBox, so one size holds everywhere.
-     viewBox width is 570; target >=12px effective at the 328px floor
-     gives 12 * 570 / 328 = 20.85, so 21px. */
+     own max-width. The narrowest real render, measured in the browser
+     (not hand-estimated from the CSS, which was off by ~18px last time),
+     is 310px, at a 400px viewport. Per DECISIONS.md's SVG label sizing
+     rule: size text against that measured narrowest render, not the
+     viewBox, so one size holds everywhere. viewBox width is 582; target
+     >=12px effective at the 310px floor gives 12 * 582 / 310 = 22.53, so
+     23px. */
   .axis-label {
     font-family: var(--font-mono);
-    font-size: 21px;
+    font-size: 23px;
     fill: var(--text-secondary);
   }
 
   .axis-title {
     font-family: var(--font-body);
-    font-size: 21px;
+    font-size: 23px;
     font-weight: 500;
     fill: var(--text);
   }
 
   /* DECISIONS.md's other diagram-screen rule (a bounded getBBox()
-     clearance pass) isn't needed here: every label position is a fixed
-     offset from a fixed grid driven by a hardcoded TOTAL_ATOMS, so unlike
-     the triangle sandbox's draggable marker, there is no user-adjustable
-     geometry that could push two labels into an unpredictable overlap. */
+     clearance pass) doesn't need a *runtime* mechanism here: every label
+     position is a fixed offset from a fixed grid driven by a hardcoded
+     TOTAL_ATOMS, unlike the triangle sandbox's draggable marker, so
+     nothing a viewer does can push two labels into a new overlap. That
+     is not the same as the static layout being collision-free by
+     construction, though: changing TOTAL_ATOMS from 160 to 320 (to fix
+     an unrelated accuracy problem) changed which tick VALUES get
+     labeled, and two of the new three-digit labels (128, 192) landed
+     right in the rotated "Query atom index" title's vertical span,
+     clipping their leading digit, a real collision the old margins
+     just happened not to expose at the previous TOTAL_ATOMS. Verified
+     by measuring both text elements' actual getBoundingClientRect() in
+     the browser after widening the left margin (GRID_X 68->80) and
+     moving the title closer to the edge (x 24->14), not by re-eyeballing
+     the arithmetic. */
 
   .figcaption {
     margin-top: 12px;
@@ -272,14 +284,14 @@
 
   <div class="panel">
     <figure>
-      <svg id="mask-svg" viewBox="0 0 570 570" role="img"
-           aria-label="A 160 by 160 grid of atom indices. Five overlapping rectangular bands run along the diagonal: each band's 32 query atoms can see a key window up to 128 atoms wide, narrower the closer a band sits to either end of this range, so neighboring bands' key windows overlap.">
-        <line class="axis-line" x1="68" y1="28" x2="68" y2="508"></line>
-        <line class="axis-line" x1="68" y1="508" x2="548" y2="508"></line>
+      <svg id="mask-svg" viewBox="0 0 582 570" role="img"
+           aria-label="A 320 by 320 grid of atom indices. Ten overlapping rectangular bands run along the diagonal: each band's 32 query atoms can see a key window up to 128 atoms wide. Six of the ten bands, everywhere away from the two ends of this range, reach that full width; only the outer two bands on each end are narrower, since there is no atom beyond either edge. Neighboring bands' key windows overlap.">
+        <line class="axis-line" x1="80" y1="28" x2="80" y2="508"></line>
+        <line class="axis-line" x1="80" y1="508" x2="560" y2="508"></line>
         <g id="ticks"></g>
         <g id="bands"></g>
-        <text class="axis-title" x="308" y="548" text-anchor="middle">Key atom index</text>
-        <text class="axis-title" x="24" y="268" text-anchor="middle" transform="rotate(-90, 24, 268)">Query atom index</text>
+        <text class="axis-title" x="320" y="548" text-anchor="middle">Key atom index</text>
+        <text class="axis-title" x="14" y="268" text-anchor="middle" transform="rotate(-90, 14, 268)">Query atom index</text>
       </svg>
       <figcaption class="figcaption">
         Rows are query atoms (the atom currently updating itself), columns
@@ -311,7 +323,15 @@
     // (+-64 of center, 4x the query stride). See
     // ~/research/src/alphafold3.typ line 504 for the derivation this
     // implements.
-    const TOTAL_ATOMS = 160;
+    // 320 (10 bands) rather than a smaller round number: with only 5
+    // bands, 4 of the 5 shown would be edge-clipped (only the exact
+    // center band reaches the true 128-atom key width), overrepresenting
+    // a boundary artifact as if it were typical. At 320, 6 of the 10
+    // bands are genuinely interior (full 128-width), and only the outer
+    // two on each side taper, matching what any real molecule actually
+    // looks like regardless of its total size: clipping only ever
+    // affects the first and last band, never the middle.
+    const TOTAL_ATOMS = 320;
     const QUERY_STRIDE = 32;
     const QUERY_HALF_WIDTH = 16;
     const KEY_HALF_WIDTH = 64;
@@ -330,8 +350,8 @@
       return bands;
     }
 
-    // Grid drawing area inside the fixed 570x570 viewBox.
-    const GRID_X = 68, GRID_Y = 28, GRID_SIZE = 480;
+    // Grid drawing area inside the fixed 582x570 viewBox.
+    const GRID_X = 80, GRID_Y = 28, GRID_SIZE = 480;
     const SCALE = GRID_SIZE / TOTAL_ATOMS;
 
     const bands = computeBands(TOTAL_ATOMS);
@@ -344,7 +364,7 @@
     let selected = null;
 
     function renderTicks() {
-      const step = 32;
+      const step = 64;
       for (let v = 0; v <= TOTAL_ATOMS; v += step) {
         const x = GRID_X + v * SCALE;
         const y = GRID_Y + v * SCALE;
@@ -440,7 +460,7 @@
 
     function updateReadout() {
       if (selected === null) {
-        readout.innerHTML = 'Five bands shown together: every query atom belongs to exactly one <strong>32-atom</strong> home band, and each band\'s key window is up to <strong>128 atoms</strong> wide, 4x the query stride, narrower the closer a band sits to either end of this illustrative range (only the middle band, index 2, reaches the full width). Neighboring bands\' key windows overlap.';
+        readout.innerHTML = 'Ten bands shown together: every query atom belongs to exactly one <strong>32-atom</strong> home band, and each band\'s key window is up to <strong>128 atoms</strong> wide, 4x the query stride. Six of the ten, bands 2 through 7, reach that full width, only the outer two bands on each end (0, 1 and 8, 9) are narrower, since this illustrative range has to stop somewhere. A real molecule works the same way: clipping only ever touches its first and last band, never the ones in between. Neighboring bands\' key windows overlap.';
       } else {
         const b = bands[selected];
         readout.innerHTML = 'Band ' + b.index + ': queries <strong>' + b.queryStart + '-' + (b.queryEnd - 1) +
