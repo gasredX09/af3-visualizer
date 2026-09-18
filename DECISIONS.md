@@ -24,9 +24,8 @@ screens, a larger total surface area to keep visually consistent by hand,
 and a need for a lightweight index/landing artifact later to link them all
 together, rather than one cohesive app shell.
 
-Full design context for the first screen built under this decision (the
-triangle inequality sandbox) is in
-`specs/2026-09-17-triangle-inequality-sandbox-design.md`.
+Full design detail for the first screen built under this decision is in
+`SPEC.md`'s triangle inequality sandbox entry.
 
 ## 2026-09-15 — Data source: real AlphaFold 3 output, run directly
 
