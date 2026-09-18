@@ -125,26 +125,35 @@ narrow waist, broadcast back out through skip connections), with an O(N^2) cost
 bar beside each level. Makes the reason for the architecture's shape visible
 rather than asserted. No model output needed beyond atom and token counts.
 
-**Triangle inequality sandbox.** Three nodes, named after real entities from
-the fixed example complex (two peptide residues and the magnesium ion) with
-distances at realistic protein/ligand scale (roughly 3-20 A), not abstract
-`i, j, k` with unitless numbers, per the concrete-before-abstract convention.
-An inline SVG diagram: solid edges for the two slider-controlled distances
-`d(i,k)` and `d(j,k)`, a dashed edge for `d(i,j)` labeled with its current
-valid range instead of one number. The diagram redraws live as either slider
-moves. One always-visible plain-English takeaway: two distances bound, don't
-fix, the third. A third interactive element, a marker draggable along the
-`d(i,j)` range, snaps back with a visible "not a valid triangle" flash if
-dragged past either bound, making "why triangle updates exist" felt rather
-than stated. Thirty seconds of interaction replaces a paragraph nobody
-follows. Separate from screen 4 and far cheaper. No model needed.
+**Triangle inequality sandbox. Built:** https://claude.ai/artifact/7XypoWSkFxFStn9ZFhBv84
+(source: `screens/triangle-inequality-sandbox.html`).
+
+Three nodes, named after real entities from the fixed example complex (two
+peptide residues and the magnesium ion) with distances at realistic
+protein/ligand scale (roughly 3-20 A), not abstract `i, j, k` with unitless
+numbers, per the concrete-before-abstract convention. An inline SVG diagram:
+solid edges for the two slider-controlled distances `d(i,k)` and `d(j,k)`, a
+dashed edge for `d(i,j)` labeled with its current valid range instead of one
+number. The diagram redraws live as either slider moves, using the marker's
+own current position (see below) as the live `d(i,j)` value that drives the
+drawn triangle shape, so the marker means something concrete: it represents
+one candidate pairwise distance, and the diagram shows the shape that value
+implies. One always-visible plain-English takeaway: two distances bound,
+don't fix, the third. A third interactive element, a marker draggable along
+a fixed `[0, 40] A` track with the current valid range highlighted as a
+sub-zone (not a track constrained to just the valid range itself, which
+would leave no room to demonstrate dragging past a bound), snaps back with a
+visible "not a valid triangle" flash if dragged past either bound, making
+"why triangle updates exist" felt rather than stated. Thirty seconds of
+interaction replaces a paragraph nobody follows. Separate from screen 4 and
+far cheaper. No model needed.
 
 Tech: single self-contained HTML artifact, inline SVG, vanilla JS, no
 framework or build step, no external libraries, no runtime data (the bound
 is the two-line formula `|d(i,k) - d(j,k)| <= d(i,j) <= d(i,k) + d(j,k)`).
-Verify manually before publishing: the degenerate case `d(i,k) == d(j,k)`
-(lower bound hits 0), the invalid-drag marker snapping at both bounds, and
-layout at ~400px width and in dark mode.
+SVG label sizing and collision-avoidance follow the rules in `DECISIONS.md`
+(2026-09-18 entry), which future diagram screens should reuse rather than
+rediscover.
 
 **Sequence-local attention mask, drawn.** The 32-query by 128-key block-diagonal
 pattern with overlapping key windows. Confusing in prose, obvious as a picture.
