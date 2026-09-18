@@ -5,7 +5,7 @@ CLAUDE.md change-logging rules for the format and when a new entry is
 required. Past entries are never rewritten; a reversal gets a new entry that
 links back with `**Supersedes:**`.
 
-## 2026-09-17 — Screen delivery architecture: one Artifact per screen
+## 2026-09-17: Screen delivery architecture, one Artifact per screen
 
 **Decision:** Each of the ~15 planned screens ships as its own
 self-contained Artifact with its own URL and its own HTML file, rather than
@@ -27,7 +27,7 @@ together, rather than one cohesive app shell.
 Full design detail for the first screen built under this decision is in
 `SPEC.md`'s triangle inequality sandbox entry.
 
-## 2026-09-15 — Data source: real AlphaFold 3 output, run directly
+## 2026-09-15: Data source, real AlphaFold 3 output, run directly
 
 **Decision:** Use real AlphaFold 3 model output, not a reimplementation and
 not a mock, as the source of precomputed tensors for every screen that needs
@@ -86,7 +86,7 @@ architectural choices.
   biomolecular structure prediction. Not applicable here; the tool only
   visualizes, never trains.
 
-## 2026-09-18 — SVG label sizing and placement rules for diagram screens
+## 2026-09-18: SVG label sizing and placement rules for diagram screens
 
 **Decision:** Two rules for any screen whose diagram is an inline SVG with a
 fixed viewBox scaled to fit its column:
