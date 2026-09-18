@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   /* ============================================================
-     TOKENS — light palette on bare :root, redefined for dark via
+     TOKENS: light palette on bare :root, redefined for dark via
      both the OS-preference media query and the explicit toggle.
      ============================================================ */
   :root {
@@ -11,8 +11,8 @@
     --surface-2: #eef3ea;
     --text: #1b231f;
     --text-secondary: #5b6b62;
-    --accent: #2b6e63;       /* teal — the two measured edges, i/j nodes */
-    --accent-2: #8a5a12;     /* amber — the bounded edge, the ion node */
+    --accent: #2b6e63;       /* teal: the two measured edges, i/j nodes */
+    --accent-2: #8a5a12;     /* amber: the bounded edge, the ion node */
     --danger: #b23a22;       /* invalid-drag flash */
     --border: #d7e1d8;
 
@@ -108,7 +108,7 @@
   }
 
   /* ============================================================
-     LAYOUT — diagram + controls, side by side above 760px
+     LAYOUT: diagram + controls, side by side above 760px
      ============================================================ */
   .workspace {
     display: grid;
@@ -145,9 +145,21 @@
   .node-i, .node-j { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
   .node-k { fill: var(--accent-2); stroke: var(--surface); stroke-width: 3; }
 
+  /* SVG text is sized in viewBox user units, so its on-screen size is
+     (font-size x rendered SVG width / 560). The rendered width is never
+     the full page width: in the two-column layout the SVG column is
+     capped by .page's 900px max-width at about 462px however wide the
+     browser gets, and at a 761px viewport (the narrowest two-column
+     case) it is only about 338px. The narrowest render of all is about
+     310px at a 400px viewport. Sizing these for a 560px render would
+     therefore leave the text under the 11px legibility floor at nearly
+     every real width, so they are sized against the *narrowest* render
+     instead: 21 x (310/560) = 11.6px and 20 x (310/560) = 11.1px. One
+     size holds at every viewport, so there is no breakpoint where the
+     diagram's proportions jump. */
   .svg-label {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 21px;
     text-anchor: middle;
     fill: var(--text);
     paint-order: stroke;
@@ -161,36 +173,19 @@
 
   .abstract-tspan {
     font-family: var(--font-body);
-    font-size: 10px;
+    font-size: 20px;
     fill: var(--text-secondary);
     letter-spacing: 0.02em;
   }
 
-  /* At narrow viewports the SVG's rendered width (and therefore the
-     effective on-screen size of its user-space-unit text) shrinks well
-     below the base sizes above — down to roughly 0.59x at a 400px
-     viewport (328px rendered SVG width / 560 viewBox width), which would
-     put .svg-label at ~7.6px and .abstract-tspan at ~5.9px, both
-     illegible. Bump the user-space font-size specifically below the
-     point where that shrink starts eating legibility (empirically ~560px
-     viewport for .svg-label; the query below covers that with margin)
-     so the *effective rendered* size stays >=11px at the 400px
-     responsive floor, without touching the base sizes that render
-     correctly at normal desktop width. */
-  @media (max-width: 480px) {
-    .svg-label { font-size: 21px; }
-    .abstract-tspan { font-size: 20px; }
-  }
-
-  /* The node labels below (label-i/j/k) stack two tspan lines: the
-     concrete name at .svg-label size, then the abstract role letter at
-     .abstract-tspan size, offset by a dy on the second tspan. That dy is
-     set as 1.4em (not a fixed SVG-unit number) precisely so it tracks the
-     .abstract-tspan font-size through the media query above instead of
-     staying pinned to the 10px base: at the 10px base that resolves to
-     14, matching the old fixed value exactly, and at the 20px mobile
-     size it resolves to 28, which clears the two lines at the bumped
-     21px/20px fonts. See the tspan markup for the actual dy values. */
+  /* The node labels (label-i/j/k) stack two tspan lines: the concrete
+     name at .svg-label size, then the abstract role letter at
+     .abstract-tspan size, pushed down by a dy on the second tspan. That
+     dy is written as 1.4em rather than a fixed user-unit number so it
+     follows whatever .abstract-tspan's font-size is (1.4 x 20 = 28
+     units here), which keeps the two lines clear of each other without a
+     second number to remember to update. See the tspan markup for where
+     it is applied. */
 
   figcaption {
     margin-top: 12px;
@@ -278,6 +273,8 @@
     background: var(--surface-2);
     border: 1px solid var(--border);
     margin-block: 14px;
+    cursor: pointer;
+    touch-action: none;
   }
 
   .dij-track-zone {
@@ -291,12 +288,14 @@
     pointer-events: none;
   }
 
+  /* 24x24 is the WCAG 2.5.8 minimum target size; the translate below
+     re-centers whatever size is set here on the value it points at. */
   .dij-marker {
     position: absolute;
     top: 50%;
     left: 0;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
     background: var(--accent-2);
@@ -377,37 +376,38 @@
 
     <div class="panel">
       <figure>
-        <svg viewBox="0 0 560 360" role="img"
+        <svg viewBox="0 0 560 440" role="img"
              aria-label="Triangle diagram of three points: two peptide residues, Gly two and Ser five, and a magnesium ion. The distance between the two residues is constrained, not fixed, by their distances to the ion.">
-          <line id="edge-ik" class="edge-solid" x1="130" y1="270" x2="280" y2="90"></line>
-          <line id="edge-jk" class="edge-solid" x1="430" y1="270" x2="280" y2="90"></line>
-          <line id="edge-ij" class="edge-dashed" x1="130" y1="270" x2="430" y2="270"></line>
+          <line id="edge-ik" class="edge-solid" x1="145" y1="325" x2="280" y2="85"></line>
+          <line id="edge-jk" class="edge-solid" x1="415" y1="325" x2="280" y2="85"></line>
+          <line id="edge-ij" class="edge-dashed" x1="145" y1="325" x2="415" y2="325"></line>
 
-          <text id="label-ik" class="svg-label edge-value" x="180" y="170">12.0 &#197;</text>
-          <text id="label-jk" class="svg-label edge-value" x="380" y="170">9.0 &#197;</text>
-          <text id="dij-range-label" class="svg-label edge-range" x="280" y="252">3.0-21.0 &#197;</text>
+          <text id="label-ik" class="svg-label edge-value" x="190" y="205">12.0 &#197;</text>
+          <text id="label-jk" class="svg-label edge-value" x="370" y="205">9.0 &#197;</text>
+          <text id="dij-range-label" class="svg-label edge-range" x="280" y="417">3.0-21.0 &#197;</text>
 
-          <circle id="node-i" class="node-i" cx="130" cy="270" r="9"></circle>
-          <circle id="node-j" class="node-j" cx="430" cy="270" r="9"></circle>
-          <circle id="node-k" class="node-k" cx="280" cy="90" r="9"></circle>
+          <circle id="node-i" class="node-i" cx="145" cy="325" r="9"></circle>
+          <circle id="node-j" class="node-j" cx="415" cy="325" r="9"></circle>
+          <circle id="node-k" class="node-k" cx="280" cy="85" r="9"></circle>
 
-          <text id="label-i" class="svg-label" x="130" y="296">
-            <tspan x="130" dy="0">Gly&#178;</tspan>
-            <tspan class="abstract-tspan" x="130" dy="1.4em">i</tspan>
+          <text id="label-i" class="svg-label" x="145" y="359">
+            <tspan x="145" dy="0">Gly&#178;</tspan>
+            <tspan class="abstract-tspan" x="145" dy="1.4em">i</tspan>
           </text>
-          <text id="label-j" class="svg-label" x="430" y="296">
-            <tspan x="430" dy="0">Ser&#8309;</tspan>
-            <tspan class="abstract-tspan" x="430" dy="1.4em">j</tspan>
+          <text id="label-j" class="svg-label" x="415" y="359">
+            <tspan x="415" dy="0">Ser&#8309;</tspan>
+            <tspan class="abstract-tspan" x="415" dy="1.4em">j</tspan>
           </text>
-          <text id="label-k" class="svg-label" x="280" y="56">
+          <text id="label-k" class="svg-label" x="280" y="35">
             <tspan x="280" dy="0">Mg&#178;&#8314;</tspan>
             <tspan class="abstract-tspan" x="280" dy="1.4em">k</tspan>
           </text>
         </svg>
         <figcaption>
           Solid edges are set directly by the sliders. The dashed edge shows
-          the full range Gly&#178; to Ser&#8309; could occupy: drag its
-          marker past either end to see what happens outside that range.
+          the full range Gly&#178; to Ser&#8309; could occupy: drag the
+          d(i,j) marker in the panel beside this diagram past either end of
+          its highlighted zone to see what happens outside that range.
         </figcaption>
       </figure>
     </div>
@@ -441,17 +441,22 @@
           <div class="dij-track-zone" id="dij-track-zone"></div>
           <button type="button"
                   id="dij-marker"
+                  class="dij-marker"
                   role="slider"
                   aria-orientation="horizontal"
                   aria-valuemin="0"
-                  aria-valuemax="40"
                   aria-label="d(i,j), Gly two to Ser five distance. Drag past the highlighted valid range to see it snap back."></button>
         </div>
         <div class="dij-track-endlabels">
-          <span>0 &#197;</span>
-          <span>40 &#197;</span>
+          <span id="dij-track-min-label">0 &#197;</span>
+          <span id="dij-track-max-label">40 &#197;</span>
         </div>
-        <p id="invalid-flash" class="invalid-flash" role="status">Not a valid triangle: snapped back to the nearest bound.</p>
+        <!-- Ships empty on purpose: a role="status" live region only
+             announces when its content changes, so the message is written
+             in when the flash fires and cleared again when the animation
+             ends. That also keeps it out of the accessibility tree as
+             ambient text the rest of the time. -->
+        <p id="invalid-flash" class="invalid-flash" role="status"></p>
       </div>
 
     </div>
@@ -465,11 +470,19 @@
   // no dependency on the interaction-logic closure below.
   // ==========================================================
 
-  // Fixed pixel-space domain of the d(i,j) track control. 0 is the
-  // theoretical floor of triangleRange (dik === djk); 40 is the
-  // theoretical ceiling (dik === djk === 20, the slider max on both).
+  // Full domain of the d(i,j) track control, in angstroms. The floor is 0
+  // (the smallest triangleRange minimum, reached when dik === djk) and the
+  // ceiling is the largest triangleRange maximum, dik + djk at both
+  // sliders' maximums. Read off the sliders rather than written out, so
+  // changing a slider's max cannot silently desync the track from it.
   const DIJ_TRACK_MIN = 0;
-  const DIJ_TRACK_MAX = 40;
+  const DIJ_TRACK_MAX =
+    Number(document.getElementById('dik-slider').max) +
+    Number(document.getElementById('djk-slider').max);
+
+  document.getElementById('dij-marker').setAttribute('aria-valuemax', String(DIJ_TRACK_MAX));
+  document.getElementById('dij-track-min-label').textContent = DIJ_TRACK_MIN + ' Å';
+  document.getElementById('dij-track-max-label').textContent = DIJ_TRACK_MAX + ' Å';
 
   function updateMarkerPosition(dijValue, min, max) {
     const pct = (v) => ((v - DIJ_TRACK_MIN) / (DIJ_TRACK_MAX - DIJ_TRACK_MIN)) * 100;
@@ -480,7 +493,14 @@
 
     marker.style.left = pct(dijValue) + '%';
     marker.setAttribute('aria-valuenow', dijValue.toFixed(1));
-    marker.setAttribute('aria-valuetext', dijValue.toFixed(1) + ' Å');
+    // The valid range is drawn as a highlighted zone on the track, which a
+    // screen reader user never sees, so say it out loud here alongside the
+    // current value.
+    marker.setAttribute(
+      'aria-valuetext',
+      dijValue.toFixed(1) + ' Å, valid range ' +
+        min.toFixed(1) + ' to ' + max.toFixed(1) + ' Å'
+    );
 
     const zoneLeft = pct(min);
     const zoneWidth = Math.max(pct(max) - pct(min), 0);
@@ -490,11 +510,25 @@
     readout.textContent = dijValue.toFixed(1) + ' Å';
   }
 
-  function updateSvgFromPoints(i, j, k) {
-    // Drawing area inside the fixed 560x360 viewBox, leaving room for the
-    // node labels (below i/j, above k) and the edge-value labels.
-    const viewW = 560, viewH = 360;
-    const pad = { left: 80, right: 80, top: 60, bottom: 70 };
+  // Label placement geometry, all in viewBox user units. These are tuned
+  // against the 21px/20px text above: shrink the text and they can shrink
+  // with it, but they must stay large enough that a label block clears
+  // both its node and its neighbours.
+  const NODE_LABEL_DY = 34;      // i and j names, below their node
+  const K_LABEL_DY = -50;        // k's name, above its node (two lines tall)
+  const EDGE_LABEL_OFFSET = 22;  // perpendicular clearance off an edge
+  const RANGE_LABEL_DY = 92;     // range label, below the deeper i/j label
+  const MIN_IJ_SEP = 76;         // below this i-j gap, treat i and j as collapsed
+  const COLLAPSED_IJ_SPREAD = 76; // how far apart to force the i and j names then
+  const NUDGE_STEP = 14;          // clearance pass: units per push
+  const NUDGE_MAX_STEPS = 10;     // clearance pass: give up after this many
+
+  function updateSvgFromPoints(i, j, k, dik, djk) {
+    // Drawing area inside the fixed 560x440 viewBox, leaving room for the
+    // node labels (below i/j, above k), the edge-value labels, and the
+    // range label on its own line under the baseline.
+    const viewW = 560, viewH = 440;
+    const pad = { left: 90, right: 90, top: 85, bottom: 115 };
     const innerW = viewW - pad.left - pad.right;
     const innerH = viewH - pad.top - pad.bottom;
 
@@ -502,16 +536,23 @@
     // itself guard: when dik === djk and the marker is dragged to the
     // range's lower bound (0), dij is 0 too, so layoutTriangle's
     // cosAngleI divides by 2*dik*dij = 0 and k comes back as NaN/NaN.
-    // layoutTriangle's own math is left untouched (Task 1's contract) —
-    // this is purely a rendering fallback: with i and j collapsed onto
-    // the same point, direction is genuinely undefined, so k is drawn
-    // directly above the collapsed point at distance dik.
+    // layoutTriangle's own math is left untouched on purpose. This is
+    // purely a rendering fallback: with i and j collapsed onto the same
+    // point, direction is genuinely undefined, so k is drawn directly
+    // above the collapsed point at distance dik.
     let kx = k.x, ky = k.y;
     if (!Number.isFinite(kx) || !Number.isFinite(ky)) {
-      const dik = Number(document.getElementById('dik-slider').value);
       kx = i.x;
       ky = dik;
     }
+
+    // Write the edge-value text before anything is positioned: the
+    // clearance pass at the end measures these labels, and measuring last
+    // frame's text would size them wrong. Both come from the same dik/djk
+    // arguments used to lay the triangle out, so they cannot drift out of
+    // sync with what is drawn.
+    document.getElementById('label-ik').textContent = dik.toFixed(1) + ' Å';
+    document.getElementById('label-jk').textContent = djk.toFixed(1) + ' Å';
 
     const pts = [i, j, { x: kx, y: ky }];
     const minX = Math.min(pts[0].x, pts[1].x, pts[2].x);
@@ -557,52 +598,119 @@
     edgeIj.setAttribute('x1', si.x); edgeIj.setAttribute('y1', si.y);
     edgeIj.setAttribute('x2', sj.x); edgeIj.setAttribute('y2', sj.y);
 
-    // Node labels: concrete name + abstract letter, positioned below i/j
-    // and above k so they never sit inside the triangle's interior.
-    function placeNodeLabel(id, p, dy) {
-      const el = document.getElementById(id);
-      el.setAttribute('x', p.x);
-      el.setAttribute('y', p.y + dy);
-      const tspans = el.querySelectorAll('tspan');
-      tspans.forEach((t) => t.setAttribute('x', p.x));
-    }
-    placeNodeLabel('label-i', si, 26);
-    placeNodeLabel('label-j', sj, 26);
-    placeNodeLabel('label-k', sk, -34);
+    // How far apart i and j actually landed on screen. At the low end of
+    // the valid range (dij near |dik - djk|) the two nodes sit on top of
+    // each other, which would print their two names at the same anchor and
+    // put both edge labels at the same midpoint. Everything below keys off
+    // this one measurement.
+    const ijSep = Math.hypot(sj.x - si.x, sj.y - si.y);
+    const ijCollapsed = ijSep < MIN_IJ_SEP;
 
-    // Edge-value labels: midpoint of each edge, offset perpendicular to
+    // Node labels: concrete name + abstract letter, positioned below i/j
+    // and above k so they never sit inside the triangle's interior. When
+    // i and j have collapsed together, the two names are pushed apart
+    // horizontally around their shared midpoint so they stay readable.
+    function placeNodeLabel(id, p, dy, xShift) {
+      const x = p.x + (xShift || 0);
+      const el = document.getElementById(id);
+      el.setAttribute('x', x);
+      el.setAttribute('y', p.y + dy);
+      el.querySelectorAll('tspan').forEach((t) => t.setAttribute('x', x));
+    }
+    const ijNudge = ijCollapsed ? (COLLAPSED_IJ_SPREAD - ijSep) / 2 : 0;
+    placeNodeLabel('label-i', si, NODE_LABEL_DY, -ijNudge);
+    placeNodeLabel('label-j', sj, NODE_LABEL_DY, ijNudge);
+    placeNodeLabel('label-k', sk, K_LABEL_DY, 0);
+
+    // Edge-value labels: a point along each edge, offset perpendicular to
     // it so the text clears the line instead of sitting on top of it.
-    function placeEdgeLabel(id, p1, p2, offset) {
-      const mx = (p1.x + p2.x) / 2;
-      const my = (p1.y + p2.y) / 2;
+    // `t` picks the point along the edge (0.5 is the midpoint). The
+    // perpendicular direction is undefined for a zero-length edge, so fall
+    // back to straight up rather than emitting a NaN coordinate.
+    // Returns the unit direction it pushed the label in, so the clearance
+    // pass below can keep pushing the same way if the label still collides.
+    function placeEdgeLabel(id, p1, p2, offset, t) {
+      const f = t === undefined ? 0.5 : t;
+      const mx = p1.x + (p2.x - p1.x) * f;
+      const my = p1.y + (p2.y - p1.y) * f;
       const dx = p2.x - p1.x, dy = p2.y - p1.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len, ny = dx / len;
+      const len = Math.hypot(dx, dy);
+      const nx = len < 1e-6 ? 0 : -dy / len;
+      const ny = len < 1e-6 ? -1 : dx / len;
       const el = document.getElementById(id);
       el.setAttribute('x', mx + nx * offset);
       el.setAttribute('y', my + ny * offset);
+      return { x: Math.sign(offset) * nx, y: Math.sign(offset) * ny };
     }
-    placeEdgeLabel('label-ik', si, sk, -14);
-    placeEdgeLabel('label-jk', sj, sk, 14);
-    placeEdgeLabel('dij-range-label', si, sj, -16);
 
-    // Numeric readouts next to the sliders and the solid-edge labels'
-    // text content both come from the sliders directly, so they can
-    // never drift out of sync with what's drawn.
-    const dikVal = Number(document.getElementById('dik-slider').value);
-    const djkVal = Number(document.getElementById('djk-slider').value);
-    document.getElementById('label-ik').textContent = dikVal.toFixed(1) + ' Å';
-    document.getElementById('label-jk').textContent = djkVal.toFixed(1) + ' Å';
-    document.getElementById('dik-readout').textContent = dikVal.toFixed(1) + ' Å';
-    document.getElementById('djk-readout').textContent = djkVal.toFixed(1) + ' Å';
+    // With i and j collapsed, the i-k and j-k edges are the same segment,
+    // so their midpoints coincide and a perpendicular offset alone cannot
+    // separate two labels wider than the offset. Slide them to different
+    // points along the shared edge instead; the perpendicular offset then
+    // only has to keep each one off the line.
+    const ikT = ijCollapsed ? 0.35 : 0.5;
+    const jkT = ijCollapsed ? 0.65 : 0.5;
+    const ikDir = placeEdgeLabel('label-ik', si, sk, -EDGE_LABEL_OFFSET, ikT);
+    const jkDir = placeEdgeLabel('label-jk', sj, sk, EDGE_LABEL_OFFSET, jkT);
+
+    // The d(i,j) range label is not offset perpendicular to the i-j edge
+    // the way the other two are. At the top of the valid range k lands on
+    // that edge, so a perpendicular offset would place the range label
+    // right where k's own name already is, and at the bottom of the range
+    // the edge has no length to take a perpendicular from. Anchoring it
+    // below the baseline instead, under the i and j names, keeps it clear
+    // of both without depending on the triangle's shape.
+    const rangeEl = document.getElementById('dij-range-label');
+    rangeEl.setAttribute('x', (si.x + sj.x) / 2);
+    rangeEl.setAttribute('y', Math.max(si.y, sj.y) + RANGE_LABEL_DY);
+
+    // Clearance pass. The placements above are analytic and handle the
+    // shapes students actually sweep through, but a few extremes (one edge
+    // several times longer than the other, with d(i,j) pinned at a bound)
+    // still land two labels on the same spot. Rather than special-case each
+    // of those shapes, measure what was drawn and push the movable labels
+    // further along the direction they were already offset in until they
+    // are clear. The node names stay put: they are anchored to their nodes
+    // and moving them would break the thing they identify.
+    function boxOf(id) { return document.getElementById(id).getBBox(); }
+    function hits(a, b) {
+      return a.x < b.x + b.width && b.x < a.x + a.width &&
+             a.y < b.y + b.height && b.y < a.y + a.height;
+    }
+    function nudgeClear(id, dir, againstIds) {
+      const el = document.getElementById(id);
+      const x0 = Number(el.getAttribute('x'));
+      const y0 = Number(el.getAttribute('y'));
+      const against = againstIds.map(boxOf);
+      let bestStep = 0, bestHits = Infinity;
+      for (let s = 0; s <= NUDGE_MAX_STEPS; s++) {
+        el.setAttribute('x', x0 + dir.x * NUDGE_STEP * s);
+        el.setAttribute('y', y0 + dir.y * NUDGE_STEP * s);
+        const b = el.getBBox();
+        // Stop before pushing the label out of the viewBox; a clipped
+        // label is worse than an overlapping one.
+        if (b.x < 2 || b.y < 2 || b.x + b.width > viewW - 2 || b.y + b.height > viewH - 2) break;
+        const n = against.reduce((acc, o) => acc + (hits(b, o) ? 1 : 0), 0);
+        if (n < bestHits) { bestHits = n; bestStep = s; }
+        if (n === 0) return;
+      }
+      el.setAttribute('x', x0 + dir.x * NUDGE_STEP * bestStep);
+      el.setAttribute('y', y0 + dir.y * NUDGE_STEP * bestStep);
+    }
+    nudgeClear('label-ik', ikDir, ['label-i', 'label-j', 'label-k']);
+    nudgeClear('label-jk', jkDir, ['label-i', 'label-j', 'label-k', 'label-ik']);
+    nudgeClear('dij-range-label', { x: 0, y: 1 },
+      ['label-i', 'label-j', 'label-k', 'label-ik', 'label-jk']);
+
+    document.getElementById('dik-readout').textContent = dik.toFixed(1) + ' Å';
+    document.getElementById('djk-readout').textContent = djk.toFixed(1) + ' Å';
   }
 </script>
 
 <script>
   // ==========================================================
-  // Interaction logic — copied verbatim from the plan, with the
-  // marked insertion point filled in for the d(i,j) track's drag
-  // and keyboard handling.
+  // Interaction logic: the triangle-inequality math, and the
+  // pointer and keyboard handling for the d(i,j) track control.
   // ==========================================================
   (function () {
     function triangleRange(dik, djk) {
@@ -626,24 +734,56 @@
     const rangeLabel = document.getElementById('dij-range-label');
     const flash = document.getElementById('invalid-flash');
 
-    // dijValue is the marker's current position in Å — the live value used
+    const FLASH_MESSAGE = 'Not a valid triangle: snapped back to the nearest bound.';
+
+    // dijValue is the marker's current position in Å, the live value used
     // to draw the triangle. Starts at the midpoint of the initial range.
     let dijValue = null;
 
     // Tracks whether the previous attemptDijDrag call was already
     // out-of-range, so the flash only (re)triggers on the transition from
     // valid into invalid, not on every event tick while the marker is held
-    // past a bound (pointermove fires per pixel, keydown repeats while
-    // held — without this guard the animation would restart dozens of
-    // times a second and strobe instead of showing one clean pulse).
+    // past a bound. pointermove fires per pixel and keydown repeats while
+    // held, so without this guard the animation would restart dozens of
+    // times a second and strobe instead of showing one clean pulse. It is
+    // cleared when a gesture ends and when the valid range itself moves,
+    // since "already out of range" means nothing against a new range.
     let wasOutOfRange = false;
+
+    // The range the last redraw drew, so redraw can tell a range change
+    // (slider moved) from a same-range redraw (mid-drag).
+    let lastRange = null;
 
     function currentRange() {
       return triangleRange(Number(dikSlider.value), Number(djkSlider.value));
     }
 
+    function triggerFlash() {
+      // Writing the text here rather than leaving it in the markup is what
+      // makes the role="status" live region announce: a live region fires
+      // on content change, so the message has to arrive at flash time. The
+      // animationend handler below clears it again.
+      flash.textContent = FLASH_MESSAGE;
+      // Force a reflow so the animation restarts cleanly even if a
+      // previous pulse's fade is still finishing.
+      flash.classList.remove('flash-active');
+      void flash.offsetWidth;
+      flash.classList.add('flash-active');
+    }
+
+    flash.addEventListener('animationend', () => {
+      flash.classList.remove('flash-active');
+      flash.textContent = '';
+    });
+
     function redraw() {
       const [min, max] = currentRange();
+      if (lastRange === null || min !== lastRange[0] || max !== lastRange[1]) {
+        // The bounds themselves moved (a slider changed), so any pending
+        // "already flashed for this excursion" state is stale.
+        wasOutOfRange = false;
+        lastRange = [min, max];
+      }
       if (dijValue === null) {
         dijValue = (min + max) / 2;
       } else {
@@ -651,28 +791,20 @@
         dijValue = clampToRange(dijValue, min, max);
       }
       rangeLabel.textContent = min.toFixed(1) + '-' + max.toFixed(1) + ' Å';
-      const { i, j, k } = layoutTriangle(Number(dikSlider.value), Number(djkSlider.value), dijValue);
-      // Implementer: map i/j/k model-space coordinates to SVG viewBox
-      // coordinates here (scale + center), then set the solid i-k / j-k
-      // line endpoints, the dashed i-j line endpoints, and each node
-      // circle's cx/cy, plus the marker's position along the range track.
-      updateSvgFromPoints(i, j, k); // defined alongside the SVG markup in Step 2
-      updateMarkerPosition(dijValue, min, max); // same
+      const dik = Number(dikSlider.value);
+      const djk = Number(djkSlider.value);
+      const { i, j, k } = layoutTriangle(dik, djk, dijValue);
+      updateSvgFromPoints(i, j, k, dik, djk);
+      updateMarkerPosition(dijValue, min, max);
     }
 
     function attemptDijDrag(candidateValue) {
       const [min, max] = currentRange();
       if (candidateValue < min || candidateValue > max) {
-        const clamped = clampToRange(candidateValue, min, max);
-        dijValue = clamped;
+        dijValue = clampToRange(candidateValue, min, max);
         if (!wasOutOfRange) {
-          // Transition from valid (or first drag) into invalid: (re)start
-          // the flash exactly once. Force a reflow so the animation
-          // restarts cleanly even if a previous pulse's fade is still
-          // finishing.
-          flash.classList.remove('flash-active');
-          void flash.offsetWidth;
-          flash.classList.add('flash-active');
+          // Transition from valid (or first drag) into invalid: pulse once.
+          triggerFlash();
         }
         // Already out-of-range: leave the running animation alone. Continued
         // out-of-range movement (holding a drag or a key past the bound)
@@ -687,35 +819,75 @@
 
     dikSlider.addEventListener('input', redraw);
     djkSlider.addEventListener('input', redraw);
-    // Implementer: attach pointerdown/pointermove/pointerup (or drag) handlers
-    // on `marker` that compute a candidateValue in Å from pointer position
-    // along the range track and call attemptDijDrag(candidateValue).
+
     const track = document.getElementById('dij-track');
 
+    // The marker's `left` is a percentage, which CSS resolves against the
+    // track's padding box, so the inverse mapping has to use the padding
+    // box too (clientLeft is the border width, clientWidth excludes both
+    // borders). Measuring off the border box instead would leave pointer
+    // position and rendered position about a pixel apart.
     function valueFromClientX(clientX) {
       const rect = track.getBoundingClientRect();
-      const ratio = (clientX - rect.left) / rect.width;
+      const ratio = (clientX - rect.left - track.clientLeft) / track.clientWidth;
       return clampToRange(DIJ_TRACK_MIN + ratio * (DIJ_TRACK_MAX - DIJ_TRACK_MIN), DIJ_TRACK_MIN, DIJ_TRACK_MAX);
     }
 
     let dragging = false;
+    // Distance in px between where the pointer went down and the marker's
+    // own centre. Subtracting it from every subsequent pointer position
+    // keeps the marker under the same part of the fingertip for the whole
+    // drag, instead of snapping its centre to the cursor on first move.
+    let grabOffsetX = 0;
+
+    function beginDrag(e) {
+      dragging = true;
+      try {
+        marker.setPointerCapture(e.pointerId);
+      } catch (err) {
+        // Capture is a nicety (it keeps events coming if the pointer
+        // leaves the marker); dragging still works without it.
+      }
+    }
 
     marker.addEventListener('pointerdown', (e) => {
-      dragging = true;
-      marker.setPointerCapture(e.pointerId);
+      const rect = marker.getBoundingClientRect();
+      grabOffsetX = e.clientX - (rect.left + rect.width / 2);
+      beginDrag(e);
+      // Deliberately no attemptDijDrag here: picking the handle up is not
+      // itself a change of value, and treating it as one would report the
+      // grab point rather than the value the handle already holds.
+    });
+
+    // Click or tap anywhere on the track: seek there and keep dragging
+    // from that point. On a phone this is the natural gesture, and the
+    // fallback when the handle is hard to hit. Pointerdowns that landed on
+    // the handle are already handled above and bubble through here.
+    track.addEventListener('pointerdown', (e) => {
+      if (e.target === marker || marker.contains(e.target)) return;
+      grabOffsetX = 0;
+      beginDrag(e);
+      marker.focus();
       attemptDijDrag(valueFromClientX(e.clientX));
     });
+
     marker.addEventListener('pointermove', (e) => {
       if (!dragging) return;
-      attemptDijDrag(valueFromClientX(e.clientX));
+      attemptDijDrag(valueFromClientX(e.clientX - grabOffsetX));
     });
-    marker.addEventListener('pointerup', (e) => {
+
+    function endDrag(e) {
       dragging = false;
-      marker.releasePointerCapture(e.pointerId);
-    });
-    marker.addEventListener('pointercancel', () => {
-      dragging = false;
-    });
+      grabOffsetX = 0;
+      // A finished gesture means the next excursion past a bound is a new
+      // one and should pulse again.
+      wasOutOfRange = false;
+      if (e && e.pointerId !== undefined && marker.hasPointerCapture && marker.hasPointerCapture(e.pointerId)) {
+        marker.releasePointerCapture(e.pointerId);
+      }
+    }
+    marker.addEventListener('pointerup', endDrag);
+    marker.addEventListener('pointercancel', endDrag);
 
     // Keyboard parity with the two native <input type="range"> sliders,
     // since this is a hand-built control standing in for a third one.
@@ -735,6 +907,10 @@
         attemptDijDrag(DIJ_TRACK_MAX);
       }
     });
+
+    // Releasing the key ends the keyboard equivalent of a gesture, so the
+    // next push past a bound pulses again, exactly as pointerup does.
+    marker.addEventListener('keyup', () => { wasOutOfRange = false; });
 
     redraw();
   })();

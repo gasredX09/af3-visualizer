@@ -85,3 +85,51 @@ architectural choices.
 - Do not use AF3 output to train or create machine learning models for
   biomolecular structure prediction. Not applicable here; the tool only
   visualizes, never trains.
+
+## 2026-09-18 — SVG label sizing and placement rules for diagram screens
+
+**Decision:** Two rules for any screen whose diagram is an inline SVG with a
+fixed viewBox scaled to fit its column:
+
+1. Size SVG text against the *narrowest* width the SVG ever renders at, not
+   against the viewBox width, and use one size at every viewport rather than
+   bumping it at a breakpoint.
+2. Place labels analytically first, then run a bounded clearance pass that
+   measures the drawn boxes with `getBBox()` and pushes the movable ones
+   further along the direction they were already offset in until nothing
+   overlaps, stopping before anything leaves the viewBox.
+
+**Options considered:**
+- Sizing text for the viewBox width and correcting with `max-width` media
+  queries (what the first version of the triangle sandbox did).
+- Widening `.page` or the diagram grid column so the SVG renders closer to
+  1:1 with its viewBox.
+- Shrinking the viewBox so user units map closer to rendered pixels.
+- Special-casing each degenerate geometry in the placement maths, with no
+  measurement pass.
+
+**Why:** In a two-column layout the SVG's rendered width is capped by the
+page's own `max-width`, not by the viewport, so it never approaches the
+viewBox width however wide the browser gets. Media queries keyed to viewport
+width cannot see that, which is how the sandbox ended up with text under the
+11px legibility floor at every desktop width from 761px up while passing its
+400px and 760px spot checks. Because effective size is
+`font-size x renderedWidth / viewBoxWidth`, the viewBox width is arbitrary:
+widening the column and shrinking the viewBox are the same adjustment
+expressed differently, and neither removes the need to check the narrowest
+render. Sizing for the narrowest render gives one number that holds
+everywhere, keeps the diagram's proportions identical at every width, and
+removes the breakpoint entirely.
+
+The clearance pass exists because purely analytic placement cannot be checked
+by reading it. Both the collapsed (`d(i,j)` at its lower bound) and collinear
+(upper bound) cases produce overlaps that look correct in the source, and the
+lopsided cases (one edge several times the other) produce more. Measuring what
+was actually drawn turns "does this overlap" into something a headless browser
+can answer across the whole parameter space; the triangle sandbox is checked
+over 441 slider/marker combinations with zero overlaps and zero clipping. The
+cost is ~15 `getBBox()` calls per redraw, measured at 0.12ms, against a 16.7ms
+frame budget.
+
+Applies to the triangle inequality sandbox now and to the other diagram
+screens in `SPEC.md` as they are built.
