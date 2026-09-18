@@ -150,16 +150,18 @@
      the full page width: in the two-column layout the SVG column is
      capped by .page's 900px max-width at about 462px however wide the
      browser gets, and at a 761px viewport (the narrowest two-column
-     case) it is only about 338px. The narrowest render of all is about
-     310px at a 400px viewport. Sizing these for a 560px render would
-     therefore leave the text under the 11px legibility floor at nearly
-     every real width, so they are sized against the *narrowest* render
-     instead: 21 x (310/560) = 11.6px and 20 x (310/560) = 11.1px. One
-     size holds at every viewport, so there is no breakpoint where the
-     diagram's proportions jump. */
+     case) it is only about 338px. The narrowest render of all, measured
+     in the browser, is 310px at a 400px viewport. Sizing these for a
+     560px render would leave the text under a legibility floor at
+     nearly every real width, so they are sized against the *narrowest*
+     render instead, targeting a genuinely comfortable ~15px effective
+     size (not just an accessibility-minimum floor): 27 x (310/560) =
+     15.0px and 26 x (310/560) = 14.4px. One size holds at every
+     viewport, so there is no breakpoint where the diagram's proportions
+     jump. */
   .svg-label {
     font-family: var(--font-mono);
-    font-size: 21px;
+    font-size: 27px;
     text-anchor: middle;
     fill: var(--text);
     paint-order: stroke;
@@ -173,7 +175,7 @@
 
   .abstract-tspan {
     font-family: var(--font-body);
-    font-size: 20px;
+    font-size: 26px;
     fill: var(--text-secondary);
     letter-spacing: 0.02em;
   }
@@ -182,14 +184,14 @@
      name at .svg-label size, then the abstract role letter at
      .abstract-tspan size, pushed down by a dy on the second tspan. That
      dy is written as 1.4em rather than a fixed user-unit number so it
-     follows whatever .abstract-tspan's font-size is (1.4 x 20 = 28
-     units here), which keeps the two lines clear of each other without a
+     follows whatever .abstract-tspan's font-size is (1.4 x 26 = 36.4
+     units now), which keeps the two lines clear of each other without a
      second number to remember to update. See the tspan markup for where
      it is applied. */
 
   figcaption {
     margin-top: 12px;
-    font-size: 0.85rem;
+    font-size: 0.92rem;
     color: var(--text-secondary);
   }
 
@@ -205,7 +207,7 @@
   .slider-group { display: flex; flex-direction: column; gap: 6px; }
 
   .slider-group label {
-    font-size: 0.85rem;
+    font-size: 0.92rem;
     font-weight: 500;
   }
 
@@ -230,7 +232,7 @@
   .readout {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     min-width: 5.2ch;
     text-align: right;
     color: var(--text);
@@ -249,7 +251,7 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 0.85rem;
+    font-size: 0.92rem;
     font-weight: 500;
   }
 
@@ -263,7 +265,7 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     color: var(--accent-2);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
 
   .dij-track {
@@ -317,14 +319,14 @@
     display: flex;
     justify-content: space-between;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
   }
 
   .invalid-flash {
     margin: 0;
     min-height: 1.1em;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
     font-weight: 500;
     color: var(--danger);
     opacity: 0;
@@ -511,16 +513,22 @@
   }
 
   // Label placement geometry, all in viewBox user units. These are tuned
-  // against the 21px/20px text above: shrink the text and they can shrink
-  // with it, but they must stay large enough that a label block clears
-  // both its node and its neighbours.
-  const NODE_LABEL_DY = 34;      // i and j names, below their node
-  const K_LABEL_DY = -50;        // k's name, above its node (two lines tall)
-  const EDGE_LABEL_OFFSET = 22;  // perpendicular clearance off an edge
-  const RANGE_LABEL_DY = 92;     // range label, below the deeper i/j label
-  const MIN_IJ_SEP = 76;         // below this i-j gap, treat i and j as collapsed
-  const COLLAPSED_IJ_SPREAD = 76; // how far apart to force the i and j names then
-  const NUDGE_STEP = 14;          // clearance pass: units per push
+  // against the current 27px/26px text (originally 21px/20px, scaled up
+  // ~1.29x when the text grew for legibility): scale the text again and
+  // these must scale with it, in either direction. Growing the text
+  // without rescaling these was a real, measured regression once
+  // (label-i and label-j's names started overlapping in the collapsed
+  // case, since COLLAPSED_IJ_SPREAD no longer cleared the wider text) --
+  // confirmed by an exhaustive pairwise getBoundingClientRect() check
+  // across every SVG text element after document.fonts.ready, not by
+  // hand-estimating from font metrics.
+  const NODE_LABEL_DY = 44;      // i and j names, below their node
+  const K_LABEL_DY = -64;        // k's name, above its node (two lines tall)
+  const EDGE_LABEL_OFFSET = 28;  // perpendicular clearance off an edge
+  const RANGE_LABEL_DY = 118;    // range label, below the deeper i/j label
+  const MIN_IJ_SEP = 98;         // below this i-j gap, treat i and j as collapsed
+  const COLLAPSED_IJ_SPREAD = 98; // how far apart to force the i and j names then
+  const NUDGE_STEP = 18;          // clearance pass: units per push
   const NUDGE_MAX_STEPS = 10;     // clearance pass: give up after this many
 
   function updateSvgFromPoints(i, j, k, dik, djk) {
