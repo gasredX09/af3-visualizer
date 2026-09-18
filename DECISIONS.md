@@ -5,6 +5,41 @@ CLAUDE.md change-logging rules for the format and when a new entry is
 required. Past entries are never rewritten; a reversal gets a new entry that
 links back with `**Supersedes:**`.
 
+## 2026-09-18: Add GitHub Pages as a second delivery channel
+
+**Decision:** Alongside the per-screen Claude Artifacts (the primary
+delivery route, decided below), also deploy every screen as a static site
+on GitHub Pages, built by a small Node script (`scripts/build-pages.mjs`)
+run in a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) on
+every push to `main`.
+
+**Options considered:**
+- Artifacts only (status quo).
+- Rewrite each screen from scratch as a full standalone `<html>` document,
+  usable directly by both Pages and (if the Artifact tool tolerated it)
+  Artifact publishing.
+- This decision: keep each screen authored as an Artifact fragment (no
+  `<!DOCTYPE>`/`<html>`/`<head>`/`<body>`, per the Artifact tool's own
+  requirement), and add a build step that wraps fragments into standalone
+  documents for Pages specifically.
+
+**Why:** The Artifact tool injects a real HTML skeleton (charset and
+viewport meta, a small CSS reset) at publish time; GitHub Pages has no
+equivalent step, so serving a fragment file directly would ship without a
+viewport meta tag, breaking the mobile-responsive behavior each screen is
+built to have. Rewriting every screen as a standalone document was rejected
+because the Artifact tool requires the fragment form, a full document isn't
+publishable as-is; that would mean maintaining two divergent copies by hand.
+A build step that wraps the existing fragment source is one script, in one
+place, that both delivery routes can share without duplicating each
+screen's markup.
+
+Pages gives a durable, non-Claude-account-dependent public link (useful for
+the conference talk itself) and a natural home for the index/landing page
+that links every screen, which the entry below already anticipated needing.
+The two delivery routes are otherwise independent: nothing about building a
+new screen as an Artifact changes because Pages now also exists.
+
 ## 2026-09-17: Screen delivery architecture, one Artifact per screen
 
 **Decision:** Each of the ~15 planned screens ships as its own
