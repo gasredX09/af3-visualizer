@@ -1,5 +1,6 @@
 <title>Triangle Inequality Sandbox</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.18.6/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.18.6/katex.min.js"></script>
 <style>
   /* ============================================================
      TOKENS: light palette on bare :root, redefined for dark via
@@ -16,9 +17,14 @@
     --danger: #b23a22;       /* invalid-drag flash */
     --border: #d7e1d8;
 
-    --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-    --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    /* Plain system-UI stack, matching personal-website's approach: the
+       page renders in the reader's own system font rather than a custom
+       loaded typeface, and headings get no separate display face. */
+    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+      Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+      Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -70,6 +76,11 @@
   }
 
   h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+  /* KaTeX-rendered math inherits the surrounding text color rather than
+     the library's own default black/currentColor handling, so it stays
+     legible in both themes without a separate token. */
+  .katex-target, .katex-target .katex { color: inherit; }
 
   .eyebrow {
     font-family: var(--font-body);
@@ -408,8 +419,9 @@
         <figcaption>
           Solid edges are set directly by the sliders. The dashed edge shows
           the full range Gly&#178; to Ser&#8309; could occupy: drag the
-          d(i,j) marker in the panel beside this diagram past either end of
-          its highlighted zone to see what happens outside that range.
+          <span class="katex-target" data-tex="d(i,j)">d(i,j)</span> marker
+          in the panel beside this diagram past either end of its
+          highlighted zone to see what happens outside that range.
         </figcaption>
       </figure>
     </div>
@@ -417,7 +429,7 @@
     <div class="panel controls">
 
       <div class="slider-group">
-        <label for="dik-slider">d(i,k) <span class="abstract">(Gly&#178; to Mg&#178;&#8314;)</span></label>
+        <label for="dik-slider"><span class="katex-target" data-tex="d(i,k)">d(i,k)</span> <span class="abstract">(Gly&#178; to Mg&#178;&#8314;)</span></label>
         <div class="slider-row">
           <input type="range" id="dik-slider" min="3" max="20" step="0.1" value="12.0">
           <output id="dik-readout" for="dik-slider" class="readout">12.0 &#197;</output>
@@ -425,7 +437,7 @@
       </div>
 
       <div class="slider-group">
-        <label for="djk-slider">d(j,k) <span class="abstract">(Ser&#8309; to Mg&#178;&#8314;)</span></label>
+        <label for="djk-slider"><span class="katex-target" data-tex="d(j,k)">d(j,k)</span> <span class="abstract">(Ser&#8309; to Mg&#178;&#8314;)</span></label>
         <div class="slider-row">
           <input type="range" id="djk-slider" min="3" max="20" step="0.1" value="9.0">
           <output id="djk-readout" for="djk-slider" class="readout">9.0 &#197;</output>
@@ -436,7 +448,7 @@
 
       <div class="dij-control">
         <div class="dij-control-header">
-          <span>d(i,j) <span class="abstract">(Gly&#178; to Ser&#8309;)</span></span>
+          <span><span class="katex-target" data-tex="d(i,j)">d(i,j)</span> <span class="abstract">(Gly&#178; to Ser&#8309;)</span></span>
           <span id="dij-current-readout">12.0 &#197;</span>
         </div>
         <div class="dij-track" id="dij-track">
@@ -464,6 +476,18 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Typeset every math expression with KaTeX rather than leaving it as
+  // plain/monospace text. Each target ships with its literal notation as
+  // a graceful fallback (visible until this runs, and if it never runs at
+  // all), and gets replaced with real math typesetting here. Placed as
+  // its own script, ahead of the DOM-update/interaction logic below,
+  // since it has no dependency on either.
+  document.querySelectorAll('.katex-target').forEach((el) => {
+    katex.render(el.dataset.tex, el, { throwOnError: false });
+  });
+</script>
 
 <script>
   // ==========================================================

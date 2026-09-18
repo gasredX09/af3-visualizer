@@ -1,5 +1,6 @@
 <title>Sequence-Local Attention Mask</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.18.6/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.18.6/katex.min.js"></script>
 <style>
   /* ============================================================
      TOKENS: same palette as the triangle inequality sandbox, the
@@ -16,9 +17,14 @@
     --danger: #b23a22;       /* inherited from the shared palette; unused here (no invalid-state flash on this screen) */
     --border: #d7e1d8;
 
-    --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-    --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    /* Plain system-UI stack, matching personal-website's approach: the
+       page renders in the reader's own system font rather than a custom
+       loaded typeface, and headings get no separate display face. */
+    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+      Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+      Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -70,6 +76,11 @@
   }
 
   h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+  /* KaTeX-rendered math inherits the surrounding text color rather than
+     the library's own default black/currentColor handling, so it stays
+     legible in both themes without a separate token. */
+  .katex-target, .katex-target .katex { color: inherit; }
 
   .eyebrow {
     font-family: var(--font-body);
@@ -250,14 +261,6 @@
     border-top: 1px solid var(--border);
     padding-top: 14px;
   }
-
-  .bias-note code {
-    font-family: var(--font-mono);
-    background: var(--surface-2);
-    padding: 1px 5px;
-    border-radius: 4px;
-    color: var(--text);
-  }
 </style>
 
 <div class="page">
@@ -268,7 +271,8 @@
     <p class="subhead">
       A single small molecule can have thousands of atoms. Full attention,
       every atom comparing itself to every other atom, costs
-      <strong>O(atoms squared)</strong>, too expensive to run at every one
+      <strong class="katex-target" data-tex="\boldsymbol{O(N_{\text{atoms}}^2)}">O(atoms squared)</strong>,
+      too expensive to run at every one
       of AF3's roughly 200 diffusion steps. AF3's atom-level attention
       (<strong>AtomTransformer</strong> in machine-learning terms, the step
       where an atom checks its own local <strong>3D geometry</strong> in
@@ -306,12 +310,24 @@
     <p class="readout" id="readout" aria-live="polite"></p>
     <p class="bias-note">
       Masking is not a separate mechanism from ordinary attention biasing.
-      A disallowed pair just gets <code>-10^10</code> added to its
-      attention logit before the softmax, effectively <code>-infinity</code>,
+      A disallowed pair just gets
+      <span class="katex-target" data-tex="-10^{10}">-10^10</span> added to
+      its attention logit before the softmax, effectively
+      <span class="katex-target" data-tex="-\infty">-infinity</span>,
       so it comes out as exactly zero after it.
     </p>
   </div>
 </div>
+
+<script>
+  // Typeset every math expression with KaTeX rather than leaving it as
+  // plain/monospace text. Each target ships with its literal notation as
+  // a graceful fallback (visible until this runs, and if it never runs at
+  // all), and gets replaced with real math typesetting here.
+  document.querySelectorAll('.katex-target').forEach((el) => {
+    katex.render(el.dataset.tex, el, { throwOnError: false });
+  });
+</script>
 
 <script>
   (function () {
