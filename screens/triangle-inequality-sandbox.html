@@ -182,6 +182,16 @@
     .abstract-tspan { font-size: 20px; }
   }
 
+  /* The node labels below (label-i/j/k) stack two tspan lines: the
+     concrete name at .svg-label size, then the abstract role letter at
+     .abstract-tspan size, offset by a dy on the second tspan. That dy is
+     set as 1.4em (not a fixed SVG-unit number) precisely so it tracks the
+     .abstract-tspan font-size through the media query above instead of
+     staying pinned to the 10px base: at the 10px base that resolves to
+     14, matching the old fixed value exactly, and at the 20px mobile
+     size it resolves to 28, which clears the two lines at the bumped
+     21px/20px fonts. See the tspan markup for the actual dy values. */
+
   figcaption {
     margin-top: 12px;
     font-size: 0.85rem;
@@ -383,15 +393,15 @@
 
           <text id="label-i" class="svg-label" x="130" y="296">
             <tspan x="130" dy="0">Gly&#178;</tspan>
-            <tspan class="abstract-tspan" x="130" dy="14">i</tspan>
+            <tspan class="abstract-tspan" x="130" dy="1.4em">i</tspan>
           </text>
           <text id="label-j" class="svg-label" x="430" y="296">
             <tspan x="430" dy="0">Ser&#8309;</tspan>
-            <tspan class="abstract-tspan" x="430" dy="14">j</tspan>
+            <tspan class="abstract-tspan" x="430" dy="1.4em">j</tspan>
           </text>
           <text id="label-k" class="svg-label" x="280" y="56">
             <tspan x="280" dy="0">Mg&#178;&#8314;</tspan>
-            <tspan class="abstract-tspan" x="280" dy="14">k</tspan>
+            <tspan class="abstract-tspan" x="280" dy="1.4em">k</tspan>
           </text>
         </svg>
         <figcaption>
