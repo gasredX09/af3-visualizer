@@ -1,0 +1,697 @@
+<title>Triangle Inequality Sandbox</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* ============================================================
+     TOKENS — light palette on bare :root, redefined for dark via
+     both the OS-preference media query and the explicit toggle.
+     ============================================================ */
+  :root {
+    --bg: #f5f7f3;
+    --surface: #ffffff;
+    --surface-2: #eef3ea;
+    --text: #1b231f;
+    --text-secondary: #5b6b62;
+    --accent: #2b6e63;       /* teal — the two measured edges, i/j nodes */
+    --accent-2: #8a5a12;     /* amber — the bounded edge, the ion node */
+    --danger: #b23a22;       /* invalid-drag flash */
+    --border: #d7e1d8;
+
+    --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10150e;
+      --surface: #171d15;
+      --surface-2: #1e2a1e;
+      --text: #e7ece4;
+      --text-secondary: #93a68e;
+      --accent: #5cb39e;
+      --accent-2: #d9a855;
+      --danger: #e2694c;
+      --border: #2a332a;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10150e;
+    --surface: #171d15;
+    --surface-2: #1e2a1e;
+    --text: #e7ece4;
+    --text-secondary: #93a68e;
+    --accent: #5cb39e;
+    --accent-2: #d9a855;
+    --danger: #e2694c;
+    --border: #2a332a;
+  }
+
+  /* ============================================================
+     BASE
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    padding-inline: clamp(16px, 4vw, 48px);
+    padding-block: clamp(24px, 5vw, 56px);
+  }
+
+  .page {
+    max-width: 900px;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 1.5rem + 1.6vw, 2.5rem);
+    font-weight: 600;
+    margin-top: 6px;
+  }
+
+  .subhead {
+    max-width: 62ch;
+    font-size: 1.02rem;
+    color: var(--text-secondary);
+  }
+
+  .subhead strong { color: var(--text); font-weight: 600; }
+
+  /* Always-visible plain-English takeaway. */
+  .takeaway {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 1rem + 0.7vw, 1.4rem);
+    font-style: italic;
+    color: var(--text);
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent-2);
+    border-radius: 4px;
+    padding: 16px 20px;
+    text-wrap: balance;
+  }
+
+  /* ============================================================
+     LAYOUT — diagram + controls, side by side above 760px
+     ============================================================ */
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 760px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  /* ============================================================
+     DIAGRAM
+     ============================================================ */
+  figure { margin: 0; }
+
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .edge-solid { stroke: var(--accent); stroke-width: 2.5; fill: none; }
+  .edge-dashed { stroke: var(--accent-2); stroke-width: 2.5; stroke-dasharray: 6 6; fill: none; }
+
+  .node-i, .node-j { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
+  .node-k { fill: var(--accent-2); stroke: var(--surface); stroke-width: 3; }
+
+  .svg-label {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    text-anchor: middle;
+    fill: var(--text);
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+
+  .svg-label.edge-value { fill: var(--accent); }
+  .svg-label.edge-range { fill: var(--accent-2); font-weight: 500; }
+
+  .abstract-tspan {
+    font-family: var(--font-body);
+    font-size: 10px;
+    fill: var(--text-secondary);
+    letter-spacing: 0.02em;
+  }
+
+  figcaption {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  /* ============================================================
+     CONTROLS
+     ============================================================ */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .slider-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .slider-group label {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .slider-group .abstract {
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-size: 0.82em;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    min-width: 0;
+  }
+
+  .readout {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    min-width: 5.2ch;
+    text-align: right;
+    color: var(--text);
+  }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+  }
+
+  /* d(i,j) custom track control */
+  .dij-control { display: flex; flex-direction: column; gap: 8px; }
+
+  .dij-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .dij-control-header .abstract {
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-size: 0.82em;
+  }
+
+  #dij-current-readout {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-2);
+    font-size: 0.9rem;
+  }
+
+  .dij-track {
+    position: relative;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    margin-block: 14px;
+  }
+
+  .dij-track-zone {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: 0;
+    width: 0;
+    background: color-mix(in srgb, var(--accent-2) 30%, transparent);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .dij-marker {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--accent-2);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--border);
+    cursor: grab;
+    padding: 0;
+    touch-action: none;
+  }
+
+  .dij-marker:active { cursor: grabbing; }
+
+  .dij-marker:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .dij-track-endlabels {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+
+  .invalid-flash {
+    margin: 0;
+    min-height: 1.1em;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--danger);
+    opacity: 0;
+  }
+
+  @keyframes invalid-pulse {
+    0%   { opacity: 0; transform: translateY(-3px); }
+    18%  { opacity: 1; transform: translateY(0); }
+    78%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .invalid-flash.flash-active {
+    animation: invalid-pulse 700ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .invalid-flash.flash-active { animation-duration: 1ms; }
+  }
+
+  input:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>
+
+<div class="page">
+
+  <header>
+    <div class="eyebrow">AF3 Visualizer &middot; Supporting Visualization</div>
+    <h1>Triangle Inequality Sandbox</h1>
+    <p class="subhead">
+      AlphaFold 3's pair representation stores one distance estimate for every
+      pair of tokens &mdash; the model's internal notion of a
+      <strong>distance map</strong> (structural biology) built from
+      <strong>pairwise attention</strong> (machine learning). Fix how far two
+      residues each sit from a shared reference point, and the distance
+      between those two residues is no longer free: geometry boxes it in.
+      That constraint is exactly what AF3's triangle updates exploit.
+    </p>
+  </header>
+
+  <p class="takeaway">
+    Two distances don't fix the third, they only bound it, geometry does the rest.
+  </p>
+
+  <div class="workspace">
+
+    <div class="panel">
+      <figure>
+        <svg viewBox="0 0 560 360" role="img"
+             aria-label="Triangle diagram of three points: two peptide residues, Gly two and Ser five, and a magnesium ion. The distance between the two residues is constrained, not fixed, by their distances to the ion.">
+          <line id="edge-ik" class="edge-solid" x1="130" y1="270" x2="280" y2="90"></line>
+          <line id="edge-jk" class="edge-solid" x1="430" y1="270" x2="280" y2="90"></line>
+          <line id="edge-ij" class="edge-dashed" x1="130" y1="270" x2="430" y2="270"></line>
+
+          <text id="label-ik" class="svg-label edge-value" x="180" y="170">12.0 &#197;</text>
+          <text id="label-jk" class="svg-label edge-value" x="380" y="170">9.0 &#197;</text>
+          <text id="dij-range-label" class="svg-label edge-range" x="280" y="252">3.0 &ndash; 21.0 &#197;</text>
+
+          <circle id="node-i" class="node-i" cx="130" cy="270" r="9"></circle>
+          <circle id="node-j" class="node-j" cx="430" cy="270" r="9"></circle>
+          <circle id="node-k" class="node-k" cx="280" cy="90" r="9"></circle>
+
+          <text id="label-i" class="svg-label" x="130" y="296">
+            <tspan x="130" dy="0">Gly&#178;</tspan>
+            <tspan class="abstract-tspan" x="130" dy="14">i</tspan>
+          </text>
+          <text id="label-j" class="svg-label" x="430" y="296">
+            <tspan x="430" dy="0">Ser&#8309;</tspan>
+            <tspan class="abstract-tspan" x="430" dy="14">j</tspan>
+          </text>
+          <text id="label-k" class="svg-label" x="280" y="56">
+            <tspan x="280" dy="0">Mg&#178;&#8314;</tspan>
+            <tspan class="abstract-tspan" x="280" dy="14">k</tspan>
+          </text>
+        </svg>
+        <figcaption>
+          Solid edges are set directly by the sliders. The dashed edge shows
+          the full range Gly&#178;&ndash;Ser&#8309; could occupy &mdash; drag its
+          marker past either end to see what happens outside that range.
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="panel controls">
+
+      <div class="slider-group">
+        <label for="dik-slider">d(i,k) <span class="abstract">&mdash; Gly&#178; to Mg&#178;&#8314;</span></label>
+        <div class="slider-row">
+          <input type="range" id="dik-slider" min="3" max="20" step="0.1" value="12.0">
+          <output id="dik-readout" for="dik-slider" class="readout">12.0 &#197;</output>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <label for="djk-slider">d(j,k) <span class="abstract">&mdash; Ser&#8309; to Mg&#178;&#8314;</span></label>
+        <div class="slider-row">
+          <input type="range" id="djk-slider" min="3" max="20" step="0.1" value="9.0">
+          <output id="djk-readout" for="djk-slider" class="readout">9.0 &#197;</output>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="dij-control">
+        <div class="dij-control-header">
+          <span>d(i,j) <span class="abstract">&mdash; Gly&#178; to Ser&#8309;</span></span>
+          <span id="dij-current-readout">12.0 &#197;</span>
+        </div>
+        <div class="dij-track" id="dij-track">
+          <div class="dij-track-zone" id="dij-track-zone"></div>
+          <button type="button"
+                  id="dij-marker"
+                  role="slider"
+                  aria-orientation="horizontal"
+                  aria-valuemin="0"
+                  aria-valuemax="40"
+                  aria-label="d(i,j), Gly two to Ser five distance. Drag past the highlighted valid range to see it snap back."></button>
+        </div>
+        <div class="dij-track-endlabels">
+          <span>0 &#197;</span>
+          <span>40 &#197;</span>
+        </div>
+        <p id="invalid-flash" class="invalid-flash" role="status">Not a valid triangle &mdash; snapped back to the nearest bound.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==========================================================
+  // DOM-update helpers for the diagram and the d(i,j) track.
+  // Self-contained: each does its own element lookups so it has
+  // no dependency on the interaction-logic closure below.
+  // ==========================================================
+
+  // Fixed pixel-space domain of the d(i,j) track control. 0 is the
+  // theoretical floor of triangleRange (dik === djk); 40 is the
+  // theoretical ceiling (dik === djk === 20, the slider max on both).
+  const DIJ_TRACK_MIN = 0;
+  const DIJ_TRACK_MAX = 40;
+
+  function updateMarkerPosition(dijValue, min, max) {
+    const pct = (v) => ((v - DIJ_TRACK_MIN) / (DIJ_TRACK_MAX - DIJ_TRACK_MIN)) * 100;
+
+    const marker = document.getElementById('dij-marker');
+    const zone = document.getElementById('dij-track-zone');
+    const readout = document.getElementById('dij-current-readout');
+
+    marker.style.left = pct(dijValue) + '%';
+    marker.setAttribute('aria-valuenow', dijValue.toFixed(1));
+    marker.setAttribute('aria-valuetext', dijValue.toFixed(1) + ' Å');
+
+    const zoneLeft = pct(min);
+    const zoneWidth = Math.max(pct(max) - pct(min), 0);
+    zone.style.left = zoneLeft + '%';
+    zone.style.width = zoneWidth + '%';
+
+    readout.textContent = dijValue.toFixed(1) + ' Å';
+  }
+
+  function updateSvgFromPoints(i, j, k) {
+    // Drawing area inside the fixed 560x360 viewBox, leaving room for the
+    // node labels (below i/j, above k) and the edge-value labels.
+    const viewW = 560, viewH = 360;
+    const pad = { left: 80, right: 80, top: 60, bottom: 70 };
+    const innerW = viewW - pad.left - pad.right;
+    const innerH = viewH - pad.top - pad.bottom;
+
+    // Guard the one reachable degenerate case layoutTriangle does not
+    // itself guard: when dik === djk and the marker is dragged to the
+    // range's lower bound (0), dij is 0 too, so layoutTriangle's
+    // cosAngleI divides by 2*dik*dij = 0 and k comes back as NaN/NaN.
+    // layoutTriangle's own math is left untouched (Task 1's contract) —
+    // this is purely a rendering fallback: with i and j collapsed onto
+    // the same point, direction is genuinely undefined, so k is drawn
+    // directly above the collapsed point at distance dik.
+    let kx = k.x, ky = k.y;
+    if (!Number.isFinite(kx) || !Number.isFinite(ky)) {
+      const dik = Number(document.getElementById('dik-slider').value);
+      kx = i.x;
+      ky = dik;
+    }
+
+    const pts = [i, j, { x: kx, y: ky }];
+    const minX = Math.min(pts[0].x, pts[1].x, pts[2].x);
+    const maxX = Math.max(pts[0].x, pts[1].x, pts[2].x);
+    const minY = Math.min(pts[0].y, pts[1].y, pts[2].y);
+    const maxY = Math.max(pts[0].y, pts[1].y, pts[2].y);
+
+    // Guard flat (collinear) triangles, which are common here: dij at
+    // either exact bound puts k on the i-j line, giving zero height.
+    const spanX = Math.max(maxX - minX, 0.5);
+    const spanY = Math.max(maxY - minY, 0.5);
+    const scale = Math.min(innerW / spanX, innerH / spanY);
+
+    // Fit-and-center: model space to SVG space, flipping y (model y grows
+    // "up" out of the i-j baseline; SVG y grows down) so k always renders
+    // above the baseline, matching layoutTriangle's own convention.
+    function toSvg(p) {
+      const x = pad.left + (innerW - spanX * scale) / 2 + (p.x - minX) * scale;
+      const y = pad.top + innerH - ((innerH - spanY * scale) / 2 + (p.y - minY) * scale);
+      return { x, y };
+    }
+
+    const si = toSvg(i);
+    const sj = toSvg(j);
+    const sk = toSvg({ x: kx, y: ky });
+
+    document.getElementById('node-i').setAttribute('cx', si.x);
+    document.getElementById('node-i').setAttribute('cy', si.y);
+    document.getElementById('node-j').setAttribute('cx', sj.x);
+    document.getElementById('node-j').setAttribute('cy', sj.y);
+    document.getElementById('node-k').setAttribute('cx', sk.x);
+    document.getElementById('node-k').setAttribute('cy', sk.y);
+
+    const edgeIk = document.getElementById('edge-ik');
+    edgeIk.setAttribute('x1', si.x); edgeIk.setAttribute('y1', si.y);
+    edgeIk.setAttribute('x2', sk.x); edgeIk.setAttribute('y2', sk.y);
+
+    const edgeJk = document.getElementById('edge-jk');
+    edgeJk.setAttribute('x1', sj.x); edgeJk.setAttribute('y1', sj.y);
+    edgeJk.setAttribute('x2', sk.x); edgeJk.setAttribute('y2', sk.y);
+
+    const edgeIj = document.getElementById('edge-ij');
+    edgeIj.setAttribute('x1', si.x); edgeIj.setAttribute('y1', si.y);
+    edgeIj.setAttribute('x2', sj.x); edgeIj.setAttribute('y2', sj.y);
+
+    // Node labels: concrete name + abstract letter, positioned below i/j
+    // and above k so they never sit inside the triangle's interior.
+    function placeNodeLabel(id, p, dy) {
+      const el = document.getElementById(id);
+      el.setAttribute('x', p.x);
+      el.setAttribute('y', p.y + dy);
+      const tspans = el.querySelectorAll('tspan');
+      tspans.forEach((t) => t.setAttribute('x', p.x));
+    }
+    placeNodeLabel('label-i', si, 26);
+    placeNodeLabel('label-j', sj, 26);
+    placeNodeLabel('label-k', sk, -34);
+
+    // Edge-value labels: midpoint of each edge, offset perpendicular to
+    // it so the text clears the line instead of sitting on top of it.
+    function placeEdgeLabel(id, p1, p2, offset) {
+      const mx = (p1.x + p2.x) / 2;
+      const my = (p1.y + p2.y) / 2;
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const el = document.getElementById(id);
+      el.setAttribute('x', mx + nx * offset);
+      el.setAttribute('y', my + ny * offset);
+    }
+    placeEdgeLabel('label-ik', si, sk, -14);
+    placeEdgeLabel('label-jk', sj, sk, 14);
+    placeEdgeLabel('dij-range-label', si, sj, -16);
+
+    // Numeric readouts next to the sliders and the solid-edge labels'
+    // text content both come from the sliders directly, so they can
+    // never drift out of sync with what's drawn.
+    const dikVal = Number(document.getElementById('dik-slider').value);
+    const djkVal = Number(document.getElementById('djk-slider').value);
+    document.getElementById('label-ik').textContent = dikVal.toFixed(1) + ' Å';
+    document.getElementById('label-jk').textContent = djkVal.toFixed(1) + ' Å';
+    document.getElementById('dik-readout').textContent = dikVal.toFixed(1) + ' Å';
+    document.getElementById('djk-readout').textContent = djkVal.toFixed(1) + ' Å';
+  }
+</script>
+
+<script>
+  // ==========================================================
+  // Interaction logic — copied verbatim from the plan, with the
+  // marked insertion point filled in for the d(i,j) track's drag
+  // and keyboard handling.
+  // ==========================================================
+  (function () {
+    function triangleRange(dik, djk) {
+      return [Math.abs(dik - djk), dik + djk];
+    }
+    function clampToRange(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+    function layoutTriangle(dik, djk, dij) {
+      const i = { x: 0, y: 0 };
+      const j = { x: dij, y: 0 };
+      const cosAngleI = (dik * dik + dij * dij - djk * djk) / (2 * dik * dij);
+      const angleI = Math.acos(clampToRange(cosAngleI, -1, 1));
+      const k = { x: dik * Math.cos(angleI), y: dik * Math.sin(angleI) };
+      return { i, j, k };
+    }
+
+    const dikSlider = document.getElementById('dik-slider');
+    const djkSlider = document.getElementById('djk-slider');
+    const marker = document.getElementById('dij-marker');
+    const rangeLabel = document.getElementById('dij-range-label');
+    const flash = document.getElementById('invalid-flash');
+
+    // dijValue is the marker's current position in Å — the live value used
+    // to draw the triangle. Starts at the midpoint of the initial range.
+    let dijValue = null;
+
+    function currentRange() {
+      return triangleRange(Number(dikSlider.value), Number(djkSlider.value));
+    }
+
+    function redraw() {
+      const [min, max] = currentRange();
+      if (dijValue === null) {
+        dijValue = (min + max) / 2;
+      } else {
+        // Automatic reflow on slider change: silently reclamp, no flash.
+        dijValue = clampToRange(dijValue, min, max);
+      }
+      rangeLabel.textContent = min.toFixed(1) + ' – ' + max.toFixed(1) + ' Å';
+      const { i, j, k } = layoutTriangle(Number(dikSlider.value), Number(djkSlider.value), dijValue);
+      // Implementer: map i/j/k model-space coordinates to SVG viewBox
+      // coordinates here (scale + center), then set the solid i-k / j-k
+      // line endpoints, the dashed i-j line endpoints, and each node
+      // circle's cx/cy, plus the marker's position along the range track.
+      updateSvgFromPoints(i, j, k); // defined alongside the SVG markup in Step 2
+      updateMarkerPosition(dijValue, min, max); // same
+    }
+
+    function attemptDijDrag(candidateValue) {
+      const [min, max] = currentRange();
+      if (candidateValue < min || candidateValue > max) {
+        const clamped = clampToRange(candidateValue, min, max);
+        dijValue = clamped;
+        flash.classList.remove('flash-active');
+        // Force reflow so the animation restarts on repeated out-of-range drags.
+        void flash.offsetWidth;
+        flash.classList.add('flash-active');
+      } else {
+        dijValue = candidateValue;
+      }
+      redraw();
+    }
+
+    dikSlider.addEventListener('input', redraw);
+    djkSlider.addEventListener('input', redraw);
+    // Implementer: attach pointerdown/pointermove/pointerup (or drag) handlers
+    // on `marker` that compute a candidateValue in Å from pointer position
+    // along the range track and call attemptDijDrag(candidateValue).
+    const track = document.getElementById('dij-track');
+
+    function valueFromClientX(clientX) {
+      const rect = track.getBoundingClientRect();
+      const ratio = (clientX - rect.left) / rect.width;
+      return clampToRange(DIJ_TRACK_MIN + ratio * (DIJ_TRACK_MAX - DIJ_TRACK_MIN), DIJ_TRACK_MIN, DIJ_TRACK_MAX);
+    }
+
+    let dragging = false;
+
+    marker.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      marker.setPointerCapture(e.pointerId);
+      attemptDijDrag(valueFromClientX(e.clientX));
+    });
+    marker.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      attemptDijDrag(valueFromClientX(e.clientX));
+    });
+    marker.addEventListener('pointerup', (e) => {
+      dragging = false;
+      marker.releasePointerCapture(e.pointerId);
+    });
+    marker.addEventListener('pointercancel', () => {
+      dragging = false;
+    });
+
+    // Keyboard parity with the two native <input type="range"> sliders,
+    // since this is a hand-built control standing in for a third one.
+    const KEY_STEP = 0.5;
+    marker.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        attemptDijDrag(clampToRange(dijValue + KEY_STEP, DIJ_TRACK_MIN, DIJ_TRACK_MAX));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        attemptDijDrag(clampToRange(dijValue - KEY_STEP, DIJ_TRACK_MIN, DIJ_TRACK_MAX));
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        attemptDijDrag(DIJ_TRACK_MIN);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        attemptDijDrag(DIJ_TRACK_MAX);
+      }
+    });
+
+    redraw();
+  })();
+</script>
