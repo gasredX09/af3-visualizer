@@ -66,6 +66,14 @@ boards:
       density: compact
       col: 3
       row: 3
+    - id: single_state_input_projection
+      ref: modules.single_state_input_projection
+      label: project singles
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 4
+      row: 2
     - id: pair_state_input_projection
       ref: modules.pair_state_input_projection
       label: project pairs
@@ -74,8 +82,6 @@ boards:
       density: micro
       col: 4
       row: 4
-      role: outer-sum two independent LinearNoBias projections of s_inputs into pair_state_input
-      detail: single_state_input_projection projects s_inputs to single_state_input the same way (one LinearNoBias layer, Algorithm 1 line 2); it is not separately diagrammed on this overview since the pattern is identical.
     - id: token_mask_input
       ref: value_sites.token_mask_input
       label: token mask
@@ -133,12 +139,8 @@ boards:
         title: Final pair representation
         role: downstream pair context
         inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
-    exclude:
-    - ref: modules.single_state_input_projection
-      reason: single_state_input_projection and pair_state_input_projection are structurally identical independent linear projections of s_inputs (Algorithm 1 lines 2-3; the pair projection additionally outer-sums two projections). The pair projection stays visible on this overview as the representative example; the root board keeps that one pattern once rather than drawing it twice, now that the board must also show the Input Feature Embedder's own inputs.
-    - ref: value_sites.single_state_input
-      reason: Its sole producer, single_state_input_projection, is excluded from this board for the same reason (see that occurrence's reason); showing this value site without its producer would misrepresent it as unexplained.
     elide:
+    - ref: value_sites.single_state_input
     - ref: value_sites.pair_state_input
 
   - id: pairformer_block

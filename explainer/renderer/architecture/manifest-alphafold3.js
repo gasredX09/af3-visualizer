@@ -5,7 +5,7 @@ export const manifest = {
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
       "architectures/alphafold3-pairformer.yaml": "fb4323a3a49e12c39fea3270c68d2f448544d8db023991e5e7043aeacf0b09ee",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "c826ddc124a717df137e6e75207d190c4d9c99b4a41695f6f6cb6a88a67a4b03",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4fb4e43e588132cf00225aa7c10300f74b37b3b809a87c598f0e96799fef05e4",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -5797,6 +5797,16 @@ export const manifest = {
             "row": 3
           },
           {
+            "id": "single_state_input_projection",
+            "ref": "modules.single_state_input_projection",
+            "label": "project singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 2
+          },
+          {
             "id": "pair_state_input_projection",
             "ref": "modules.pair_state_input_projection",
             "label": "project pairs",
@@ -5804,9 +5814,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 4,
-            "row": 4,
-            "role": "outer-sum two independent LinearNoBias projections of s_inputs into pair_state_input",
-            "detail": "single_state_input_projection projects s_inputs to single_state_input the same way (one LinearNoBias layer, Algorithm 1 line 2); it is not separately diagrammed on this overview since the pattern is identical."
+            "row": 4
           },
           {
             "id": "token_mask_input",
@@ -5885,17 +5893,10 @@ export const manifest = {
             }
           }
         ],
-        "exclude": [
-          {
-            "ref": "modules.single_state_input_projection",
-            "reason": "single_state_input_projection and pair_state_input_projection are structurally identical independent linear projections of s_inputs (Algorithm 1 lines 2-3; the pair projection additionally outer-sums two projections). The pair projection stays visible on this overview as the representative example; the root board keeps that one pattern once rather than drawing it twice, now that the board must also show the Input Feature Embedder's own inputs."
-          },
-          {
-            "ref": "value_sites.single_state_input",
-            "reason": "Its sole producer, single_state_input_projection, is excluded from this board for the same reason (see that occurrence's reason); showing this value site without its producer would misrepresent it as unexplained."
-          }
-        ],
         "elide": [
+          {
+            "ref": "value_sites.single_state_input"
+          },
           {
             "ref": "value_sites.pair_state_input"
           }
@@ -6231,6 +6232,58 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_3d1249db30c6",
+            "from": "s_inputs",
+            "to": "single_state_input_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_single_state_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_single_state_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a09034493b88",
+            "from": "single_state_input_projection",
+            "to": "pairformer_stack",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_state_projection_produces_single_state_input",
+              "relations.input_single_state_initializes_block_single_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_projection_produces_single_state_input"
+              },
+              {
+                "relation_ref": "relations.input_single_state_initializes_block_single_state"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.single_state_input"
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_d3b940b30ce4",
             "from": "token_mask_input",
             "to": "pairformer_stack",
@@ -6266,7 +6319,7 @@ export const manifest = {
           "modules.pairformer_stack": "visible",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
-          "modules.single_state_input_projection": "excluded",
+          "modules.single_state_input_projection": "visible",
           "modules.single_transition": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
@@ -6288,7 +6341,7 @@ export const manifest = {
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
-          "value_sites.single_state_input": "excluded",
+          "value_sites.single_state_input": "elided",
           "value_sites.single_state_output": "visible",
           "value_sites.token_mask_input": "visible"
         },
