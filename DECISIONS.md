@@ -382,3 +382,63 @@ attribution, while arguably compliant given the repo's public source,
 fell short of the courtesy this project already extends to other
 licensing questions (see the AF3 weights Output Terms of Use handling
 in `CLAUDE.md`) -- a whole-plan review caught the gap and this closes it.
+
+## 2026-09-19: Hand-edit the Input Feature Embedder instead of using architecture-edit-v0.2
+
+**Decision:** Author the Input Feature Embedder module's architecture
+facts and its root-board view node by direct, careful hand-edit of both
+`explainer/architectures/alphafold3-pairformer.yaml` and
+`explainer/views/alphafold3-pairformer-semantic-zoom.view.yaml` in one
+pass, gated by the full verification pipeline (`lint_sources.rb`,
+`verify_architecture.rb`, `build-manifest.rb --check`) -- not by the
+`architecture-edit-v0.2` typed edit-plan tool, despite the 2026-09-18
+pivot entry and this plan's own original design both calling for
+edit-plans as the authoring mechanism for an already-registered source
+set.
+
+**Options considered:**
+- Extend `architecture-edit-v0.2` itself with new operations (a node-
+  on-an-existing-board op, an `architecture`-root `update_entity`
+  target, an `unset` capability) before authoring any content.
+- Split this module's content so nothing wires into an already-visible
+  value site, avoiding the trigger for the blocking validation.
+- This decision: hand-edit, following `explainer/AGENTS.md`'s own
+  documented fallback for edits outside the edit-plan boundary.
+
+**Why:** A first implementation attempt exhaustively confirmed, via
+isolated one-operation probe plans against the real tool (not just
+reading its docs), that `architecture-edit-v0.2` cannot express this
+task: `prepare` requires anything wired into an already-visible value
+site to also be visible on the root board (`missing_root_boundary` /
+`unclassified_object` / `unmapped_boundary`, depending on how the new
+facts were scoped), and no operation in the current op list
+(`add_module`, `add_representation`, `add_value_site`, `add_relation`,
+`update_entity`, `scaffold_board`, `layout_board`, `update_view_entity`,
+`set_edge_override`, `set_board_visibility`) adds a node to an existing
+board. `update_entity` separately cannot target the architecture root
+(no `architecture` collection in `lib/architecture_edit.rb`'s
+`COLLECTIONS`) or remove a field (`update_entity`'s schema exposes
+`set`/`expect`, not the `YamlSourcePatch` primitive's own `unset`).
+
+Extending the tool (option 1) is likely the more durable fix if this
+exact pattern -- a new module wired into an already-visible value site
+-- recurs for later sub-project 1 modules, which it plausibly will
+(every remaining module borders content the Pairformer or an earlier
+module already made visible). It was not chosen for *this* task because
+it means modifying the vendored tool's own Ruby source, schema, and test
+suite, which is a separate, larger piece of work deserving its own
+design pass, not something to improvise under one blocked task. Splitting
+the content to dodge the trigger (option 2) was rejected because it would
+mean either not actually wiring into `single_state_input`/`pair_state_input`
+(the task's explicit, required content, per `SPEC.md`) or misrepresenting
+the architecture to route around a tool limitation -- both worse than
+using the documented escape hatch. `explainer/AGENTS.md` already
+sanctions hand-editing for "unsupported edits," so this is applying an
+existing rule to a newly-confirmed case, not inventing a new exception.
+
+**Supersedes:** this plan's own original Task 2/Task 3 split (edit-plan
+for architecture, hand-edit-plus-`layout_board` for the view), written
+before this gap was discovered. The 2026-09-18 pivot entry's general
+guidance (edit-plans for an already-registered source set) is not
+reversed -- it still applies whenever a change doesn't trigger this
+specific visibility constraint.
