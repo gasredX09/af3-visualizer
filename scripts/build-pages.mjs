@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// Builds the static site served by GitHub Pages, into dist/.
+// Builds the legacy screens (built before the Architecture Explainer pivot,
+// DECISIONS.md 2026-09-18) into dist/screens/. Additive only: this script
+// must never touch anything outside dist/screens/, because the Ruby
+// explainer build (explainer/scripts/build_pages.rb) owns the rest of
+// dist/ and runs first, wholesale-replacing its own output directory. If
+// this script ran first, or wiped all of dist/, the Ruby build's output
+// would be silently destroyed.
 //
 // Each file under screens/ is authored as an Artifact fragment (per
-// DECISIONS.md's one-Artifact-per-screen entry): no <!DOCTYPE>, <html>,
-// <head>, or <body> tags of its own, since Claude's Artifact tool injects
-// those at publish time. GitHub Pages has no such publish-time wrapping
-// step, so this script does the same job: wrap each fragment in a real
-// standalone document (charset + viewport meta, since the fragment's own
-// responsive CSS depends on the viewport meta actually being present) and
-// write the result into dist/, alongside a generated index page linking
-// every screen.
+// DECISIONS.md's one-Artifact-per-screen entry, now superseded for future
+// screens but still describing how these three were built): no
+// <!DOCTYPE>, <html>, <head>, or <body> tags of its own. This script wraps
+// each fragment in a real standalone document (charset + viewport meta)
+// and writes the result into dist/screens/, alongside a generated index
+// page linking every screen and back to the explainer root.
 //
 // Run: node scripts/build-pages.mjs
 
@@ -20,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SCREENS_DIR = join(ROOT, 'screens');
 const DIST_DIR = join(ROOT, 'dist');
+const DIST_SCREENS_DIR = join(DIST_DIR, 'screens');
 
 function wrapDocument(title, fragment) {
   return `<!doctype html>
@@ -48,12 +53,12 @@ async function buildScreens() {
     .sort();
 
   const screens = [];
-  await mkdir(join(DIST_DIR, 'screens'), { recursive: true });
+  await mkdir(DIST_SCREENS_DIR, { recursive: true });
 
   for (const name of htmlFiles) {
     const fragment = await readFile(join(SCREENS_DIR, name), 'utf8');
     const title = extractTitle(fragment, name.replace(/\.html$/, ''));
-    await writeFile(join(DIST_DIR, 'screens', name), wrapDocument(title, fragment));
+    await writeFile(join(DIST_SCREENS_DIR, name), wrapDocument(title, fragment));
     screens.push({ name, title });
   }
 
@@ -62,10 +67,10 @@ async function buildScreens() {
 
 function renderIndex(screens) {
   const items = screens
-    .map((s) => `      <li><a href="screens/${s.name}">${s.title}</a></li>`)
+    .map((s) => `      <li><a href="${s.name}">${s.title}</a></li>`)
     .join('\n');
 
-  const fragment = `<title>AF3 Visualizer</title>
+  const fragment = `<title>AF3 Visualizer: earlier screens</title>
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -83,24 +88,26 @@ function renderIndex(screens) {
   h1 { margin: 0 0 8px; }
   p.sub { color: #5b6b62; max-width: 60ch; }
   ul { padding-left: 1.2em; line-height: 1.8; font-size: 1.05rem; }
+  p.back { margin-top: 2em; }
 </style>
-<h1>AF3 Visualizer</h1>
+<h1>Earlier standalone screens</h1>
 <p class="sub">
-  An interactive teaching tool showing how input flows through the
-  AlphaFold 3 architecture.
+  Built before the AF3 Visualizer moved to the Architecture Explainer.
+  Kept live; not part of the explorer's semantic-zoom boards.
 </p>
 <ul>
 ${items}
 </ul>
+<p class="back"><a href="../">&larr; Back to the AF3 architecture explainer</a></p>
 `;
-  return wrapDocument('AF3 Visualizer', fragment);
+  return wrapDocument('AF3 Visualizer: earlier screens', fragment);
 }
 
 async function main() {
-  await rm(DIST_DIR, { recursive: true, force: true });
+  await rm(DIST_SCREENS_DIR, { recursive: true, force: true });
   const screens = await buildScreens();
-  await writeFile(join(DIST_DIR, 'index.html'), renderIndex(screens));
-  console.log(`Built ${screens.length} screen(s) and index.html into ${DIST_DIR}`);
+  await writeFile(join(DIST_SCREENS_DIR, 'index.html'), renderIndex(screens));
+  console.log(`Built ${screens.length} screen(s) and screens/index.html into ${DIST_SCREENS_DIR}`);
   for (const s of screens) console.log(`  - screens/${s.name} (${s.title})`);
 }
 
