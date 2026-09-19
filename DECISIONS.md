@@ -316,3 +316,31 @@ atom-token-atom hourglass): they stay exactly as they are, live at
 for now rather than port or retire them. The 2026-09-18 "Pages is the
 actual delivery channel" entry's reasoning (Pages over Artifacts) is
 unaffected and still applies to the explainer build.
+
+## 2026-09-19: License the vendored explainer/ subtree as AGPL-3.0, third-party notice added
+
+**Decision:** `explainer/` (vendored from ramithuh/explainer, per the
+2026-09-18 pivot entry) is licensed AGPL-3.0 under its own
+`explainer/LICENSE`, unchanged from upstream. Added a root
+`THIRD_PARTY_NOTICES.md` documenting this and a small attribution
+footer on the explainer's own landing page, to satisfy AGPL-3.0
+Section 13 for the live, modified, network-served deployment (this
+repo being public already satisfies the "corresponding source"
+requirement; the notice and footer close the attribution gap).
+
+**Options considered:**
+- License the whole af3-visualizer repo as AGPL-3.0 to match.
+- Do nothing further (the public repo alone technically satisfies
+  Section 13's source-availability requirement).
+- This decision: keep the rest of the repo under no formal license
+  (as it already was before this pivot) and scope AGPL-3.0 plus
+  attribution explicitly to the vendored subtree.
+
+**Why:** Relicensing the whole project wasn't asked for and isn't
+warranted, since only `explainer/` is actually AGPL-3.0 code; the rest
+of af3-visualizer (screens, docs, build scripts) is original work with
+no license obligations from the vendored subtree. Silence on
+attribution, while arguably compliant given the repo's public source,
+fell short of the courtesy this project already extends to other
+licensing questions (see the AF3 weights Output Terms of Use handling
+in `CLAUDE.md`) -- a whole-plan review caught the gap and this closes it.

@@ -68,13 +68,17 @@ export const manifest = {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.context_builder": {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.item_encoder": {
           "status": "complete",
@@ -89,19 +93,25 @@ export const manifest = {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.local_attention_stack": {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.item_to_group_pool": {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.group_refiner": {
           "status": "complete",
@@ -115,19 +125,25 @@ export const manifest = {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.output_decoder": {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.output_heads": {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
@@ -140,8 +156,12 @@ export const manifest = {
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 2
       },
-      "opaqueFrontierRefs": [],
-      "partialScopeRefs": []
+      "opaqueFrontierRefs": [
+
+      ],
+      "partialScopeRefs": [
+
+      ]
     },
     "modules": [
       {
@@ -904,11 +924,15 @@ export const manifest = {
     ],
     "valueSiteInterfaces": {
       "raw_records_input": {
-        "incomingRelationRefs": [],
+        "incomingRelationRefs": [
+
+        ],
         "outgoingRelationRefs": [
           "relations.raw_records_enter_input_adapter"
         ],
-        "producerRefs": [],
+        "producerRefs": [
+
+        ],
         "consumerRefs": [
           "modules.input_adapter"
         ]
@@ -1037,11 +1061,15 @@ export const manifest = {
         "incomingRelationRefs": [
           "relations.output_heads_produce_predictions"
         ],
-        "outgoingRelationRefs": [],
+        "outgoingRelationRefs": [
+
+        ],
         "producerRefs": [
           "modules.output_heads"
         ],
-        "consumerRefs": []
+        "consumerRefs": [
+
+        ]
       }
     },
     "execution": {
@@ -3268,7 +3296,9 @@ export const manifest = {
           "source_ref": "generic_feature_refinement_source"
         }
       ],
-      "scopes": [],
+      "scopes": [
+
+      ],
       "symbols": [
         {
           "id": "raw_records",
@@ -3936,7 +3966,9 @@ export const manifest = {
                 "relation_ref": "relations.conditioning_signal_modulates_item_adaln"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.conditioning_signal"
             ],
@@ -3965,7 +3997,9 @@ export const manifest = {
                 "relation_ref": "relations.context_builder_produces_pair_context"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.pair_context"
             ],
@@ -3994,7 +4028,9 @@ export const manifest = {
                 "relation_ref": "relations.refined_group_state_enters_output_decoder"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.group_state"
             ],
@@ -4022,7 +4058,9 @@ export const manifest = {
                 "relation_ref": "relations.group_state_enters_pair_attention"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.group_state"
             ],
@@ -4050,7 +4088,9 @@ export const manifest = {
                 "relation_ref": "relations.input_adapter_initializes_conditioning_signal"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.conditioning_signal"
             ],
@@ -4115,7 +4155,9 @@ export const manifest = {
                 "relation_ref": "relations.input_adapter_initializes_item_state"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4215,7 +4257,9 @@ export const manifest = {
                 "relation_ref": "relations.encoded_item_state_enters_group_pool"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4243,7 +4287,9 @@ export const manifest = {
                 "relation_ref": "relations.encoded_item_state_skips_to_output_decoder"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4274,7 +4320,9 @@ export const manifest = {
                 "relation_ref": "relations.item_output_state_feeds_output_heads"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_output_state"
             ],
@@ -4302,7 +4350,9 @@ export const manifest = {
                 "relation_ref": "relations.item_state_feeds_context_builder"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4330,7 +4380,9 @@ export const manifest = {
                 "relation_ref": "relations.item_state_enters_item_adaln"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4358,7 +4410,9 @@ export const manifest = {
                 "relation_ref": "relations.item_to_group_pool_produces_group_state"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.group_state"
             ],
@@ -4386,7 +4440,9 @@ export const manifest = {
                 "relation_ref": "relations.output_decoder_produces_item_output_state"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_output_state"
             ],
@@ -4414,7 +4470,9 @@ export const manifest = {
                 "relation_ref": "relations.output_heads_produce_predictions"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.predictions"
             ],
@@ -4442,7 +4500,9 @@ export const manifest = {
                 "relation_ref": "relations.pair_context_biases_pair_attention"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.pair_context"
             ],
@@ -4471,7 +4531,9 @@ export const manifest = {
                 "relation_ref": "relations.raw_records_enter_input_adapter"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.raw_records"
             ],
@@ -4630,7 +4692,9 @@ export const manifest = {
                 "relation_ref": "relations.item_adaln_feeds_local_attention"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4658,7 +4722,9 @@ export const manifest = {
                 "relation_ref": "relations.conditioning_signal_modulates_item_adaln"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.conditioning_signal"
             ],
@@ -4687,7 +4753,9 @@ export const manifest = {
                 "relation_ref": "relations.item_state_enters_item_adaln"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4715,7 +4783,9 @@ export const manifest = {
                 "relation_ref": "relations.local_attention_updates_item_state"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.item_state"
             ],
@@ -4842,7 +4912,9 @@ export const manifest = {
                 "relation_ref": "relations.group_state_enters_pair_attention"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.group_state"
             ],
@@ -4870,7 +4942,9 @@ export const manifest = {
                 "relation_ref": "relations.pair_attention_updates_group_state"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.group_state"
             ],
@@ -4898,7 +4972,9 @@ export const manifest = {
                 "relation_ref": "relations.pair_context_biases_pair_attention"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.pair_context"
             ],
@@ -5316,7 +5392,9 @@ export const manifest = {
             "from": "project_qkv",
             "to": "queries",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5335,7 +5413,9 @@ export const manifest = {
             "from": "project_qkv",
             "to": "keys",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5354,7 +5434,9 @@ export const manifest = {
             "from": "project_qkv",
             "to": "scalar_values",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5373,7 +5455,9 @@ export const manifest = {
             "from": "queries",
             "to": "scalar_logits_step",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5392,7 +5476,9 @@ export const manifest = {
             "from": "keys",
             "to": "scalar_logits_step",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5411,7 +5497,9 @@ export const manifest = {
             "from": "scalar_logits_step",
             "to": "scalar_logits",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5455,7 +5543,9 @@ export const manifest = {
             "from": "project_pair_bias",
             "to": "pair_bias",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5474,7 +5564,9 @@ export const manifest = {
             "from": "scalar_logits",
             "to": "combine_logits",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5493,7 +5585,9 @@ export const manifest = {
             "from": "pair_bias",
             "to": "combine_logits",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5512,7 +5606,9 @@ export const manifest = {
             "from": "combine_logits",
             "to": "biased_logits",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5531,7 +5627,9 @@ export const manifest = {
             "from": "biased_logits",
             "to": "softmax_attention_unmasked",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5550,7 +5648,9 @@ export const manifest = {
             "from": "softmax_attention_unmasked",
             "to": "attention_weights",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5569,7 +5669,9 @@ export const manifest = {
             "from": "attention_weights",
             "to": "aggregate_scalar_values",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5588,7 +5690,9 @@ export const manifest = {
             "from": "scalar_values",
             "to": "aggregate_scalar_values",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5607,7 +5711,9 @@ export const manifest = {
             "from": "aggregate_scalar_values",
             "to": "scalar_context",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -5626,7 +5732,9 @@ export const manifest = {
             "from": "scalar_context",
             "to": "project_attention_output",
             "kind": "data_flow",
-            "carries": [],
+            "carries": [
+
+            ],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",

@@ -26,7 +26,7 @@ const SCREENS_DIR = join(ROOT, 'screens');
 const DIST_DIR = join(ROOT, 'dist');
 const DIST_SCREENS_DIR = join(DIST_DIR, 'screens');
 
-function wrapDocument(title, fragment) {
+function wrapDocument(fragment) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -58,7 +58,7 @@ async function buildScreens() {
   for (const name of htmlFiles) {
     const fragment = await readFile(join(SCREENS_DIR, name), 'utf8');
     const title = extractTitle(fragment, name.replace(/\.html$/, ''));
-    await writeFile(join(DIST_SCREENS_DIR, name), wrapDocument(title, fragment));
+    await writeFile(join(DIST_SCREENS_DIR, name), wrapDocument(fragment));
     screens.push({ name, title });
   }
 
@@ -100,7 +100,7 @@ ${items}
 </ul>
 <p class="back"><a href="../">&larr; Back to the AF3 architecture explainer</a></p>
 `;
-  return wrapDocument('AF3 Visualizer: earlier screens', fragment);
+  return wrapDocument(fragment);
 }
 
 async function main() {

@@ -490,7 +490,9 @@ export const comparisonIndex = {
           "label": "Frame-aware point attention",
           "relationship": "counterpart_only",
           "explanation": "Only full IPA projects points, expresses them through token frames, uses invariant point distances in the logits, and returns aggregated point values to the query frame.",
-          "primaryFacts": [],
+          "primaryFacts": [
+
+          ],
           "counterpartFacts": [
             {
               "factRef": "block_instances.structure_ipa.steps.project_local_points",
@@ -608,7 +610,9 @@ export const comparisonIndex = {
           }
         }
       ],
-      "openQuestions": [],
+      "openQuestions": [
+
+      ],
       "sourceYaml": "../../comparisons/genie3-reduced-vs-full-ipa.yaml"
     }
   ]

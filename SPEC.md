@@ -65,7 +65,9 @@ Authoring an AF3 module means editing YAML under `explainer/architectures/`,
 fact, every claim tagged `confirmed_from_code` / `confirmed_from_paper` /
 `confirmed_from_docs` / `inferred` / `open_question`) — the same accuracy bar
 this project already holds itself to, just enforced by the tool's own
-verifier instead of by hand.
+verifier instead of by hand. Regenerate manifests with Ruby 3.3
+(`explainer/.ruby-version` matches CI's pin) to avoid a spurious
+reformatting diff from a different interpreter's json gem.
 
 Two sequential sub-projects:
 

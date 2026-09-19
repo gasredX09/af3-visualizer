@@ -64,6 +64,16 @@ attention. Design for both at once:
   imposes.
 - **Browser-based, no install.** Students should open a link. Publishing as a
   web artifact is the likely delivery route.
+- **The Architecture Explainer is the delivery framework for all new content.**
+  `explainer/` is a vendored copy of `ramithuh/explainer` (AGPL-3.0, see
+  `explainer/LICENSE` and `THIRD_PARTY_NOTICES.md`); its own `AGENTS.md`
+  and `CLAUDE.md` hold the authoring rules for architecture YAML, views,
+  and pseudocode -- read those before touching anything under
+  `explainer/`. The GitHub Pages build runs the Ruby explainer build
+  BEFORE the Node screens build (`.github/workflows/deploy-pages.yml`) --
+  the Ruby build wholesale-replaces its output directory, so reversing
+  this order silently destroys the screens output. See `SPEC.md`'s
+  "Delivery architecture" section for the full picture.
 - **Screens that need no model output come first.** Several planned screens
   (triangle inequality sandbox, attention mask picture, tokenization, the
   atom-token-atom hourglass) involve no model run at all. Build those first,

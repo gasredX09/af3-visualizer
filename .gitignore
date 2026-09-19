@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+.dist.explainer-pages-output
 .DS_Store
 *.log
 .env

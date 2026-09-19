@@ -119,26 +119,34 @@ export const manifest = {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.inverse_latent_scaling": {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.frozen_vae_decoder": {
           "status": "opaque",
           "reason": "external_pretrained_component",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.patchify": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.timestep_embedder": {
           "status": "complete",
@@ -152,13 +160,17 @@ export const manifest = {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.cond_combiner": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.dit_blocks": {
           "status": "complete",
@@ -183,91 +195,121 @@ export const manifest = {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.unpatchify": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.sinusoidal_embedding": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.adaln_zero": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.adaln_mlp": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.norm1": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.adaln_mod": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.self_attention": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.gate1": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.add1": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.norm2": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.scale_shift2": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.mlp_branch": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.gate2": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         },
         "modules.add2": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": []
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
@@ -283,7 +325,9 @@ export const manifest = {
       "opaqueFrontierRefs": [
         "modules.frozen_vae_decoder"
       ],
-      "partialScopeRefs": []
+      "partialScopeRefs": [
+
+      ]
     },
     "modules": [
       {
@@ -926,7 +970,9 @@ export const manifest = {
         }
       }
     ],
-    "blockInstances": [],
+    "blockInstances": [
+
+    ],
     "representations": [
       {
         "id": "initial_noise",
@@ -1553,21 +1599,29 @@ export const manifest = {
     ],
     "valueSiteInterfaces": {
       "initial_noise": {
-        "incomingRelationRefs": [],
+        "incomingRelationRefs": [
+
+        ],
         "outgoingRelationRefs": [
           "relations.initial_noise_initializes_current_latent"
         ],
-        "producerRefs": [],
+        "producerRefs": [
+
+        ],
         "consumerRefs": [
           "value_sites.latent_before_step"
         ]
       },
       "class_label": {
-        "incomingRelationRefs": [],
+        "incomingRelationRefs": [
+
+        ],
         "outgoingRelationRefs": [
           "relations.class_label_featurization"
         ],
-        "producerRefs": [],
+        "producerRefs": [
+
+        ],
         "consumerRefs": [
           "modules.label_embedder"
         ]
@@ -1607,23 +1661,31 @@ export const manifest = {
         ]
       },
       "timestep": {
-        "incomingRelationRefs": [],
+        "incomingRelationRefs": [
+
+        ],
         "outgoingRelationRefs": [
           "relations.timestep_enters_reverse_diffusion_step",
           "relations.timestep_featurization"
         ],
-        "producerRefs": [],
+        "producerRefs": [
+
+        ],
         "consumerRefs": [
           "modules.reverse_diffusion_step",
           "modules.timestep_embedder"
         ]
       },
       "step_noise": {
-        "incomingRelationRefs": [],
+        "incomingRelationRefs": [
+
+        ],
         "outgoingRelationRefs": [
           "relations.step_noise_enters_reverse_diffusion_step"
         ],
-        "producerRefs": [],
+        "producerRefs": [
+
+        ],
         "consumerRefs": [
           "modules.reverse_diffusion_step"
         ]
@@ -1808,11 +1870,15 @@ export const manifest = {
         "incomingRelationRefs": [
           "relations.frozen_decoder_produces_generated_image"
         ],
-        "outgoingRelationRefs": [],
+        "outgoingRelationRefs": [
+
+        ],
         "producerRefs": [
           "modules.frozen_vae_decoder"
         ],
-        "consumerRefs": []
+        "consumerRefs": [
+
+        ]
       }
     },
     "execution": {
@@ -1830,7 +1896,9 @@ export const manifest = {
             "modules.unpatchify",
             "modules.reverse_diffusion_step"
           ],
-          "cached": [],
+          "cached": [
+
+          ],
           "notes": [
             "The full backbone reruns at every denoising step; both the sampled latent x_t and timestep t change, while the class label remains fixed for a sample.",
             "A fresh Gaussian step-noise tensor enters each reverse update for t greater than zero; the final t=0 update is deterministic.",
@@ -4159,7 +4227,9 @@ export const manifest = {
           "source_ref": "dit_models_code"
         }
       ],
-      "scopes": [],
+      "scopes": [
+
+      ],
       "symbols": [
         {
           "id": "initial_noise",
@@ -4638,7 +4708,9 @@ export const manifest = {
                 "relation_ref": "relations.class_label_featurization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.class_label"
             ],
@@ -4667,7 +4739,9 @@ export const manifest = {
                 "relation_ref": "relations.current_latent_becomes_final_latent"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.final_latent"
             ],
@@ -4735,7 +4809,9 @@ export const manifest = {
                 "relation_ref": "relations.frozen_decoder_produces_generated_image"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.generated_image"
             ],
@@ -4763,7 +4839,9 @@ export const manifest = {
                 "relation_ref": "relations.initial_noise_initializes_current_latent"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.input_latent"
             ],
@@ -5062,7 +5140,9 @@ export const manifest = {
                 "relation_ref": "relations.class_label_featurization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.class_label"
             ],
@@ -5091,7 +5171,9 @@ export const manifest = {
                 "relation_ref": "relations.input_latent_patch_embedding"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.input_latent"
             ],
@@ -5119,7 +5201,9 @@ export const manifest = {
                 "relation_ref": "relations.current_latent_enters_reverse_diffusion_step"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.input_latent"
             ],
@@ -5150,7 +5234,9 @@ export const manifest = {
                 "relation_ref": "relations.spatial_noise_prediction"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.noise_prediction"
             ],
@@ -5178,7 +5264,9 @@ export const manifest = {
                 "relation_ref": "relations.updated_latent_reenters_sampling_iteration"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.input_latent"
             ],
@@ -5209,7 +5297,9 @@ export const manifest = {
                 "relation_ref": "relations.noise_prediction_enters_reverse_diffusion_step"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.noise_prediction"
             ],
@@ -5237,7 +5327,9 @@ export const manifest = {
                 "relation_ref": "relations.reverse_diffusion_step_updates_current_latent"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.input_latent"
             ],
@@ -5265,7 +5357,9 @@ export const manifest = {
                 "relation_ref": "relations.step_noise_enters_reverse_diffusion_step"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.step_noise"
             ],
@@ -5293,7 +5387,9 @@ export const manifest = {
                 "relation_ref": "relations.timestep_featurization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.timestep"
             ],
@@ -5322,7 +5418,9 @@ export const manifest = {
                 "relation_ref": "relations.timestep_enters_reverse_diffusion_step"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.timestep"
             ],
@@ -5700,7 +5798,9 @@ export const manifest = {
                 "relation_ref": "relations.class_label_featurization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.class_label"
             ],
@@ -5728,7 +5828,9 @@ export const manifest = {
                 "relation_ref": "relations.conditioning_vector_initialization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.cond_vector"
             ],
@@ -5757,7 +5859,9 @@ export const manifest = {
                 "relation_ref": "relations.cond_vector_enters_adaln_mlp"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.cond_vector"
             ],
@@ -5786,7 +5890,9 @@ export const manifest = {
                 "relation_ref": "relations.final_layer_adaln_conditioning"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.cond_vector"
             ],
@@ -5883,7 +5989,9 @@ export const manifest = {
                 "relation_ref": "relations.input_latent_patch_embedding"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.input_latent"
             ],
@@ -5945,7 +6053,9 @@ export const manifest = {
                 "relation_ref": "relations.token_state_initialization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -5973,7 +6083,9 @@ export const manifest = {
                 "relation_ref": "relations.timestep_featurization"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.timestep"
             ],
@@ -6035,7 +6147,9 @@ export const manifest = {
                 "relation_ref": "relations.tokens_enter_block_stack"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6063,7 +6177,9 @@ export const manifest = {
                 "relation_ref": "relations.spatial_noise_prediction"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.noise_prediction"
             ],
@@ -6550,7 +6666,9 @@ export const manifest = {
                 "relation_ref": "relations.adaln_mlp_produces_attn_params"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.adaln_parameter_triplet"
             ],
@@ -6579,7 +6697,9 @@ export const manifest = {
                 "relation_ref": "relations.adaln_mlp_produces_mlp_params"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.adaln_parameter_triplet"
             ],
@@ -6608,7 +6728,9 @@ export const manifest = {
                 "relation_ref": "relations.adaln_mod_enters_self_attention"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6636,7 +6758,9 @@ export const manifest = {
                 "relation_ref": "relations.add1_skips_to_add2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6665,7 +6789,9 @@ export const manifest = {
                 "relation_ref": "relations.add1_enters_norm2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6693,7 +6819,9 @@ export const manifest = {
                 "relation_ref": "relations.add2_produces_tokens_after_blocks"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6721,7 +6849,9 @@ export const manifest = {
                 "relation_ref": "relations.attn_params_enter_adaln_mod"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.adaln_parameter_triplet"
             ],
@@ -6750,7 +6880,9 @@ export const manifest = {
                 "relation_ref": "relations.attn_params_enter_gate1"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.adaln_parameter_triplet"
             ],
@@ -6779,7 +6911,9 @@ export const manifest = {
                 "relation_ref": "relations.cond_vector_enters_adaln_mlp"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.cond_vector"
             ],
@@ -6808,7 +6942,9 @@ export const manifest = {
                 "relation_ref": "relations.gate1_enters_add1"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6836,7 +6972,9 @@ export const manifest = {
                 "relation_ref": "relations.gate2_enters_add2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6864,7 +7002,9 @@ export const manifest = {
                 "relation_ref": "relations.mlp_branch_enters_gate2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6892,7 +7032,9 @@ export const manifest = {
                 "relation_ref": "relations.mlp_params_enter_gate2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.adaln_parameter_triplet"
             ],
@@ -6921,7 +7063,9 @@ export const manifest = {
                 "relation_ref": "relations.mlp_params_enter_scale_shift2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.adaln_parameter_triplet"
             ],
@@ -6950,7 +7094,9 @@ export const manifest = {
                 "relation_ref": "relations.norm1_enters_adaln_mod"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -6978,7 +7124,9 @@ export const manifest = {
                 "relation_ref": "relations.norm2_enters_scale_shift2"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -7006,7 +7154,9 @@ export const manifest = {
                 "relation_ref": "relations.scale_shift2_enters_mlp_branch"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -7034,7 +7184,9 @@ export const manifest = {
                 "relation_ref": "relations.self_attention_enters_gate1"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -7062,7 +7214,9 @@ export const manifest = {
                 "relation_ref": "relations.tokens_skip_to_add1"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],
@@ -7091,7 +7245,9 @@ export const manifest = {
                 "relation_ref": "relations.tokens_enter_block_norm1"
               }
             ],
-            "hidden_refs": [],
+            "hidden_refs": [
+
+            ],
             "carries": [
               "representations.token_state"
             ],

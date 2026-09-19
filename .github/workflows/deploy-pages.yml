@@ -27,6 +27,9 @@ jobs:
           node-version: '20'
       - name: Lint explainer sources
         run: ruby explainer/scripts/lint_sources.rb
+      - name: Verify published entry points
+        run: ruby -Ilib:test test/pages_build_test.rb
+        working-directory: explainer
       - name: Build architecture explainer (site root)
         run: ruby explainer/scripts/build_pages.rb --source-set af3_pairformer --output dist
       - name: Build legacy screens (dist/screens/)
