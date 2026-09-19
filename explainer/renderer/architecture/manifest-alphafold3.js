@@ -4,14 +4,14 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "0e9baf415f97e87da42420e5fde1916ff0563839695638aea1c159c09d20419d",
+      "architectures/alphafold3-pairformer.yaml": "f9fb8d80c5e2b5ebb8011cbc0733daae4c5878c6b5e8f8363dff637b8e61abec",
       "views/alphafold3-pairformer-semantic-zoom.view.yaml": "3978a4c18d06c27104497dce4c349e90e65ea95f684ddf878f22c323badc440b",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
   "architecture": {
     "schemaVersion": "architecture-v0.5",
-    "id": "alphafold3_pairformer",
+    "id": "alphafold3",
     "name": "AlphaFold 3 Pairformer",
     "family": "transformer",
     "status": "review",

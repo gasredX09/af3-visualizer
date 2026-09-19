@@ -18,10 +18,10 @@ export const manifestIndex = [
     "file": "manifest-af2.js"
   },
   {
-    "id": "af3_pairformer",
-    "name": "AlphaFold 3 Pairformer",
+    "id": "alphafold3",
+    "name": "AlphaFold 3",
     "role": "architecture",
-    "file": "manifest-af3_pairformer.js"
+    "file": "manifest-alphafold3.js"
   },
   {
     "id": "genie2",
@@ -57,7 +57,7 @@ export const comparisonIndex = {
       "standard_blocks/sinusoidal-timestep-embedding.yaml": "8cb2d467fe967e9a83da657ef85940406be89836de502d24cb7f557152763039",
       "architectures/alphafold2.yaml": "a754a17dc83303c7dff50f6925771b01dc51d237dae382476b8bf87fbead77fe",
       "views/alphafold2-semantic-zoom.view.yaml": "6b317c6d224a7e3b8416839247c0c12d6b9e0cd34d859475f4529a939d51fe8e",
-      "architectures/alphafold3-pairformer.yaml": "0e9baf415f97e87da42420e5fde1916ff0563839695638aea1c159c09d20419d",
+      "architectures/alphafold3-pairformer.yaml": "f9fb8d80c5e2b5ebb8011cbc0733daae4c5878c6b5e8f8363dff637b8e61abec",
       "views/alphafold3-pairformer-semantic-zoom.view.yaml": "3978a4c18d06c27104497dce4c349e90e65ea95f684ddf878f22c323badc440b",
       "architectures/genie2.yaml": "dc70626daca21c212b372e601a3a064ee1a1ea01e226b955b21e00e4c308bdb0",
       "views/genie2-semantic-zoom.view.yaml": "e5ed5c07d6c8bc3215aa09b1e2ca261c2861a1dc19bdf8c3968d69c23e28b0d2",

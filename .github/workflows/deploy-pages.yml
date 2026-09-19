@@ -31,7 +31,7 @@ jobs:
         run: ruby -Ilib:test test/pages_build_test.rb
         working-directory: explainer
       - name: Build architecture explainer (site root)
-        run: ruby explainer/scripts/build_pages.rb --source-set af3_pairformer --output dist
+        run: ruby explainer/scripts/build_pages.rb --source-set alphafold3 --output dist
       - name: Build legacy screens (dist/screens/)
         run: node scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@v3

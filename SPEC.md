@@ -73,7 +73,7 @@ Two sequential sub-projects:
 
 - **Sub-project 0 (infrastructure, complete and live).** Got the pipeline
   itself live on `af3-visualizer`'s GitHub Pages, publishing only the
-  existing `af3_pairformer` source set with no content changes, so the
+  existing `af3_pairformer` source set (renamed `alphafold3` in sub-project 1) with no content changes, so the
   build/deploy machine was proven before new content went on top of it.
 - **Sub-project 1 (content, current work).** Expand that source set (renamed
   `alphafold3`, see `DECISIONS.md` 2026-09-19 entry) into a full AF3

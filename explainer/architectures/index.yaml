@@ -31,8 +31,8 @@ source_sets:
     view: views/alphafold2-semantic-zoom.view.yaml
     pseudocode: pseudocode/alphafold2.yaml
     standard_blocks: []
-  - id: af3_pairformer
-    label: AlphaFold 3 Pairformer
+  - id: alphafold3
+    label: AlphaFold 3
     directory_role: architecture
     architecture: architectures/alphafold3-pairformer.yaml
     view: views/alphafold3-pairformer-semantic-zoom.view.yaml
