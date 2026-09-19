@@ -17,143 +17,129 @@ boards:
       col_gap: 40
       row_gap: 32
     nodes:
-      - id: atom_reference_features_input
-        ref: value_sites.atom_reference_features_input
-        label: reference conformer
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 1
-        row: 1
-      - id: restype_input
-        ref: value_sites.restype_input
-        label: restype
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 1
-        row: 2
-      - id: profile_input
-        ref: value_sites.profile_input
-        label: MSA profile
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 1
-        row: 4
-      - id: deletion_mean_input
-        ref: value_sites.deletion_mean_input
-        label: deletion mean
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 1
-        row: 5
-      - id: input_feature_embedder
-        ref: modules.input_feature_embedder
-        label: Input Feature Embedder
-        prominence: primary
-        treatment: block
-        col: 2
-        row: 3
-      - id: s_inputs
-        ref: value_sites.s_inputs
-        label: input embedding
-        notation: 's^{inputs}'
-        prominence: secondary
-        treatment: compact
-        density: compact
-        col: 3
-        row: 3
-      - id: single_state_input_projection
-        ref: modules.single_state_input_projection
-        label: project singles
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 4
-        row: 2
-      - id: pair_state_input_projection
-        ref: modules.pair_state_input_projection
-        label: project pairs
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 4
-        row: 4
-      - id: token_mask_input
-        ref: value_sites.token_mask_input
-        label: token mask
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 5
-        row: 1
-      - id: single_state_input
-        ref: value_sites.single_state_input
-        label: input singles
-        notation: s
-        prominence: secondary
-        treatment: compact
-        density: compact
-        col: 5
-        row: 2
-      - id: pair_state_input
-        ref: value_sites.pair_state_input
-        label: input pairs
-        notation: z
-        prominence: secondary
-        treatment: compact
-        density: compact
-        col: 5
-        row: 4
-      - id: pair_mask_input
-        ref: value_sites.pair_mask_input
-        label: pair mask
-        prominence: context
-        treatment: chip
-        density: micro
-        col: 5
-        row: 5
-      - id: pairformer_stack
-        ref: modules.pairformer_stack
-        label: 48-block Pairformer
-        prominence: primary
-        treatment: block
-        col: 7
-        row: 3
-        board_ref: pairformer_block
-      - id: single_state_output
-        ref: value_sites.single_state_output
-        label: trunk singles
-        notation: 's^{trunk}'
-        prominence: secondary
-        treatment: compact
-        density: compact
-        col: 9
-        row: 2
-      - id: pair_state_output
-        ref: value_sites.pair_state_output
-        label: trunk pairs
-        notation: 'z^{trunk}'
-        prominence: secondary
-        treatment: compact
-        density: compact
-        col: 9
-        row: 4
+    - id: atom_reference_features_input
+      ref: value_sites.atom_reference_features_input
+      label: reference conformer
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 1
+    - id: restype_input
+      ref: value_sites.restype_input
+      label: restype
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 2
+    - id: profile_input
+      ref: value_sites.profile_input
+      label: MSA profile
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 4
+    - id: deletion_mean_input
+      ref: value_sites.deletion_mean_input
+      label: deletion mean
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 5
+    - id: input_feature_embedder
+      ref: modules.input_feature_embedder
+      label: Input Feature Embedder
+      prominence: primary
+      treatment: block
+      col: 2
+      row: 3
+      board_ref: input_feature_embedder_detail
+    - id: s_inputs
+      ref: value_sites.s_inputs
+      label: input embedding
+      notation: s^{inputs}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 3
+      row: 3
+    - id: pair_state_input_projection
+      ref: modules.pair_state_input_projection
+      label: project pairs
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 4
+      row: 4
+      role: outer-sum two independent LinearNoBias projections of s_inputs into pair_state_input
+      detail: single_state_input_projection projects s_inputs to single_state_input the same way (one LinearNoBias layer, Algorithm 1 line 2); it is not separately diagrammed on this overview since the pattern is identical.
+    - id: token_mask_input
+      ref: value_sites.token_mask_input
+      label: token mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 1
+    - id: pair_mask_input
+      ref: value_sites.pair_mask_input
+      label: pair mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 5
+    - id: pairformer_stack
+      ref: modules.pairformer_stack
+      label: 48-block Pairformer
+      prominence: primary
+      treatment: block
+      col: 7
+      row: 3
+      board_ref: pairformer_block
+    - id: single_state_output
+      ref: value_sites.single_state_output
+      label: trunk singles
+      notation: s^{trunk}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 9
+      row: 2
+    - id: pair_state_output
+      ref: value_sites.pair_state_output
+      label: trunk pairs
+      notation: z^{trunk}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 9
+      row: 4
     edge_overrides:
-      - match: { relation_ref: relations.final_single_block_state_becomes_output }
-        label: 's^{trunk}'
-        connection:
-          title: Final single representation
-          role: downstream trunk state
-          inside: After block 48, the token-wise state is exposed to downstream AF3 modules.
-      - match: { relation_ref: relations.final_pair_block_state_becomes_output }
-        label: 'z^{trunk}'
-        connection:
-          title: Final pair representation
-          role: downstream pair context
-          inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
+    - match:
+        relation_ref: relations.final_single_block_state_becomes_output
+      label: s^{trunk}
+      connection:
+        title: Final single representation
+        role: downstream trunk state
+        inside: After block 48, the token-wise state is exposed to downstream AF3 modules.
+    - match:
+        relation_ref: relations.final_pair_block_state_becomes_output
+      label: z^{trunk}
+      connection:
+        title: Final pair representation
+        role: downstream pair context
+        inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
+    exclude:
+    - ref: modules.single_state_input_projection
+      reason: single_state_input_projection and pair_state_input_projection are structurally identical independent linear projections of s_inputs (Algorithm 1 lines 2-3; the pair projection additionally outer-sums two projections). The pair projection stays visible on this overview as the representative example; the root board keeps that one pattern once rather than drawing it twice, now that the board must also show the Input Feature Embedder's own inputs.
+    - ref: value_sites.single_state_input
+      reason: Its sole producer, single_state_input_projection, is excluded from this board for the same reason (see that occurrence's reason); showing this value site without its producer would misrepresent it as unexplained.
+    elide:
+    - ref: value_sites.pair_state_input
 
   - id: pairformer_block
     title: One Pairformer Block, Repeated 48 Times
@@ -623,3 +609,67 @@ boards:
           title: Single transition update
           role: pointwise token feed-forward
           inside: LayerNorm and a 4x SwiGLU hidden projection produce a 384-channel delta that is added to each token state.
+  - id: input_feature_embedder_detail
+    title: The Input Feature Embedder
+    summary: A bare-mode Atom Attention Encoder pools each token's isolated reference-conformer geometry into one per-token vector, which is concatenated with restype, profile, and deletion mean to produce s_inputs -- the single source that the single and pair state projections each read from.
+    subject_ref: modules.input_feature_embedder
+    expansion_depth: 1
+    grid:
+      columns: 4
+      rows: 4
+      column_sizing: content
+    nodes:
+    - id: value_profile_input
+      ref: value_sites.profile_input
+      label: MSA profile
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 1
+    - id: value_atom_reference_features_input
+      ref: value_sites.atom_reference_features_input
+      label: reference conformer
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 2
+    - id: value_deletion_mean_input
+      ref: value_sites.deletion_mean_input
+      label: deletion mean
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 3
+    - id: value_restype_input
+      ref: value_sites.restype_input
+      label: restype
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 4
+    - id: module_atom_attention_encoder_bare
+      ref: modules.atom_attention_encoder_bare
+      prominence: primary
+      treatment: block
+      col: 2
+      row: 2
+    - id: module_input_feature_concatenation
+      ref: modules.input_feature_concatenation
+      prominence: primary
+      treatment: block
+      col: 3
+      row: 2
+    - id: value_s_inputs
+      ref: value_sites.s_inputs
+      label: input embedding
+      notation: 's^{inputs}'
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 4
+      row: 2
+    parent: pairformer_overview

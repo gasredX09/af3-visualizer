@@ -5,7 +5,7 @@ export const manifest = {
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
       "architectures/alphafold3-pairformer.yaml": "fb4323a3a49e12c39fea3270c68d2f448544d8db023991e5e7043aeacf0b09ee",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "3d7e5f1df6c1889ec604c140de0cf2a4a857bc7054666a76e219f69bb983ae33",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "c826ddc124a717df137e6e75207d190c4d9c99b4a41695f6f6cb6a88a67a4b03",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -5782,7 +5782,8 @@ export const manifest = {
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
-            "row": 3
+            "row": 3,
+            "board_ref": "input_feature_embedder_detail"
           },
           {
             "id": "s_inputs",
@@ -5796,16 +5797,6 @@ export const manifest = {
             "row": 3
           },
           {
-            "id": "single_state_input_projection",
-            "ref": "modules.single_state_input_projection",
-            "label": "project singles",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 4,
-            "row": 2
-          },
-          {
             "id": "pair_state_input_projection",
             "ref": "modules.pair_state_input_projection",
             "label": "project pairs",
@@ -5813,7 +5804,9 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 4,
-            "row": 4
+            "row": 4,
+            "role": "outer-sum two independent LinearNoBias projections of s_inputs into pair_state_input",
+            "detail": "single_state_input_projection projects s_inputs to single_state_input the same way (one LinearNoBias layer, Algorithm 1 line 2); it is not separately diagrammed on this overview since the pattern is identical."
           },
           {
             "id": "token_mask_input",
@@ -5824,28 +5817,6 @@ export const manifest = {
             "density": "micro",
             "col": 5,
             "row": 1
-          },
-          {
-            "id": "single_state_input",
-            "ref": "value_sites.single_state_input",
-            "label": "input singles",
-            "notation": "s",
-            "prominence": "secondary",
-            "treatment": "compact",
-            "density": "compact",
-            "col": 5,
-            "row": 2
-          },
-          {
-            "id": "pair_state_input",
-            "ref": "value_sites.pair_state_input",
-            "label": "input pairs",
-            "notation": "z",
-            "prominence": "secondary",
-            "treatment": "compact",
-            "density": "compact",
-            "col": 5,
-            "row": 4
           },
           {
             "id": "pair_mask_input",
@@ -5912,6 +5883,21 @@ export const manifest = {
               "role": "downstream pair context",
               "inside": "After block 48, the ordered token-pair state is exposed to downstream AF3 modules."
             }
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "modules.single_state_input_projection",
+            "reason": "single_state_input_projection and pair_state_input_projection are structurally identical independent linear projections of s_inputs (Algorithm 1 lines 2-3; the pair projection additionally outer-sums two projections). The pair projection stays visible on this overview as the representative example; the root board keeps that one pattern once rather than drawing it twice, now that the board must also show the Input Feature Embedder's own inputs."
+          },
+          {
+            "ref": "value_sites.single_state_input",
+            "reason": "Its sole producer, single_state_input_projection, is excluded from this board for the same reason (see that occurrence's reason); showing this value site without its producer would misrepresent it as unexplained."
+          }
+        ],
+        "elide": [
+          {
+            "ref": "value_sites.pair_state_input"
           }
         ],
         "projection_mode": "derived",
@@ -6085,46 +6071,26 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_ebfe5c7e75c5",
-            "from": "pair_state_input",
+            "id": "projection_a6a29a735a80",
+            "from": "pair_state_input_projection",
             "to": "pairformer_stack",
-            "projection": "boundary",
+            "projection": "contracted",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
+              "relations.pair_state_projection_produces_pair_state_input",
               "relations.input_pair_state_initializes_block_pair_state"
             ],
             "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_projection_produces_pair_state_input"
+              },
               {
                 "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
               }
             ],
             "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_1d8e8f7a235c",
-            "from": "pair_state_input_projection",
-            "to": "pair_state_input",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.pair_state_projection_produces_pair_state_input"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.pair_state_projection_produces_pair_state_input"
-              }
-            ],
-            "hidden_refs": [
-
+              "value_sites.pair_state_input"
             ],
             "carries": [
               "representations.pair_state"
@@ -6265,78 +6231,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_3d1249db30c6",
-            "from": "s_inputs",
-            "to": "single_state_input_projection",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.s_inputs_enters_single_state_projection"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.s_inputs_enters_single_state_projection"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.s_inputs"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_f1044b987a6f",
-            "from": "single_state_input",
-            "to": "pairformer_stack",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.input_single_state_initializes_block_single_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.input_single_state_initializes_block_single_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_97d05253b731",
-            "from": "single_state_input_projection",
-            "to": "single_state_input",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.single_state_projection_produces_single_state_input"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.single_state_projection_produces_single_state_input"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_d3b940b30ce4",
             "from": "token_mask_input",
             "to": "pairformer_stack",
@@ -6372,7 +6266,7 @@ export const manifest = {
           "modules.pairformer_stack": "visible",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
-          "modules.single_state_input_projection": "visible",
+          "modules.single_state_input_projection": "excluded",
           "modules.single_transition": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
@@ -6386,7 +6280,7 @@ export const manifest = {
           "value_sites.pair_after_starting_attention": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.pair_mask_input": "visible",
-          "value_sites.pair_state_input": "visible",
+          "value_sites.pair_state_input": "elided",
           "value_sites.pair_state_output": "visible",
           "value_sites.profile_input": "visible",
           "value_sites.restype_input": "visible",
@@ -6394,7 +6288,7 @@ export const manifest = {
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
-          "value_sites.single_state_input": "visible",
+          "value_sites.single_state_input": "excluded",
           "value_sites.single_state_output": "visible",
           "value_sites.token_mask_input": "visible"
         },
@@ -8157,6 +8051,245 @@ export const manifest = {
           "value_sites.single_after_transition": "visible",
           "value_sites.single_pair_attention_logits": "visible",
           "value_sites.token_mask_input": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "input_feature_embedder_detail",
+        "title": "The Input Feature Embedder",
+        "summary": "A bare-mode Atom Attention Encoder pools each token's isolated reference-conformer geometry into one per-token vector, which is concatenated with restype, profile, and deletion mean to produce s_inputs -- the single source that the single and pair state projections each read from.",
+        "subject_ref": "modules.input_feature_embedder",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 4,
+          "rows": 4,
+          "column_sizing": "content"
+        },
+        "nodes": [
+          {
+            "id": "value_profile_input",
+            "ref": "value_sites.profile_input",
+            "label": "MSA profile",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "value_atom_reference_features_input",
+            "ref": "value_sites.atom_reference_features_input",
+            "label": "reference conformer",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "value_deletion_mean_input",
+            "ref": "value_sites.deletion_mean_input",
+            "label": "deletion mean",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "value_restype_input",
+            "ref": "value_sites.restype_input",
+            "label": "restype",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "module_atom_attention_encoder_bare",
+            "ref": "modules.atom_attention_encoder_bare",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "module_input_feature_concatenation",
+            "ref": "modules.input_feature_concatenation",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "value_s_inputs",
+            "ref": "value_sites.s_inputs",
+            "label": "input embedding",
+            "notation": "s^{inputs}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          }
+        ],
+        "parent": "pairformer_overview",
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_1574bfd59fa5",
+            "from": "module_atom_attention_encoder_bare",
+            "to": "module_input_feature_concatenation",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_attention_encoder_feeds_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_attention_encoder_feeds_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pooled_atom_encoding"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ca5c887d6bdf",
+            "from": "module_input_feature_concatenation",
+            "to": "value_s_inputs",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.concatenation_produces_s_inputs"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.concatenation_produces_s_inputs"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e30cda2ab0bd",
+            "from": "value_atom_reference_features_input",
+            "to": "module_atom_attention_encoder_bare",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_reference_features_enter_atom_attention_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_reference_features_enter_atom_attention_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9d2f8eabd323",
+            "from": "value_deletion_mean_input",
+            "to": "module_input_feature_concatenation",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.deletion_mean_enters_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.deletion_mean_enters_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.deletion_mean"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9e54912627a6",
+            "from": "value_profile_input",
+            "to": "module_input_feature_concatenation",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.profile_enters_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.profile_enters_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.profile"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ba4e8c83ce33",
+            "from": "value_restype_input",
+            "to": "module_input_feature_concatenation",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.restype_enters_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.restype_enters_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.restype"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.atom_attention_encoder_bare": "visible",
+          "modules.input_feature_concatenation": "visible",
+          "value_sites.atom_reference_features_input": "visible",
+          "value_sites.deletion_mean_input": "visible",
+          "value_sites.profile_input": "visible",
+          "value_sites.restype_input": "visible",
+          "value_sites.s_inputs": "visible"
         },
         "projectionMode": "derived"
       }
