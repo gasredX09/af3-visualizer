@@ -317,6 +317,44 @@ for now rather than port or retire them. The 2026-09-18 "Pages is the
 actual delivery channel" entry's reasoning (Pages over Artifacts) is
 unaffected and still applies to the explainer build.
 
+## 2026-09-19: Rename af3_pairformer to alphafold3; begin expanding beyond Pairformer
+
+**Decision:** Rename the vendored source set from `af3_pairformer` to
+`alphafold3` (registry `id`, the architecture file's own `id`, and every
+`--source-set` reference in the Pages build and CI) as the first step of
+sub-project 1, before authoring the Input Feature Embedder module (full
+content spec in `SPEC.md`). Also: correct `single_state_input` and
+`pair_state_input`'s `boundary: input` marking once an upstream module
+exists, rather than leaving it as a now-inaccurate claim.
+
+**Options considered:**
+- Leave the source set named `af3_pairformer` indefinitely, even once it
+  covers the whole model, and treat the name as legacy/cosmetic.
+- Rename later, once more of the architecture is built, to do it once
+  instead of announcing the name early.
+- This decision: rename now, before any other module or view references
+  the old name.
+
+**Why:** `af3_pairformer` is only accurate while the source set's scope
+matches its name; the whole reason sub-project 1 exists is to outgrow that
+scope, one module at a time, starting with the Input Feature Embedder.
+Renaming later means touching every reference accumulated in the
+meantime (views, pseudocode scopes, comparisons, the build filter, CI);
+renaming now touches exactly the registry entry and two build commands.
+The `af3_pairformer` name was itself inherited from upstream
+`ramithuh/explainer`, where it correctly describes a source set that
+really does stop at the Pairformer — this project's version now
+diverges from upstream's scope, so keeping upstream's name would also
+misdescribe the divergence itself, not just the content.
+
+The boundary correction follows from `explainer/protocol/architecture-language.md`'s
+own rule: `boundary: input|output` marks the architecture's *task-native*
+inputs and outputs, not merely "the first value site a module happens to
+read." Adding a real upstream module makes the previous boundary claim on
+`single_state_input`/`pair_state_input` false, not just incomplete.
+Leaving it unexamined would mean the source set keeps asserting something
+evidence-graded that is no longer true.
+
 ## 2026-09-19: License the vendored explainer/ subtree as AGPL-3.0, third-party notice added
 
 **Decision:** `explainer/` (vendored from ramithuh/explainer, per the

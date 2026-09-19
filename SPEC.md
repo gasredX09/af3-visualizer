@@ -71,15 +71,107 @@ reformatting diff from a different interpreter's json gem.
 
 Two sequential sub-projects:
 
-- **Sub-project 0 (infrastructure, current work).** Get the pipeline itself
-  live on `af3-visualizer`'s GitHub Pages, publishing only the existing
-  `af3_pairformer` source set with no content changes, so the build/deploy
-  machine is proven before new content goes on top of it.
-- **Sub-project 1 (content, next).** Expand that source set into a full AF3
+- **Sub-project 0 (infrastructure, complete and live).** Got the pipeline
+  itself live on `af3-visualizer`'s GitHub Pages, publishing only the
+  existing `af3_pairformer` source set with no content changes, so the
+  build/deploy machine was proven before new content went on top of it.
+- **Sub-project 1 (content, current work).** Expand that source set (renamed
+  `alphafold3`, see `DECISIONS.md` 2026-09-19 entry) into a full AF3
   architecture, module by module: input embedder, MSA module (MSA stack plus
   `OuterProductMean`), template module, the Pairformer (already authored
   upstream), the atom-to-token-to-atom diffusion module, confidence heads.
-  Each module gets its own design/plan pass once sub-project 0 lands.
+  Each module gets its own design/plan pass.
+
+### Sub-project 1, module 1: the Input Feature Embedder
+
+Full rationale for the rename and the boundary correction is in
+`DECISIONS.md` (2026-09-19 entry). This section is the content spec for the
+first new module.
+
+**Mechanism** (`~/research/src/alphafold3.typ`, *Inside `InputFeatureEmbedder`
+and `AtomAttentionEncoder`*, `[paper] Algorithm 2, 5-7`): `InputFeatureEmbedder`
+is a three-line algorithm. It calls `AtomAttentionEncoder` (Algorithm 5) in
+its *bare* mode — all three optional conditioning arguments (noisy atom
+positions, trunk single, trunk pair) are `None` — to get a permutation-invariant
+per-atom encoding of each token's isolated reference-conformer geometry
+(reference position, charge, one-hot element, atom name; pairwise offsets
+within the same residue/ligand instance; sequence-local `AtomTransformer`
+attention restricted to each token's own atoms), mean-pooled to one vector
+per token. That per-token vector is concatenated with three non-geometric
+per-token features — `restype` (one-hot identity), `profile` (the MSA's
+per-column amino-acid distribution, a compressed summary, not the full
+alignment), `deletion_mean` (average deletion rate at that column) — to
+produce `s_inputs`, which becomes this project's existing `single_state_input`
+and (via the outer-sum pattern already used inside the trunk) `pair_state_input`.
+
+**Why this matters, for the board's own takeaway**: AF2 gets away with a
+20/21-way one-hot residue embedding because its vocabulary is fixed; AF3
+handles arbitrary ligands and modified residues with no fixed vocabulary by
+running genuine local self-attention over each token's own atoms to
+discover what matters about its specific chemistry, then compressing that
+to one vector. This one mechanism is what lets one architecture handle
+standard residues, modified residues, and arbitrary small molecules
+uniformly.
+
+**Scope for this pass (decided in brainstorming, 2026-09-19):**
+`AtomAttentionEncoder` is modeled as a single `opaque` child module — not its
+internals. It is the *same* reusable routine (`"shared routine, behavior
+toggled by whether optional args are provided"` — the note's own framing,
+also true of `AttentionPairBias`) called again later, in *conditioned* mode,
+by the Diffusion Module's own atom encoder/decoder. Modeling its internals
+now would mean doing it twice, or doing it once against only half the real
+requirements (bare mode) and reworking it when the Diffusion Module module
+is built. Its real internals become a `standard_block` (reusable, typed,
+with explicit `variant`/`conformance`) the first time a module actually
+needs them modeled — likely the Diffusion Module pass.
+
+**New facts to add** (`explainer/architectures/alphafold3.yaml`, via an
+`architecture-edit-v0.2` plan, not hand-edited):
+- Module `input_feature_embedder` (`parent_ref: architecture`), with one
+  child module `atom_attention_encoder_bare` marked `decomposition.status:
+  opaque`.
+- New `boundary: input` value sites for the true raw features this module
+  consumes: per-atom reference-conformer geometry/identity (one value site
+  is enough at this scope — the atom-level detail stays inside the opaque
+  child), `restype`, `profile`, `deletion_mean`.
+- A `concat` relation from those inputs (via the module) into the
+  **existing** `single_state_input` value site — no new value site needed
+  for the output, since `single_state_input` already exists as exactly the
+  right hand-off point; only its `boundary` field changes (below).
+- Every new fact cites `~/research/src/alphafold3.typ`'s own `[paper]`/`[code]`
+  locators for Algorithm 2 and the relevant Algorithm 5 sub-steps, at
+  `evidence.status: confirmed_from_paper` (the note's own citations are
+  paper-grounded; use `confirmed_from_code` only for facts checked directly
+  against `~/research-papers/codebases/alphafold3/`, matching the existing
+  Pairformer entries' own distinction between the two).
+
+**Corrections to existing facts** (`update_entity`, not a new addition):
+- `single_state_input` and `pair_state_input` lose `boundary: input` — they
+  are no longer the architecture's task-native boundary once
+  `input_feature_embedder` sits upstream of them. (`pair_state_input`'s own
+  producer is the outer-sum construction of `z_init` from `s_inputs`,
+  per Algorithm 1 — modeling that fold is in scope for this same module,
+  since it is a direct, one-line consequence of `s_inputs` existing and
+  keeps `pair_state_input` a real internal hand-off rather than an
+  unexplained value site.)
+- The architecture root's `decomposition.status` note ("The source set
+  deliberately stops at the already-embedded single and pair
+  representations") gets rewritten to describe the new, larger boundary
+  (raw per-token/per-atom input features) instead.
+
+**View changes** (`explainer/views/alphafold3-semantic-zoom.view.yaml`): a
+new root-board node for `input_feature_embedder`, positioned before the
+existing Pairformer node, placed via the `semantic_flow_v1` layout
+compiler (`protocol/semantic-layout.md`) rather than hand-picked `col`/`row`
+values.
+
+**Verification**: `ruby scripts/architecture_edit.rb prepare/show/apply`
+against the plan, then the mandatory
+`ruby scripts/verify_architecture.rb --source-set alphafold3` gate, then
+an actual rendered check in a browser (per this project's standing
+"verify by rendering" rule) that the new node appears, drills in
+correctly, and that removing `boundary: input` from the two existing
+value sites didn't silently orphan a board or a pseudocode reference.
 
 ## Core screens
 
