@@ -11,7 +11,7 @@ boards:
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 7
+      columns: 9
       rows: 5
       column_sizing: content
       col_gap: 40
@@ -56,13 +56,38 @@ boards:
         treatment: block
         col: 2
         row: 3
+      - id: s_inputs
+        ref: value_sites.s_inputs
+        label: input embedding
+        notation: 's^{inputs}'
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 3
+        row: 3
+      - id: single_state_input_projection
+        ref: modules.single_state_input_projection
+        label: project singles
+        prominence: context
+        treatment: chip
+        density: micro
+        col: 4
+        row: 2
+      - id: pair_state_input_projection
+        ref: modules.pair_state_input_projection
+        label: project pairs
+        prominence: context
+        treatment: chip
+        density: micro
+        col: 4
+        row: 4
       - id: token_mask_input
         ref: value_sites.token_mask_input
         label: token mask
         prominence: context
         treatment: chip
         density: micro
-        col: 3
+        col: 5
         row: 1
       - id: single_state_input
         ref: value_sites.single_state_input
@@ -71,7 +96,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 3
+        col: 5
         row: 2
       - id: pair_state_input
         ref: value_sites.pair_state_input
@@ -80,7 +105,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 3
+        col: 5
         row: 4
       - id: pair_mask_input
         ref: value_sites.pair_mask_input
@@ -88,14 +113,14 @@ boards:
         prominence: context
         treatment: chip
         density: micro
-        col: 3
+        col: 5
         row: 5
       - id: pairformer_stack
         ref: modules.pairformer_stack
         label: 48-block Pairformer
         prominence: primary
         treatment: block
-        col: 5
+        col: 7
         row: 3
         board_ref: pairformer_block
       - id: single_state_output
@@ -105,7 +130,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 7
+        col: 9
         row: 2
       - id: pair_state_output
         ref: value_sites.pair_state_output
@@ -114,7 +139,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 7
+        col: 9
         row: 4
     edge_overrides:
       - match: { relation_ref: relations.final_single_block_state_becomes_output }

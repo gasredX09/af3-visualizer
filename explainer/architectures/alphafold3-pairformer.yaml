@@ -360,6 +360,22 @@ representations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2 (f_i^deletion_mean); Supplementary Table 5 deletion_mean [N_token]
+  - id: s_inputs
+    scale: token
+    semantic_role: the concatenated per-token input embedding (s_inputs); AtomAttentionEncoder's pooled per-token vector concatenated with restype, profile, and deletion_mean, and the single independent source that single_state_input and pair_state_input are each separately linearly projected from
+    shape: "N_token x 449"
+    glyph: matrix
+    carries:
+      - pooled per-atom reference-conformer encoding (384 channels, c_token)
+      - one-hot restype (32 channels)
+      - MSA profile (32 channels)
+      - deletion mean (1 channel)
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (s_i = concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean); a_i in R^384 per Algorithm 2 line 1's c_token=384, restype/profile each [N_token, 32] and deletion_mean [N_token] per Supplementary Table 5, giving 384+32+32+1=449 channels)
 
 value_sites:
   - id: single_state_input
@@ -428,6 +444,16 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2 (f_i^deletion_mean)
+  - id: s_inputs
+    representation_ref: representations.s_inputs
+    scope_ref: architecture
+    role: assembled_input_embedding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2; Supplementary Algorithm 1 lines 2-3 (independently read by both the single_state_input and pair_state_input projections)
   - id: block_pair_state
     representation_ref: representations.pair_state
     scope_ref: modules.pairformer_stack
@@ -707,6 +733,36 @@ modules:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2 (concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))
+  - id: single_state_input_projection
+    parent_ref: architecture
+    decomposition:
+      status: leaf
+    label: Project Single State Input
+    kind: adapter
+    mechanisms: [linear_projection]
+    role: project s_inputs to the 384-channel single_state_input via one LinearNoBias layer
+    scale: token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))
+  - id: pair_state_input_projection
+    parent_ref: architecture
+    decomposition:
+      status: leaf
+    label: Project Pair State Input
+    kind: adapter
+    mechanisms: [linear_projection, outer_sum]
+    role: project s_inputs to 128 channels via two independent LinearNoBias layers, one per token of the pair, and outer-sum them into pair_state_input
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this module)
 
 relations:
   - id: input_pair_state_initializes_block_pair_state
@@ -973,11 +1029,11 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2
-  - id: concatenation_produces_single_state_input
+  - id: concatenation_produces_s_inputs
     from: modules.input_feature_concatenation
-    to: value_sites.single_state_input
+    to: value_sites.s_inputs
     kind: state_update
-    carries: [representations.single_state]
+    carries: [representations.s_inputs]
     operation: concat_pooled_atom_encoding_and_per_token_features
     evidence:
       status: confirmed_from_paper
@@ -985,18 +1041,54 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2 (s_i = concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))
-  - id: single_state_input_outer_sum_initializes_pair_state_input
-    from: value_sites.single_state_input
-    to: value_sites.pair_state_input
-    kind: state_update
-    carries: [representations.single_state]
-    operation: outer_sum_project_single_state_into_pair_state
+  - id: s_inputs_enters_single_state_projection
+    from: value_sites.s_inputs
+    to: modules.single_state_input_projection
+    kind: data_flow
+    carries: [representations.s_inputs]
+    operation: read_s_inputs_for_single_projection
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 line 3 (z_init as an outer sum of two LinearNoBias projections of s_inputs; lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)
+          locator: Supplementary Algorithm 1 line 2
+  - id: single_state_projection_produces_single_state_input
+    from: modules.single_state_input_projection
+    to: value_sites.single_state_input
+    kind: state_update
+    carries: [representations.single_state]
+    operation: project_s_inputs_to_single_state_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))
+  - id: s_inputs_enters_pair_state_projection
+    from: value_sites.s_inputs
+    to: modules.pair_state_input_projection
+    kind: data_flow
+    carries: [representations.s_inputs]
+    operation: read_s_inputs_for_pair_projection
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 3
+  - id: pair_state_projection_produces_pair_state_input
+    from: modules.pair_state_input_projection
+    to: value_sites.pair_state_input
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: outer_sum_project_s_inputs_to_pair_state_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)
 
 claims:
   - id: pairformer_has_no_msa_state
@@ -1030,4 +1122,18 @@ claims:
           role: paper_evidence
           locator: Fig. 2a caption
 
-open_questions: []
+open_questions:
+  - id: relative_position_encoding_and_token_bonds_unmodeled
+    question: Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_pair_state_input; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to pair_state_input that are not yet represented as their own value sites, modules, or relations.
+    status: deferred
+    affected_refs:
+      - value_sites.pair_state_input
+      - relations.pair_state_projection_produces_pair_state_input
+      - modules.pair_state_input_projection
+    resolution_criteria: Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding pair_state_input, alongside the existing s_inputs outer-sum contribution.
+    evidence:
+      status: open_question
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 lines 4-5

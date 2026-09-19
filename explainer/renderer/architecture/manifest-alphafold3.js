@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "55fc6ef051795f7561db77b390cfdd94fa1fc99de89d0e38e3a1670c62a07751",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "0ae9aa357b4b1bdd6e6a95d4a882e3ac88cd4e0cebe5073ef4355f15e2b21339",
+      "architectures/alphafold3-pairformer.yaml": "e283a7b3238919d0462fd082ca73d848d372bd6ea046c79b7ec7933d5618385d",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "a2474005ec4df7750e6c5604a6f1b01182591078ecd1511c968f895a197de654",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -68,10 +68,12 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 2,
+          "immediateModuleCount": 4,
           "immediateModuleRefs": [
             "modules.pairformer_stack",
-            "modules.input_feature_embedder"
+            "modules.input_feature_embedder",
+            "modules.single_state_input_projection",
+            "modules.pair_state_input_projection"
           ]
         },
         "modules.pairformer_stack": {
@@ -194,14 +196,30 @@ export const manifest = {
           "immediateModuleRefs": [
 
           ]
+        },
+        "modules.single_state_input_projection": {
+          "status": "leaf",
+          "depth": 1,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.pair_state_input_projection": {
+          "status": "leaf",
+          "depth": 1,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
-        "scopeCount": 15,
+        "scopeCount": 17,
         "expandedScopeCount": 5,
         "completeExpandedScopeCount": 5,
         "partialScopeCount": 0,
-        "leafFrontierCount": 9,
+        "leafFrontierCount": 11,
         "opaqueFrontierCount": 1,
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 3
@@ -618,6 +636,55 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "single_state_input_projection",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Project Single State Input",
+        "kind": "adapter",
+        "mechanisms": [
+          "linear_projection"
+        ],
+        "role": "project s_inputs to the 384-channel single_state_input via one LinearNoBias layer",
+        "scale": "token",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_state_input_projection",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Project Pair State Input",
+        "kind": "adapter",
+        "mechanisms": [
+          "linear_projection",
+          "outer_sum"
+        ],
+        "role": "project s_inputs to 128 channels via two independent LinearNoBias layers, one per token of the pair, and outer-sum them into pair_state_input",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this module)"
+            }
+          ]
+        }
       }
     ],
     "blockInstances": [
@@ -850,6 +917,29 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "s_inputs",
+        "scale": "token",
+        "semantic_role": "the concatenated per-token input embedding (s_inputs); AtomAttentionEncoder's pooled per-token vector concatenated with restype, profile, and deletion_mean, and the single independent source that single_state_input and pair_state_input are each separately linearly projected from",
+        "shape": "N_token x 449",
+        "glyph": "matrix",
+        "carries": [
+          "pooled per-atom reference-conformer encoding (384 channels, c_token)",
+          "one-hot restype (32 channels)",
+          "MSA profile (32 channels)",
+          "deletion mean (1 channel)"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (s_i = concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean); a_i in R^384 per Algorithm 2 line 1's c_token=384, restype/profile each [N_token, 32] and deletion_mean [N_token] per Supplementary Table 5, giving 384+32+32+1=449 channels)"
+            }
+          ]
+        }
       }
     ],
     "valueSites": [
@@ -993,6 +1083,22 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 2 line 2 (f_i^deletion_mean)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "s_inputs",
+        "representation_ref": "representations.s_inputs",
+        "scope_ref": "architecture",
+        "role": "assembled_input_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2; Supplementary Algorithm 1 lines 2-3 (independently read by both the single_state_input and pair_state_input projections)"
             }
           ]
         }
@@ -1230,29 +1336,27 @@ export const manifest = {
     "valueSiteInterfaces": {
       "single_state_input": {
         "incomingRelationRefs": [
-          "relations.concatenation_produces_single_state_input"
+          "relations.single_state_projection_produces_single_state_input"
         ],
         "outgoingRelationRefs": [
-          "relations.input_single_state_initializes_block_single_state",
-          "relations.single_state_input_outer_sum_initializes_pair_state_input"
+          "relations.input_single_state_initializes_block_single_state"
         ],
         "producerRefs": [
-          "modules.input_feature_concatenation"
+          "modules.single_state_input_projection"
         ],
         "consumerRefs": [
-          "value_sites.block_single_state",
-          "value_sites.pair_state_input"
+          "value_sites.block_single_state"
         ]
       },
       "pair_state_input": {
         "incomingRelationRefs": [
-          "relations.single_state_input_outer_sum_initializes_pair_state_input"
+          "relations.pair_state_projection_produces_pair_state_input"
         ],
         "outgoingRelationRefs": [
           "relations.input_pair_state_initializes_block_pair_state"
         ],
         "producerRefs": [
-          "value_sites.single_state_input"
+          "modules.pair_state_input_projection"
         ],
         "consumerRefs": [
           "value_sites.block_pair_state"
@@ -1346,6 +1450,22 @@ export const manifest = {
         ],
         "consumerRefs": [
           "modules.input_feature_concatenation"
+        ]
+      },
+      "s_inputs": {
+        "incomingRelationRefs": [
+          "relations.concatenation_produces_s_inputs"
+        ],
+        "outgoingRelationRefs": [
+          "relations.s_inputs_enters_single_state_projection",
+          "relations.s_inputs_enters_pair_state_projection"
+        ],
+        "producerRefs": [
+          "modules.input_feature_concatenation"
+        ],
+        "consumerRefs": [
+          "modules.single_state_input_projection",
+          "modules.pair_state_input_projection"
         ]
       },
       "block_pair_state": {
@@ -3063,12 +3183,12 @@ export const manifest = {
         }
       },
       {
-        "id": "concatenation_produces_single_state_input",
+        "id": "concatenation_produces_s_inputs",
         "from": "modules.input_feature_concatenation",
-        "to": "value_sites.single_state_input",
+        "to": "value_sites.s_inputs",
         "kind": "state_update",
         "carries": [
-          "representations.single_state"
+          "representations.s_inputs"
         ],
         "operation": "concat_pooled_atom_encoding_and_per_token_features",
         "evidence": {
@@ -3083,21 +3203,81 @@ export const manifest = {
         }
       },
       {
-        "id": "single_state_input_outer_sum_initializes_pair_state_input",
-        "from": "value_sites.single_state_input",
-        "to": "value_sites.pair_state_input",
-        "kind": "state_update",
+        "id": "s_inputs_enters_single_state_projection",
+        "from": "value_sites.s_inputs",
+        "to": "modules.single_state_input_projection",
+        "kind": "data_flow",
         "carries": [
-          "representations.single_state"
+          "representations.s_inputs"
         ],
-        "operation": "outer_sum_project_single_state_into_pair_state",
+        "operation": "read_s_inputs_for_single_projection",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 line 3 (z_init as an outer sum of two LinearNoBias projections of s_inputs; lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)"
+              "locator": "Supplementary Algorithm 1 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_state_projection_produces_single_state_input",
+        "from": "modules.single_state_input_projection",
+        "to": "value_sites.single_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "project_s_inputs_to_single_state_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "s_inputs_enters_pair_state_projection",
+        "from": "value_sites.s_inputs",
+        "to": "modules.pair_state_input_projection",
+        "kind": "data_flow",
+        "carries": [
+          "representations.s_inputs"
+        ],
+        "operation": "read_s_inputs_for_pair_projection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_state_projection_produces_pair_state_input",
+        "from": "modules.pair_state_input_projection",
+        "to": "value_sites.pair_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "outer_sum_project_s_inputs_to_pair_state_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)"
             }
           ]
         }
@@ -3174,7 +3354,27 @@ export const manifest = {
       }
     ],
     "openQuestions": [
-
+      {
+        "id": "relative_position_encoding_and_token_bonds_unmodeled",
+        "question": "Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_pair_state_input; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to pair_state_input that are not yet represented as their own value sites, modules, or relations.",
+        "status": "deferred",
+        "affected_refs": [
+          "value_sites.pair_state_input",
+          "relations.pair_state_projection_produces_pair_state_input",
+          "modules.pair_state_input_projection"
+        ],
+        "resolution_criteria": "Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding pair_state_input, alongside the existing s_inputs outer-sum contribution.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 lines 4-5"
+            }
+          ]
+        }
+      }
     ]
   },
   "bibliography": {
@@ -5508,7 +5708,7 @@ export const manifest = {
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 7,
+          "columns": 9,
           "rows": 5,
           "column_sizing": "content",
           "col_gap": 40,
@@ -5565,13 +5765,44 @@ export const manifest = {
             "row": 3
           },
           {
+            "id": "s_inputs",
+            "ref": "value_sites.s_inputs",
+            "label": "input embedding",
+            "notation": "s^{inputs}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 3
+          },
+          {
+            "id": "single_state_input_projection",
+            "ref": "modules.single_state_input_projection",
+            "label": "project singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "pair_state_input_projection",
+            "ref": "modules.pair_state_input_projection",
+            "label": "project pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 4
+          },
+          {
             "id": "token_mask_input",
             "ref": "value_sites.token_mask_input",
             "label": "token mask",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 3,
+            "col": 5,
             "row": 1
           },
           {
@@ -5582,7 +5813,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 3,
+            "col": 5,
             "row": 2
           },
           {
@@ -5593,7 +5824,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 3,
+            "col": 5,
             "row": 4
           },
           {
@@ -5603,7 +5834,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 3,
+            "col": 5,
             "row": 5
           },
           {
@@ -5612,7 +5843,7 @@ export const manifest = {
             "label": "48-block Pairformer",
             "prominence": "primary",
             "treatment": "block",
-            "col": 5,
+            "col": 7,
             "row": 3,
             "board_ref": "pairformer_block"
           },
@@ -5624,7 +5855,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 7,
+            "col": 9,
             "row": 2
           },
           {
@@ -5635,7 +5866,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 7,
+            "col": 9,
             "row": 4
           }
         ],
@@ -5714,25 +5945,25 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_59432a759c5c",
+            "id": "projection_ed195414faf6",
             "from": "input_feature_embedder",
-            "to": "single_state_input",
+            "to": "s_inputs",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
-              "relations.concatenation_produces_single_state_input"
+              "relations.concatenation_produces_s_inputs"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.concatenation_produces_single_state_input"
+                "relation_ref": "relations.concatenation_produces_s_inputs"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.single_state"
+              "representations.s_inputs"
             ],
             "presentation": {
             }
@@ -5858,6 +6089,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_1d8e8f7a235c",
+            "from": "pair_state_input_projection",
+            "to": "pair_state_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_state_projection_produces_pair_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_projection_produces_pair_state_input"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_97d1e9fd492c",
             "from": "pairformer_stack",
             "to": "pair_state_output",
@@ -5966,25 +6221,49 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_0f2a901f09c7",
-            "from": "single_state_input",
-            "to": "pair_state_input",
+            "id": "projection_e702e26247ec",
+            "from": "s_inputs",
+            "to": "pair_state_input_projection",
             "projection": "direct",
             "origin": "canonical",
-            "kind": "state_update",
+            "kind": "data_flow",
             "relation_path": [
-              "relations.single_state_input_outer_sum_initializes_pair_state_input"
+              "relations.s_inputs_enters_pair_state_projection"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.single_state_input_outer_sum_initializes_pair_state_input"
+                "relation_ref": "relations.s_inputs_enters_pair_state_projection"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.single_state"
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3d1249db30c6",
+            "from": "s_inputs",
+            "to": "single_state_input_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_single_state_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_single_state_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
             ],
             "presentation": {
             }
@@ -6002,6 +6281,30 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.input_single_state_initializes_block_single_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_97d05253b731",
+            "from": "single_state_input_projection",
+            "to": "single_state_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_state_projection_produces_single_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_projection_produces_single_state_input"
               }
             ],
             "hidden_refs": [
@@ -6044,10 +6347,12 @@ export const manifest = {
           "modules.input_feature_embedder": "visible",
           "modules.pair_attention_ending_node": "collapsed:modules.pairformer_stack",
           "modules.pair_attention_starting_node": "collapsed:modules.pairformer_stack",
+          "modules.pair_state_input_projection": "visible",
           "modules.pair_transition": "collapsed:modules.pairformer_stack",
           "modules.pairformer_stack": "visible",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
+          "modules.single_state_input_projection": "visible",
           "modules.single_transition": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
@@ -6065,6 +6370,7 @@ export const manifest = {
           "value_sites.pair_state_output": "visible",
           "value_sites.profile_input": "visible",
           "value_sites.restype_input": "visible",
+          "value_sites.s_inputs": "visible",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
