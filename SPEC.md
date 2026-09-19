@@ -189,6 +189,87 @@ standing "verify by rendering" rule) that the new nodes appear, drill in
 correctly, and that removing `boundary: input` from the two existing value
 sites didn't silently orphan a board or a pseudocode reference.
 
+### Sub-project 1, module 2: the MSA Module
+
+**Mechanism** (`~/research/src/alphafold3.typ:293-392`, `[paper] Section 3.3,
+Algorithms 8-10`): `MsaModule` takes raw MSA per-row features (`f*`: one-hot
+sequence identity, deletion flags/values) plus `s_inputs`, embeds and
+resamples MSA rows, then runs 4 blocks. Each block: **communication**
+(`OuterProductMean`, Algorithm 9) — the only place evolutionary coupling
+(correlated variation across the MSA at two token positions) enters the
+pair representation, an empirical cross-covariance between two learned
+per-row projections, averaged over MSA rows and flattened into `z_ij`;
+**MSA stack** (`MSAPairWeightedAveraging`, Algorithm 10) — attention whose
+weights come entirely from the pair representation (`softmax_j(LinearNoBias(
+LayerNorm(z_ij)))`), never from row content, so every MSA row is pulled
+through the exact same shared routing table, with a row-specific gate as the
+only per-row control; **pair stack** — the same triangle-multiplication/
+triangle-attention/transition mechanism already modeled for the Pairformer,
+run 4 times instead of 48. Only the final `z_ij` is returned; the MSA
+representation itself is discarded every call.
+
+**Why this matters, for the board's own takeaway**: this is the only place
+in the whole model where evolutionary coupling (classical coevolution-based
+contact prediction, direct-coupling analysis, done end-to-end instead of
+with hand-designed statistics) enters the pair representation, and MSA rows
+never talk to each other directly — information only flows row-to-pair
+(`OuterProductMean`) and pair-to-row (the shared, pair-derived weighting).
+The pair representation is the hub, same asymmetric design principle as the
+Pairformer, applied one level earlier: "MSA module = read new evidence;
+Pairformer = reason from it."
+
+**Scope for this pass (decided in brainstorming, 2026-09-19):**
+- `OuterProductMean` and `MSAPairWeightedAveraging` are modeled with real
+  internals (unlike `AtomAttentionEncoder` in module 1) — neither is reused
+  elsewhere in the model, so there's no shared-routine reason to keep them
+  opaque.
+- The MSA module's own pair-stack (triangle mult x2, triangle attn x2,
+  transition) is architecturally identical to 4 of the Pairformer's 5
+  pair-stack steps, just run 4 times instead of 48. This pass authors its
+  own facts for that pair-stack rather than extracting a shared
+  `standard_block` now — extracting one and retrofitting the Pairformer's
+  already-shipped relations to reference it is a real, separate future
+  cleanup task, deliberately deferred to avoid touching stable, reviewed
+  content in this pass.
+- Only one representative pass through the module is modeled. AF3 actually
+  runs the MSA module (and, once built, the Template module) inside an
+  outer recycling loop feeding back into Pairformer's output — up to 4
+  cycles — which isn't modeled anywhere in this architecture yet. That
+  outer loop is a separate, cross-cutting future addition, not bundled into
+  this content module.
+
+**New facts to add** (`explainer/architectures/alphafold3-pairformer.yaml`,
+hand-edited per `DECISIONS.md`'s 2026-09-19 hand-edit entry, not via
+edit-plan — this task wires into an already-visible value site, the exact
+condition that made module 1's edit-plan attempt fail `prepare`):
+- Module `msa_module` (`parent_ref: architecture`), with child modules
+  `outer_product_mean` and `msa_pair_weighted_averaging` (both modeled with
+  real mechanism, per the scope decision above), plus the module's own
+  pair-stack leaf modules.
+- New `boundary: input` value sites for the raw MSA features: `msa_input`
+  (one-hot sequence identity), `has_deletion_input`, `deletion_value_input`.
+- A real `z_init` value site — mirroring module 1's `s_inputs` fix.
+  `pair_state_input_projection`'s output currently feeds `pair_state_input`
+  directly, which was only ever true because nothing sat between them yet.
+  Retarget that existing relation to produce `z_init` instead of
+  `pair_state_input`; `msa_module` reads `z_init` plus the raw MSA features
+  and produces the (retargeted) `pair_state_input`.
+- Every new fact cites `~/research/src/alphafold3.typ`'s own `[paper]`
+  locators for Algorithms 8-10, matching module 1's evidence discipline.
+
+**View**: the root board (`pairformer_overview`) is already at its accepted
+13-node `dense_board` warning threshold. This module gets its own child
+board from the start (following the `pairformer_block`/
+`input_feature_embedder_detail` precedent), rather than adding its own
+substantial internal detail to the root board and needing a follow-up
+curation pass the way module 1 did.
+
+**Verification**: same pipeline as module 1 — `lint_sources.rb`,
+`verify_architecture.rb --source-set alphafold3`, `build-manifest.rb
+--check`, plus an actual rendered check confirming the retargeted
+`pair_state_input_projection -> z_init -> msa_module -> pair_state_input`
+chain renders correctly and the existing Pairformer board is unaffected.
+
 ## Core screens
 
 These four carry the main narrative: what AF3 takes in, how it transforms it,
