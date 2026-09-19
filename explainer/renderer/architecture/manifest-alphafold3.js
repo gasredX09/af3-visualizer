@@ -4,7 +4,7 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "fb4323a3a49e12c39fea3270c68d2f448544d8db023991e5e7043aeacf0b09ee",
+      "architectures/alphafold3-pairformer.yaml": "f7989a37208e7ead807e0daf330903d4899cab3c3ada460c254c3b9c4c7b1901",
       "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4fb4e43e588132cf00225aa7c10300f74b37b3b809a87c598f0e96799fef05e4",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
@@ -68,12 +68,13 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 4,
+          "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.pairformer_stack",
             "modules.input_feature_embedder",
             "modules.single_state_input_projection",
-            "modules.pair_state_input_projection"
+            "modules.pair_state_input_projection",
+            "modules.msa_module"
           ]
         },
         "modules.pairformer_stack": {
@@ -212,14 +213,58 @@ export const manifest = {
           "immediateModuleRefs": [
 
           ]
+        },
+        "modules.msa_module": {
+          "status": "partial",
+          "reason": "This task (row setup, OuterProductMean communication, and the MSA stack's MSAPairWeightedAveraging plus Transition) covers Algorithm 8 lines 1-4 and 6-8 only. A follow-up task adds this module's own pair-stack children (lines 9-13 -- TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, and a pair Transition) and flips this status to complete.",
+          "depth": 1,
+          "immediateModuleCount": 4,
+          "immediateModuleRefs": [
+            "modules.msa_row_embedding",
+            "modules.outer_product_mean",
+            "modules.msa_pair_weighted_averaging",
+            "modules.msa_transition"
+          ]
+        },
+        "modules.msa_row_embedding": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.outer_product_mean": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.msa_pair_weighted_averaging": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.msa_transition": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
-        "scopeCount": 17,
-        "expandedScopeCount": 5,
+        "scopeCount": 22,
+        "expandedScopeCount": 6,
         "completeExpandedScopeCount": 5,
-        "partialScopeCount": 0,
-        "leafFrontierCount": 11,
+        "partialScopeCount": 1,
+        "leafFrontierCount": 15,
         "opaqueFrontierCount": 1,
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 3
@@ -228,7 +273,7 @@ export const manifest = {
         "modules.atom_attention_encoder_bare"
       ],
       "partialScopeRefs": [
-
+        "modules.msa_module"
       ]
     },
     "modules": [
@@ -685,6 +730,142 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "msa_module",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "partial",
+          "reason": "This task (row setup, OuterProductMean communication, and the MSA stack's MSAPairWeightedAveraging plus Transition) covers Algorithm 8 lines 1-4 and 6-8 only. A follow-up task adds this module's own pair-stack children (lines 9-13 -- TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, and a pair Transition) and flips this status to complete."
+        },
+        "label": "MSA Module",
+        "kind": "refiner",
+        "mechanisms": [
+          "msa_row_embedding",
+          "outer_product_mean",
+          "msa_pair_weighted_averaging",
+          "transition"
+        ],
+        "role": "embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation and update the activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; only one representative pass through the module's row setup, communication, and MSA-stack steps is modeled here, not the N_block=4 loop or the outer per-recycle loop",
+        "scale": "msa",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 (MsaModule), lines 1-4 and 6-8"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_row_embedding",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Row Embedding",
+        "kind": "adapter",
+        "mechanisms": [
+          "feature_concatenation",
+          "linear_projection",
+          "additive_conditioning"
+        ],
+        "role": "concatenate each MSA row's raw one-hot identity, deletion flag, and deletion value features and linearly embed them to c_m=64 via one LinearNoBias layer, then add s_inputs (via a separate LinearNoBias layer) into every row identically",
+        "scale": "msa",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 1, 3-4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Outer Product Mean",
+        "kind": "operator",
+        "mechanisms": [
+          "layer_normalization",
+          "linear_projection",
+          "outer_product",
+          "mean_pooling",
+          "biased_linear_projection"
+        ],
+        "role": "normalize the MSA activations, project them into two independent c=32 factors, form the outer product of the two factors for every token pair, average that outer product over all MSA rows and flatten it to a 1024-channel vector, then compress it with one bias-carrying Linear layer (the one exception to LinearNoBias in this mechanism) into a 128-channel contribution to the pair representation; the only place in the model where evolutionary coupling across the MSA enters the pair representation",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 (OuterProductMean); called from Algorithm 8 line 6"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Pair Weighted Averaging",
+        "kind": "attention",
+        "mechanisms": [
+          "layer_normalization",
+          "linear_projection",
+          "pair_derived_attention_weights",
+          "gated_projection",
+          "residual_update"
+        ],
+        "role": "normalize the MSA activations and project per-head values and a per-head sigmoid gate from them; separately project a per-head attention logit from the LayerNorm'd pair representation and softmax-normalize it over the key token axis to get attention weights that depend only on the pair representation, never on MSA row content, so every row is pulled through the exact same shared routing table; gate each row's weighted average of values by that row's own gate, concatenate heads, project back to c_m=64 with one LinearNoBias layer, and add the result back into the MSA activations",
+        "scale": "msa",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 (MSA pair weighted averaging with gating); called from Algorithm 8 line 7 with c=8, N_head=8"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_transition",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Transition",
+        "kind": "feed_forward",
+        "mechanisms": [
+          "layer_normalization",
+          "swiglu",
+          "residual_update"
+        ],
+        "role": "apply a pointwise 4x SwiGLU transition and add its 64-channel (c_m) projection back to each MSA row activation",
+        "scale": "msa",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition, a shared SwiGLU utility also independently instantiated by single_transition and pair_transition elsewhere in this source set)"
+            }
+          ]
+        }
       }
     ],
     "blockInstances": [
@@ -957,6 +1138,227 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 2 line 2 (s_i = concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean); a_i in R^384 per Algorithm 2 line 1's c_token=384, restype/profile each [N_token, 32] and deletion_mean [N_token] per Supplementary Table 5, giving 384+32+32+1=449 channels)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_identity",
+        "scale": "msa",
+        "semantic_role": "raw one-hot encoding of the processed MSA, using the same 32 classes as restype, per MSA row and per token position",
+        "shape": "N_msa x N_token x 32",
+        "glyph": "volume",
+        "carries": [
+          "one-hot residue/nucleotide/gap identity for each MSA row at each token position"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 msa [N_msa, N_token, 32]; Supplementary Algorithm 8 line 1 (f_Si^msa)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "has_deletion",
+        "scale": "msa",
+        "semantic_role": "raw binary feature indicating whether a deletion occurs immediately to the left of each MSA position",
+        "shape": "N_msa x N_token",
+        "glyph": "matrix",
+        "carries": [
+          "deletion-present flag for each MSA row at each token position"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 has_deletion [N_msa, N_token]; Supplementary Algorithm 8 line 1 (f_Si^has_deletion)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deletion_value",
+        "scale": "msa",
+        "semantic_role": "raw deletion count to the left of each MSA position, transformed to [0, 1]",
+        "shape": "N_msa x N_token",
+        "glyph": "matrix",
+        "carries": [
+          "transformed deletion count for each MSA row at each token position"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 deletion_value [N_msa, N_token] ((2/pi)*arctan(d/3) transform of the raw deletion count d); Supplementary Algorithm 8 line 1 (f_Si^deletion_value)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_activations",
+        "scale": "msa",
+        "semantic_role": "per-row, per-token MSA activation after linearly embedding the concatenated raw row features and adding s_inputs into every row; the shared per-block read for both OuterProductMean and MSAPairWeightedAveraging",
+        "shape": "N_msa x N_token x 64",
+        "glyph": "volume",
+        "carries": [
+          "linearly embedded concatenation of raw MSA identity, deletion-flag, and deletion-value features",
+          "s_inputs added identically into every MSA row"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 1, 3-4 (m_Si = concat(f_Si^msa, f_Si^has_deletion, f_Si^deletion_value); m_si <- LinearNoBias(m_si), m_si in R^c_m; m_si += LinearNoBias(s_i^inputs); c_m=64 per the MsaModule signature)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_projection_a",
+        "scale": "msa",
+        "semantic_role": "OuterProductMean's first of two independent LinearNoBias projections of the LayerNorm'd MSA activations, narrowed to c=32 channels; used as the outer product's per-token-i factor",
+        "shape": "N_msa x N_token x 32",
+        "glyph": "volume",
+        "carries": [
+          "row-and-token-specific learned feature, the left factor of the outer product"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 lines 1-2 (m_si <- LayerNorm(m_si); a_si, b_si = LinearNoBias(m_si), a_si/b_si in R^c, c=32)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_projection_b",
+        "scale": "msa",
+        "semantic_role": "OuterProductMean's second of two independent LinearNoBias projections of the LayerNorm'd MSA activations, narrowed to c=32 channels; used as the outer product's per-token-j factor",
+        "shape": "N_msa x N_token x 32",
+        "glyph": "volume",
+        "carries": [
+          "row-and-token-specific learned feature, the right factor of the outer product"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 lines 1-2 (m_si <- LayerNorm(m_si); a_si, b_si = LinearNoBias(m_si), a_si/b_si in R^c, c=32)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_flattened",
+        "scale": "token_pair",
+        "semantic_role": "for every token pair, the outer product of projection_a at token i and projection_b at token j, averaged over all MSA rows and flattened; an empirical cross-covariance between the two learned projections, computed across the MSA's rows, the architectural analogue of coevolution-based contact statistics",
+        "shape": "N_token x N_token x 1024",
+        "glyph": "pair",
+        "carries": [
+          "flattened c-by-c (32 x 32 = 1024) mean outer product across MSA rows"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 3 (o_ij = flatten(mean_s(a_si tensor-product b_sj)), o_ij in R^(c*c), c=32 so c*c=1024)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_value",
+        "scale": "msa",
+        "semantic_role": "MSAPairWeightedAveraging's per-head, per-row value projection of the LayerNorm'd MSA activations; the row-specific content the shared, pair-derived attention weights are applied to",
+        "shape": "N_msa x N_token x 8 x 8",
+        "glyph": "volume",
+        "carries": [
+          "per-head (8 heads), per-row, per-token value vector (8 channels each, c=8 as called from MsaModule)"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 lines 1-2 (m_si <- LayerNorm(m_si); v_si^h = LinearNoBias(m_si), v_si^h in R^c, h in {1,...,N_head}); Algorithm 8 line 7 (called with c=8, N_head=8)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_pair_bias",
+        "scale": "token_pair",
+        "semantic_role": "per-head attention logit computed once per token pair from the LayerNorm'd pair representation; computed once per block and shared identically across every MSA row, since it never depends on row content",
+        "shape": "8 x N_token x N_token",
+        "glyph": "pair",
+        "carries": [
+          "per-head, pair-derived attention logit, with no dependence on MSA row content"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 3 (b_ij^h = LinearNoBias(LayerNorm(z_ij)))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_gate",
+        "scale": "msa",
+        "semantic_role": "per-row, per-head sigmoid gate computed from the row's own LayerNorm'd activation; the only row-specific control over how much of the shared weighted average reaches that row's output",
+        "shape": "N_msa x N_token x 8 x 8",
+        "glyph": "volume",
+        "carries": [
+          "per-head (8 heads), per-row, per-token sigmoid gate (8 channels each)"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 4 (g_si^h = sigmoid(LinearNoBias(m_si)), g_si^h in R^c)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_weights",
+        "scale": "token_pair",
+        "semantic_role": "softmax-normalized, pair-derived attention weight, shared identically across every MSA row; the routing table MSAPairWeightedAveraging applies uniformly to every row's values",
+        "shape": "8 x N_token x N_token",
+        "glyph": "pair",
+        "carries": [
+          "per-head attention weight, softmax-normalized over the key token axis j, with no dependence on MSA row content"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 5 (w_ij^h = softmax_j(b_ij^h))"
             }
           ]
         }
@@ -1351,6 +1753,246 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "msa_input",
+        "representation_ref": "representations.msa_identity",
+        "scope_ref": "modules.msa_row_embedding",
+        "role": "raw_msa_identity_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 1 (f_Si^msa)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "has_deletion_input",
+        "representation_ref": "representations.has_deletion",
+        "scope_ref": "modules.msa_row_embedding",
+        "role": "raw_deletion_flag_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 1 (f_Si^has_deletion)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deletion_value_input",
+        "representation_ref": "representations.deletion_value",
+        "scope_ref": "modules.msa_row_embedding",
+        "role": "raw_deletion_value_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 1 (f_Si^deletion_value)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_activations",
+        "representation_ref": "representations.msa_activations",
+        "scope_ref": "modules.msa_row_embedding",
+        "role": "row_setup_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 1, 3-4; read by OuterProductMean (line 6) and MSAPairWeightedAveraging (line 7)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_projection_a",
+        "representation_ref": "representations.outer_product_mean_projection_a",
+        "scope_ref": "modules.outer_product_mean",
+        "role": "outer_product_left_factor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_projection_b",
+        "representation_ref": "representations.outer_product_mean_projection_b",
+        "scope_ref": "modules.outer_product_mean",
+        "role": "outer_product_right_factor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_flattened",
+        "representation_ref": "representations.outer_product_mean_flattened",
+        "scope_ref": "modules.outer_product_mean",
+        "role": "flattened_outer_product_mean",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_pair_contribution",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.outer_product_mean",
+        "role": "communication_pair_contribution",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij), z_ij in R^c_z, c_z=128); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this value site is OuterProductMean's own returned contribution; wiring its += into the architecture's persistent pair representation is out of this task's scope (see open_questions.msa_module_pair_representation_wiring_deferred)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_value",
+        "representation_ref": "representations.msa_pair_weighted_averaging_value",
+        "scope_ref": "modules.msa_pair_weighted_averaging",
+        "role": "pair_weighted_averaging_value_projection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_pair_bias",
+        "representation_ref": "representations.msa_pair_weighted_averaging_pair_bias",
+        "scope_ref": "modules.msa_pair_weighted_averaging",
+        "role": "pair_weighted_averaging_pair_bias",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_gate",
+        "representation_ref": "representations.msa_pair_weighted_averaging_gate",
+        "scope_ref": "modules.msa_pair_weighted_averaging",
+        "role": "pair_weighted_averaging_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_weights",
+        "representation_ref": "representations.msa_pair_weighted_averaging_weights",
+        "scope_ref": "modules.msa_pair_weighted_averaging",
+        "role": "pair_weighted_averaging_attention_weights",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_module_pair_state_read",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.msa_pair_weighted_averaging",
+        "role": "msa_stack_pair_state_read",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 7 (MSAPairWeightedAveraging({m_si}, {z_ij}, c=8) reads the pair representation); this value site marks the read occurrence only -- wiring its producer to the architecture's persistent pair representation (z_init) is out of this task's scope (see open_questions.msa_module_pair_representation_wiring_deferred)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_activations_after_pair_weighted_averaging",
+        "representation_ref": "representations.msa_activations",
+        "scope_ref": "modules.msa_pair_weighted_averaging",
+        "role": "pair_weighted_averaging_updated_row_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 lines 6-7; Algorithm 8 line 7 ({m_si} += DropoutRowwise_0.15(MSAPairWeightedAveraging(...)))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_activations_after_transition",
+        "representation_ref": "representations.msa_activations",
+        "scope_ref": "modules.msa_transition",
+        "role": "transition_updated_row_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition)"
+            }
+          ]
+        }
       }
     ],
     "valueSiteInterfaces": {
@@ -1661,6 +2303,218 @@ export const manifest = {
         ],
         "producerRefs": [
           "value_sites.pair_after_transition"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "msa_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_input_enters_row_embedding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.msa_row_embedding"
+        ]
+      },
+      "has_deletion_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.has_deletion_enters_row_embedding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.msa_row_embedding"
+        ]
+      },
+      "deletion_value_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.deletion_value_enters_row_embedding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.msa_row_embedding"
+        ]
+      },
+      "msa_activations": {
+        "incomingRelationRefs": [
+          "relations.row_embedding_produces_msa_activations"
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_activations_enters_outer_product_mean",
+          "relations.msa_activations_enters_msa_pair_weighted_averaging"
+        ],
+        "producerRefs": [
+          "modules.msa_row_embedding"
+        ],
+        "consumerRefs": [
+          "modules.outer_product_mean",
+          "modules.msa_pair_weighted_averaging"
+        ]
+      },
+      "outer_product_mean_projection_a": {
+        "incomingRelationRefs": [
+          "relations.outer_product_mean_produces_projection_a"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.outer_product_mean"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "outer_product_mean_projection_b": {
+        "incomingRelationRefs": [
+          "relations.outer_product_mean_produces_projection_b"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.outer_product_mean"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "outer_product_mean_flattened": {
+        "incomingRelationRefs": [
+          "relations.outer_product_mean_produces_flattened_outer_product"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.outer_product_mean"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "outer_product_mean_pair_contribution": {
+        "incomingRelationRefs": [
+          "relations.outer_product_mean_produces_pair_contribution"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.outer_product_mean"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "msa_pair_weighted_averaging_value": {
+        "incomingRelationRefs": [
+          "relations.msa_pair_weighted_averaging_produces_value"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.msa_pair_weighted_averaging"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "msa_pair_weighted_averaging_pair_bias": {
+        "incomingRelationRefs": [
+          "relations.msa_pair_weighted_averaging_produces_pair_bias"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.msa_pair_weighted_averaging"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "msa_pair_weighted_averaging_gate": {
+        "incomingRelationRefs": [
+          "relations.msa_pair_weighted_averaging_produces_gate"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.msa_pair_weighted_averaging"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "msa_pair_weighted_averaging_weights": {
+        "incomingRelationRefs": [
+          "relations.msa_pair_weighted_averaging_produces_attention_weights"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.msa_pair_weighted_averaging"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "msa_module_pair_state_read": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.pair_state_conditions_msa_pair_weighted_averaging"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.msa_pair_weighted_averaging"
+        ]
+      },
+      "msa_activations_after_pair_weighted_averaging": {
+        "incomingRelationRefs": [
+          "relations.msa_pair_weighted_averaging_produces_updated_activations"
+        ],
+        "outgoingRelationRefs": [
+          "relations.updated_activations_enter_transition"
+        ],
+        "producerRefs": [
+          "modules.msa_pair_weighted_averaging"
+        ],
+        "consumerRefs": [
+          "modules.msa_transition"
+        ]
+      },
+      "msa_activations_after_transition": {
+        "incomingRelationRefs": [
+          "relations.transition_produces_final_activations"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.msa_transition"
         ],
         "consumerRefs": [
 
@@ -3301,6 +4155,366 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "msa_input_enters_row_embedding",
+        "from": "value_sites.msa_input",
+        "to": "modules.msa_row_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_identity"
+        ],
+        "operation": "provide_raw_msa_identity_for_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "has_deletion_enters_row_embedding",
+        "from": "value_sites.has_deletion_input",
+        "to": "modules.msa_row_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.has_deletion"
+        ],
+        "operation": "provide_deletion_flag_for_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deletion_value_enters_row_embedding",
+        "from": "value_sites.deletion_value_input",
+        "to": "modules.msa_row_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.deletion_value"
+        ],
+        "operation": "provide_deletion_value_for_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "row_embedding_produces_msa_activations",
+        "from": "modules.msa_row_embedding",
+        "to": "value_sites.msa_activations",
+        "kind": "state_update",
+        "carries": [
+          "representations.msa_activations"
+        ],
+        "operation": "concat_embed_and_add_s_inputs_to_every_msa_row",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 1, 3-4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_activations_enters_outer_product_mean",
+        "from": "value_sites.msa_activations",
+        "to": "modules.outer_product_mean",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_activations"
+        ],
+        "operation": "read_msa_activations_for_communication",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si}))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_activations_enters_msa_pair_weighted_averaging",
+        "from": "value_sites.msa_activations",
+        "to": "modules.msa_pair_weighted_averaging",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_activations"
+        ],
+        "operation": "read_msa_activations_for_msa_stack",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 7 (MSAPairWeightedAveraging({m_si}, {z_ij}, c=8))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_produces_projection_a",
+        "from": "modules.outer_product_mean",
+        "to": "value_sites.outer_product_mean_projection_a",
+        "kind": "data_flow",
+        "carries": [
+          "representations.outer_product_mean_projection_a"
+        ],
+        "operation": "project_msa_activations_to_left_factor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 lines 1-2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_produces_projection_b",
+        "from": "modules.outer_product_mean",
+        "to": "value_sites.outer_product_mean_projection_b",
+        "kind": "data_flow",
+        "carries": [
+          "representations.outer_product_mean_projection_b"
+        ],
+        "operation": "project_msa_activations_to_right_factor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 lines 1-2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_produces_flattened_outer_product",
+        "from": "modules.outer_product_mean",
+        "to": "value_sites.outer_product_mean_flattened",
+        "kind": "data_flow",
+        "carries": [
+          "representations.outer_product_mean_flattened"
+        ],
+        "operation": "form_and_average_outer_product_across_msa_rows",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_produces_pair_contribution",
+        "from": "modules.outer_product_mean",
+        "to": "value_sites.outer_product_mean_pair_contribution",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "compress_flattened_outer_product_to_pair_channels",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij)); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- the += into the architecture's persistent pair representation is wired in a follow-up task, see open_questions.msa_module_pair_representation_wiring_deferred"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_state_conditions_msa_pair_weighted_averaging",
+        "from": "value_sites.msa_module_pair_state_read",
+        "to": "modules.msa_pair_weighted_averaging",
+        "kind": "conditioning",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "condition_attention_weights_on_pair_representation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 lines 3, 5; Algorithm 8 line 7"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_produces_value",
+        "from": "modules.msa_pair_weighted_averaging",
+        "to": "value_sites.msa_pair_weighted_averaging_value",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_pair_weighted_averaging_value"
+        ],
+        "operation": "project_msa_activations_to_per_head_value",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 lines 1-2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_produces_pair_bias",
+        "from": "modules.msa_pair_weighted_averaging",
+        "to": "value_sites.msa_pair_weighted_averaging_pair_bias",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_pair_weighted_averaging_pair_bias"
+        ],
+        "operation": "project_pair_representation_to_per_head_bias",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_produces_gate",
+        "from": "modules.msa_pair_weighted_averaging",
+        "to": "value_sites.msa_pair_weighted_averaging_gate",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_pair_weighted_averaging_gate"
+        ],
+        "operation": "project_msa_activations_to_per_head_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_produces_attention_weights",
+        "from": "modules.msa_pair_weighted_averaging",
+        "to": "value_sites.msa_pair_weighted_averaging_weights",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_pair_weighted_averaging_weights"
+        ],
+        "operation": "softmax_normalize_pair_bias_over_key_axis",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 line 5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_weighted_averaging_produces_updated_activations",
+        "from": "modules.msa_pair_weighted_averaging",
+        "to": "value_sites.msa_activations_after_pair_weighted_averaging",
+        "kind": "state_update",
+        "carries": [
+          "representations.msa_activations"
+        ],
+        "operation": "gate_weighted_average_project_and_add_to_msa_activations",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 10 lines 6-7; Algorithm 8 line 7 ({m_si} += DropoutRowwise_0.15(MSAPairWeightedAveraging(...)))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "updated_activations_enter_transition",
+        "from": "value_sites.msa_activations_after_pair_weighted_averaging",
+        "to": "modules.msa_transition",
+        "kind": "data_flow",
+        "carries": [
+          "representations.msa_activations"
+        ],
+        "operation": "read_msa_activations_for_transition",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 8"
+            }
+          ]
+        }
+      },
+      {
+        "id": "transition_produces_final_activations",
+        "from": "modules.msa_transition",
+        "to": "value_sites.msa_activations_after_transition",
+        "kind": "state_update",
+        "carries": [
+          "representations.msa_activations"
+        ],
+        "operation": "apply_swiglu_transition_and_add_to_msa_activations",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition)"
+            }
+          ]
+        }
       }
     ],
     "claims": [
@@ -3391,6 +4605,68 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 1 lines 4-5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_module_pair_representation_wiring_deferred",
+        "question": "OuterProductMean's pair-representation contribution (value_sites.outer_product_mean_pair_contribution) and MSAPairWeightedAveraging's pair-representation read (value_sites.msa_module_pair_state_read) are modeled as module-scoped facts of this task's two mechanisms, but neither is yet wired into the architecture's actual persistent pair representation chain (pair_state_input_projection -> pair_state_input). Doing so correctly requires the z_init value site and the retargeted pair_state_input_projection -> z_init -> msa_module -> pair_state_input chain, which is a follow-up task's job (it also depends on this module's own pair-stack, added by that same follow-up task).",
+        "status": "deferred",
+        "affected_refs": [
+          "value_sites.outer_product_mean_pair_contribution",
+          "value_sites.msa_module_pair_state_read",
+          "modules.msa_module"
+        ],
+        "resolution_criteria": "Add value_sites.z_init, retarget relations.pair_state_projection_produces_pair_state_input to produce z_init instead of pair_state_input, and add relations wiring z_init into msa_module (producing value_sites.msa_module_pair_state_read and consuming value_sites.outer_product_mean_pair_contribution) and msa_module's final pair output into the retargeted pair_state_input.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 6-7; Algorithm 1 lines 9-10 (MsaModule called before Pairformer within the recycle)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_row_resampling_unmodeled",
+        "question": "Algorithm 8 line 2 (SampleRandomWithoutReplacement) draws a random subset of MSA rows fresh at every recycle before line 3's embedding. This resampling step is not modeled as its own value site, module, or relation; value_sites.msa_activations treats N_msa as the working (already-sampled) row count without a separate value site distinguishing the full alignment depth from the per-recycle sampled subset.",
+        "status": "deferred",
+        "affected_refs": [
+          "value_sites.msa_activations",
+          "modules.msa_row_embedding"
+        ],
+        "resolution_criteria": "Model the resampling step explicitly (likely alongside the outer per-recycle loop, Algorithm 1, which this source set does not yet model at all) if/when that recycling structure is added to this architecture.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_row_embedding_s_inputs_edge_deferred",
+        "question": "Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) means msa_row_embedding genuinely reads value_sites.s_inputs, and modules.msa_row_embedding's own role documents this. A canonical relations entry for that read is not yet added, because value_sites.s_inputs is already visible on the pairformer_overview root board and modules.msa_row_embedding is not on any board yet (this task's file scope is architectures/alphafold3-pairformer.yaml only) -- the projector rejects a relation connecting an already-visible root-board object to a depth-hidden one with no visible or elided ancestor (unmapped_boundary).",
+        "status": "deferred",
+        "affected_refs": [
+          "modules.msa_row_embedding",
+          "value_sites.s_inputs",
+          "value_sites.msa_activations"
+        ],
+        "resolution_criteria": "Once a follow-up task gives msa_module (or a suitable ancestor) a visible or elided presence on a board, add a canonical relation from value_sites.s_inputs to modules.msa_row_embedding (or directly to value_sites.msa_activations) carrying representations.s_inputs.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 4"
             }
           ]
         }
@@ -6312,6 +7588,10 @@ export const manifest = {
           "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_embedder": "visible",
+          "modules.msa_pair_weighted_averaging": "depth_hidden",
+          "modules.msa_row_embedding": "depth_hidden",
+          "modules.msa_transition": "depth_hidden",
+          "modules.outer_product_mean": "depth_hidden",
           "modules.pair_attention_ending_node": "collapsed:modules.pairformer_stack",
           "modules.pair_attention_starting_node": "collapsed:modules.pairformer_stack",
           "modules.pair_state_input_projection": "visible",
@@ -6327,6 +7607,21 @@ export const manifest = {
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
           "value_sites.deletion_mean_input": "visible",
+          "value_sites.deletion_value_input": "depth_hidden",
+          "value_sites.has_deletion_input": "depth_hidden",
+          "value_sites.msa_activations": "depth_hidden",
+          "value_sites.msa_activations_after_pair_weighted_averaging": "depth_hidden",
+          "value_sites.msa_activations_after_transition": "depth_hidden",
+          "value_sites.msa_input": "depth_hidden",
+          "value_sites.msa_module_pair_state_read": "depth_hidden",
+          "value_sites.msa_pair_weighted_averaging_gate": "depth_hidden",
+          "value_sites.msa_pair_weighted_averaging_pair_bias": "depth_hidden",
+          "value_sites.msa_pair_weighted_averaging_value": "depth_hidden",
+          "value_sites.msa_pair_weighted_averaging_weights": "depth_hidden",
+          "value_sites.outer_product_mean_flattened": "depth_hidden",
+          "value_sites.outer_product_mean_pair_contribution": "depth_hidden",
+          "value_sites.outer_product_mean_projection_a": "depth_hidden",
+          "value_sites.outer_product_mean_projection_b": "depth_hidden",
           "value_sites.pair_after_ending_attention": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_incoming_multiplication": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_outgoing_multiplication": "collapsed:modules.pairformer_stack",

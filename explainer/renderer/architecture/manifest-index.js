@@ -57,7 +57,7 @@ export const comparisonIndex = {
       "standard_blocks/sinusoidal-timestep-embedding.yaml": "8cb2d467fe967e9a83da657ef85940406be89836de502d24cb7f557152763039",
       "architectures/alphafold2.yaml": "a754a17dc83303c7dff50f6925771b01dc51d237dae382476b8bf87fbead77fe",
       "views/alphafold2-semantic-zoom.view.yaml": "6b317c6d224a7e3b8416839247c0c12d6b9e0cd34d859475f4529a939d51fe8e",
-      "architectures/alphafold3-pairformer.yaml": "fb4323a3a49e12c39fea3270c68d2f448544d8db023991e5e7043aeacf0b09ee",
+      "architectures/alphafold3-pairformer.yaml": "f7989a37208e7ead807e0daf330903d4899cab3c3ada460c254c3b9c4c7b1901",
       "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4fb4e43e588132cf00225aa7c10300f74b37b3b809a87c598f0e96799fef05e4",
       "architectures/genie2.yaml": "dc70626daca21c212b372e601a3a064ee1a1ea01e226b955b21e00e4c308bdb0",
       "views/genie2-semantic-zoom.view.yaml": "e5ed5c07d6c8bc3215aa09b1e2ca261c2861a1dc19bdf8c3968d69c23e28b0d2",
