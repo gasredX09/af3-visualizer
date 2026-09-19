@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "f7989a37208e7ead807e0daf330903d4899cab3c3ada460c254c3b9c4c7b1901",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4fb4e43e588132cf00225aa7c10300f74b37b3b809a87c598f0e96799fef05e4",
+      "architectures/alphafold3-pairformer.yaml": "3e34832c589d868ded66a9c3a13c66c02751559085120957d92163f39a69838a",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "e873b8faa923bc775790ce15449237e75eff1a1c2fd31cc7ee563bdcf2cbfe44",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -215,15 +215,19 @@ export const manifest = {
           ]
         },
         "modules.msa_module": {
-          "status": "partial",
-          "reason": "This task (row setup, OuterProductMean communication, and the MSA stack's MSAPairWeightedAveraging plus Transition) covers Algorithm 8 lines 1-4 and 6-8 only. A follow-up task adds this module's own pair-stack children (lines 9-13 -- TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, and a pair Transition) and flips this status to complete.",
+          "status": "complete",
           "depth": 1,
-          "immediateModuleCount": 4,
+          "immediateModuleCount": 9,
           "immediateModuleRefs": [
             "modules.msa_row_embedding",
             "modules.outer_product_mean",
             "modules.msa_pair_weighted_averaging",
-            "modules.msa_transition"
+            "modules.msa_transition",
+            "modules.msa_triangle_multiplication_outgoing",
+            "modules.msa_triangle_multiplication_incoming",
+            "modules.msa_pair_attention_starting_node",
+            "modules.msa_pair_attention_ending_node",
+            "modules.msa_pair_transition"
           ]
         },
         "modules.msa_row_embedding": {
@@ -257,14 +261,54 @@ export const manifest = {
           "immediateModuleRefs": [
 
           ]
+        },
+        "modules.msa_triangle_multiplication_outgoing": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.msa_triangle_multiplication_incoming": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.msa_pair_attention_starting_node": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.msa_pair_attention_ending_node": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.msa_pair_transition": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
-        "scopeCount": 22,
+        "scopeCount": 27,
         "expandedScopeCount": 6,
-        "completeExpandedScopeCount": 5,
-        "partialScopeCount": 1,
-        "leafFrontierCount": 15,
+        "completeExpandedScopeCount": 6,
+        "partialScopeCount": 0,
+        "leafFrontierCount": 20,
         "opaqueFrontierCount": 1,
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 3
@@ -273,7 +317,7 @@ export const manifest = {
         "modules.atom_attention_encoder_bare"
       ],
       "partialScopeRefs": [
-        "modules.msa_module"
+
       ]
     },
     "modules": [
@@ -735,8 +779,7 @@ export const manifest = {
         "id": "msa_module",
         "parent_ref": "architecture",
         "decomposition": {
-          "status": "partial",
-          "reason": "This task (row setup, OuterProductMean communication, and the MSA stack's MSAPairWeightedAveraging plus Transition) covers Algorithm 8 lines 1-4 and 6-8 only. A follow-up task adds this module's own pair-stack children (lines 9-13 -- TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, and a pair Transition) and flips this status to complete."
+          "status": "complete"
         },
         "label": "MSA Module",
         "kind": "refiner",
@@ -744,17 +787,20 @@ export const manifest = {
           "msa_row_embedding",
           "outer_product_mean",
           "msa_pair_weighted_averaging",
-          "transition"
+          "transition",
+          "triangle_multiplication",
+          "axial_pair_attention"
         ],
-        "role": "embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation and update the activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; only one representative pass through the module's row setup, communication, and MSA-stack steps is modeled here, not the N_block=4 loop or the outer per-recycle loop",
+        "role": "embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation; update the MSA activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; and run the resulting pair state through the module's own pair-stack (triangle multiplication x2, triangle attention x2, transition), architecturally identical to the Pairformer's own pair-stack mechanism but with its own parameters, run N_block=4 times instead of 48; only z_ij is returned, the MSA representation itself is discarded every call; only one representative pass through the module is modeled here, not the N_block=4 loop or the outer per-recycle loop",
         "scale": "msa",
+        "repeats": 4,
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 8 (MsaModule), lines 1-4 and 6-8"
+              "locator": "Supplementary Algorithm 8 (MsaModule), lines 1-15"
             }
           ]
         }
@@ -863,6 +909,160 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition, a shared SwiGLU utility also independently instantiated by single_transition and pair_transition elsewhere in this source set)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_triangle_multiplication_outgoing",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Triangle Multiplication Outgoing",
+        "kind": "operator",
+        "mechanisms": [
+          "triangle_multiplication",
+          "gated_projection",
+          "residual_update"
+        ],
+        "role": "aggregate products over shared outgoing edges and add the result to the pair representation; the same TriangleMultiplicationOutgoing mechanism the Pairformer uses (own parameters, not shared weights), run here as the first step of the MSA module's own N_block=4 pair-stack instead of the Pairformer's 48-block stack",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 9 ({z_ij} += DropoutRowwise_0.25(TriangleMultiplicationOutgoing({z_ij}))); Algorithm 12 (TriangleMultiplicationOutgoing) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 2, not modeled as its own fact here (dropout is not modeled anywhere else in this source set, including the Pairformer's own pair-stack)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_triangle_multiplication_incoming",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Triangle Multiplication Incoming",
+        "kind": "operator",
+        "mechanisms": [
+          "triangle_multiplication",
+          "gated_projection",
+          "residual_update"
+        ],
+        "role": "aggregate products over shared incoming edges and add the result to the pair representation; the same TriangleMultiplicationIncoming mechanism the Pairformer uses (own parameters, not shared weights), run here as the second step of the MSA module's own pair-stack",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 10 ({z_ij} += DropoutRowwise_0.25(TriangleMultiplicationIncoming({z_ij}))); Algorithm 13 (TriangleMultiplicationIncoming) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 3, not modeled as its own fact here"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_attention_starting_node",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Triangle Attention Starting Node",
+        "kind": "attention",
+        "mechanisms": [
+          "axial_attention",
+          "self_derived_pair_bias",
+          "query_gating",
+          "residual_update"
+        ],
+        "role": "update each ordered pair by attending along the starting-node pair-grid axis; the same TriangleAttentionStartingNode mechanism the Pairformer uses (own parameters, not shared weights), run here as the third step of the MSA module's own pair-stack",
+        "scale": "token_pair",
+        "attention": {
+          "pattern": "pair_grid_starting_node",
+          "query_scale": "token_pair",
+          "key_value_scale": "token_pair",
+          "heads": 4,
+          "pair_bias": true,
+          "pair_bias_source": "normalized_pair_state",
+          "positional_encoding": {
+            "kind": "none"
+          }
+        },
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 11 ({z_ij} += DropoutRowwise_0.25(TriangleAttentionStartingNode({z_ij}))); Algorithm 14 (TriangleAttentionStartingNode, N_head=4, c=32) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 4, not modeled as its own fact here"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_attention_ending_node",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Triangle Attention Ending Node",
+        "kind": "attention",
+        "mechanisms": [
+          "axial_attention",
+          "self_derived_pair_bias",
+          "query_gating",
+          "residual_update"
+        ],
+        "role": "transpose the pair grid, attend along the complementary ending-node axis, and add the result to the pair representation; the same TriangleAttentionEndingNode mechanism the Pairformer uses (own parameters, not shared weights), run here as the fourth step of the MSA module's own pair-stack",
+        "scale": "token_pair",
+        "attention": {
+          "pattern": "pair_grid_ending_node",
+          "query_scale": "token_pair",
+          "key_value_scale": "token_pair",
+          "heads": 4,
+          "pair_bias": true,
+          "pair_bias_source": "normalized_pair_state",
+          "positional_encoding": {
+            "kind": "none"
+          }
+        },
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 12 ({z_ij} += DropoutColumnwise_0.25(TriangleAttentionEndingNode({z_ij}))); Algorithm 15 (TriangleAttentionEndingNode, N_head=4, c=32) -- same DropoutColumnwise_0.25 scheme as the Pairformer's own Algorithm 17 line 5 (columnwise here, unlike the other three steps' rowwise dropout, since this step attends along the transposed axis), not modeled as its own fact here"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_transition",
+        "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "MSA Pair Transition",
+        "kind": "feed_forward",
+        "mechanisms": [
+          "layer_normalization",
+          "swiglu",
+          "residual_update"
+        ],
+        "role": "apply a pointwise 4x SwiGLU transition and add its 128-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights), run here as the final step of the MSA module's own pair-stack, whose output is the module's returned z_ij",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 13 ({z_ij} += Transition({z_ij})); Algorithm 11 (Transition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6)"
             }
           ]
         }
@@ -1526,6 +1726,22 @@ export const manifest = {
         }
       },
       {
+        "id": "z_init",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "architecture",
+        "role": "outer_sum_projected_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs)); Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument) -- the pair representation as it exists right after the outer-sum projection of s_inputs, before Template/MSA processing; only one representative pass is modeled, so this value site stands in for what Algorithm 1 line 8 would otherwise reconstruct at the start of every recycle"
+            }
+          ]
+        }
+      },
+      {
         "id": "block_pair_state",
         "representation_ref": "representations.pair_state",
         "scope_ref": "modules.pairformer_stack",
@@ -1757,7 +1973,8 @@ export const manifest = {
       {
         "id": "msa_input",
         "representation_ref": "representations.msa_identity",
-        "scope_ref": "modules.msa_row_embedding",
+        "scope_ref": "architecture",
+        "boundary": "input",
         "role": "raw_msa_identity_input",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -1773,7 +1990,8 @@ export const manifest = {
       {
         "id": "has_deletion_input",
         "representation_ref": "representations.has_deletion",
-        "scope_ref": "modules.msa_row_embedding",
+        "scope_ref": "architecture",
+        "boundary": "input",
         "role": "raw_deletion_flag_input",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -1789,7 +2007,8 @@ export const manifest = {
       {
         "id": "deletion_value_input",
         "representation_ref": "representations.deletion_value",
-        "scope_ref": "modules.msa_row_embedding",
+        "scope_ref": "architecture",
+        "boundary": "input",
         "role": "raw_deletion_value_input",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -1877,7 +2096,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij), z_ij in R^c_z, c_z=128); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this value site is OuterProductMean's own returned contribution; wiring its += into the architecture's persistent pair representation is out of this task's scope (see open_questions.msa_module_pair_representation_wiring_deferred)"
+              "locator": "Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij), z_ij in R^c_z, c_z=128); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this value site is OuterProductMean's own returned contribution, added into value_sites.msa_module_pair_state_read alongside value_sites.z_init by relations.outer_product_mean_contribution_updates_msa_module_pair_state"
             }
           ]
         }
@@ -1949,15 +2168,15 @@ export const manifest = {
       {
         "id": "msa_module_pair_state_read",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "modules.msa_pair_weighted_averaging",
-        "role": "msa_stack_pair_state_read",
+        "scope_ref": "modules.msa_module",
+        "role": "post_communication_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 8 line 7 (MSAPairWeightedAveraging({m_si}, {z_ij}, c=8) reads the pair representation); this value site marks the read occurrence only -- wiring its producer to the architecture's persistent pair representation (z_init) is out of this task's scope (see open_questions.msa_module_pair_representation_wiring_deferred)"
+              "locator": "Supplementary Algorithm 8 lines 6-9 -- z_ij as it stands right after OuterProductMean's communication write (line 6), before MSAPairWeightedAveraging reads it to condition attention (line 7) and before the pair-stack's first step reads it (line 9); lines 7-8 update only {m_si}, never {z_ij}, so this is the same value read at both points. Re-scoped from modules.msa_pair_weighted_averaging (its original, narrower scope when only the MSA-stack read was modeled) to modules.msa_module now that it also feeds this module's own pair-stack."
             }
           ]
         }
@@ -1993,6 +2212,86 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "msa_pair_after_outgoing_multiplication",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.msa_module",
+        "role": "msa_module_outgoing_triangle_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 9"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_after_incoming_multiplication",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.msa_module",
+        "role": "msa_module_incoming_triangle_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 10"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_after_starting_attention",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.msa_module",
+        "role": "msa_module_starting_node_attention_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 11"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_after_ending_attention",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.msa_module",
+        "role": "msa_module_ending_node_attention_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 12"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_after_transition",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.msa_module",
+        "role": "msa_module_final_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 13; line 15 (#kw[return] {z_ij}) -- this is the module's own returned z_ij, the final value written into value_sites.pair_state_input"
+            }
+          ]
+        }
       }
     ],
     "valueSiteInterfaces": {
@@ -2012,13 +2311,13 @@ export const manifest = {
       },
       "pair_state_input": {
         "incomingRelationRefs": [
-          "relations.pair_state_projection_produces_pair_state_input"
+          "relations.msa_module_pair_output_becomes_pair_state_input"
         ],
         "outgoingRelationRefs": [
           "relations.input_pair_state_initializes_block_pair_state"
         ],
         "producerRefs": [
-          "modules.pair_state_input_projection"
+          "value_sites.msa_pair_after_transition"
         ],
         "consumerRefs": [
           "value_sites.block_pair_state"
@@ -2120,14 +2419,30 @@ export const manifest = {
         ],
         "outgoingRelationRefs": [
           "relations.s_inputs_enters_single_state_projection",
-          "relations.s_inputs_enters_pair_state_projection"
+          "relations.s_inputs_enters_pair_state_projection",
+          "relations.s_inputs_enters_msa_row_embedding"
         ],
         "producerRefs": [
           "modules.input_feature_concatenation"
         ],
         "consumerRefs": [
           "modules.single_state_input_projection",
+          "modules.pair_state_input_projection",
+          "modules.msa_row_embedding"
+        ]
+      },
+      "z_init": {
+        "incomingRelationRefs": [
+          "relations.pair_state_projection_produces_z_init"
+        ],
+        "outgoingRelationRefs": [
+          "relations.z_init_initializes_msa_module_pair_state"
+        ],
+        "producerRefs": [
           "modules.pair_state_input_projection"
+        ],
+        "consumerRefs": [
+          "value_sites.msa_module_pair_state_read"
         ]
       },
       "block_pair_state": {
@@ -2413,13 +2728,13 @@ export const manifest = {
           "relations.outer_product_mean_produces_pair_contribution"
         ],
         "outgoingRelationRefs": [
-
+          "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
         ],
         "producerRefs": [
           "modules.outer_product_mean"
         ],
         "consumerRefs": [
-
+          "value_sites.msa_module_pair_state_read"
         ]
       },
       "msa_pair_weighted_averaging_value": {
@@ -2480,16 +2795,20 @@ export const manifest = {
       },
       "msa_module_pair_state_read": {
         "incomingRelationRefs": [
-
+          "relations.z_init_initializes_msa_module_pair_state",
+          "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
         ],
         "outgoingRelationRefs": [
-          "relations.pair_state_conditions_msa_pair_weighted_averaging"
+          "relations.pair_state_conditions_msa_pair_weighted_averaging",
+          "relations.msa_pair_state_enters_outgoing_multiplication"
         ],
         "producerRefs": [
-
+          "value_sites.z_init",
+          "value_sites.outer_product_mean_pair_contribution"
         ],
         "consumerRefs": [
-          "modules.msa_pair_weighted_averaging"
+          "modules.msa_pair_weighted_averaging",
+          "modules.msa_triangle_multiplication_outgoing"
         ]
       },
       "msa_activations_after_pair_weighted_averaging": {
@@ -2518,6 +2837,76 @@ export const manifest = {
         ],
         "consumerRefs": [
 
+        ]
+      },
+      "msa_pair_after_outgoing_multiplication": {
+        "incomingRelationRefs": [
+          "relations.msa_outgoing_multiplication_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
+        ],
+        "producerRefs": [
+          "modules.msa_triangle_multiplication_outgoing"
+        ],
+        "consumerRefs": [
+          "modules.msa_triangle_multiplication_incoming"
+        ]
+      },
+      "msa_pair_after_incoming_multiplication": {
+        "incomingRelationRefs": [
+          "relations.msa_incoming_multiplication_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_incoming_pair_state_enters_starting_attention"
+        ],
+        "producerRefs": [
+          "modules.msa_triangle_multiplication_incoming"
+        ],
+        "consumerRefs": [
+          "modules.msa_pair_attention_starting_node"
+        ]
+      },
+      "msa_pair_after_starting_attention": {
+        "incomingRelationRefs": [
+          "relations.msa_starting_attention_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_starting_pair_state_enters_ending_attention"
+        ],
+        "producerRefs": [
+          "modules.msa_pair_attention_starting_node"
+        ],
+        "consumerRefs": [
+          "modules.msa_pair_attention_ending_node"
+        ]
+      },
+      "msa_pair_after_ending_attention": {
+        "incomingRelationRefs": [
+          "relations.msa_ending_attention_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_ending_pair_state_enters_pair_transition"
+        ],
+        "producerRefs": [
+          "modules.msa_pair_attention_ending_node"
+        ],
+        "consumerRefs": [
+          "modules.msa_pair_transition"
+        ]
+      },
+      "msa_pair_after_transition": {
+        "incomingRelationRefs": [
+          "relations.msa_pair_transition_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.msa_module_pair_output_becomes_pair_state_input"
+        ],
+        "producerRefs": [
+          "modules.msa_pair_transition"
+        ],
+        "consumerRefs": [
+          "value_sites.pair_state_input"
         ]
       }
     },
@@ -4137,21 +4526,21 @@ export const manifest = {
         }
       },
       {
-        "id": "pair_state_projection_produces_pair_state_input",
+        "id": "pair_state_projection_produces_z_init",
         "from": "modules.pair_state_input_projection",
-        "to": "value_sites.pair_state_input",
+        "to": "value_sites.z_init",
         "kind": "state_update",
         "carries": [
           "representations.pair_state"
         ],
-        "operation": "outer_sum_project_s_inputs_to_pair_state_input",
+        "operation": "outer_sum_project_s_inputs_to_z_init",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)"
+              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8)."
             }
           ]
         }
@@ -4351,7 +4740,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij)); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- the += into the architecture's persistent pair representation is wired in a follow-up task, see open_questions.msa_module_pair_representation_wiring_deferred"
+              "locator": "Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij)); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this contribution's own += into the pair representation is relations.outer_product_mean_contribution_updates_msa_module_pair_state"
             }
           ]
         }
@@ -4515,6 +4904,286 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "s_inputs_enters_msa_row_embedding",
+        "from": "value_sites.s_inputs",
+        "to": "modules.msa_row_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.s_inputs"
+        ],
+        "operation": "read_s_inputs_for_msa_row_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) -- s_inputs is added into every MSA row identically"
+            }
+          ]
+        }
+      },
+      {
+        "id": "z_init_initializes_msa_module_pair_state",
+        "from": "value_sites.z_init",
+        "to": "value_sites.msa_module_pair_state_read",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "initialize_msa_module_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument); Algorithm 1 line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer"
+            }
+          ]
+        }
+      },
+      {
+        "id": "outer_product_mean_contribution_updates_msa_module_pair_state",
+        "from": "value_sites.outer_product_mean_pair_contribution",
+        "to": "value_sites.msa_module_pair_state_read",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_outer_product_mean_contribution_to_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- communication writes into z_ij before the MSA stack (line 7) or this block's pair-stack (lines 9-13) run"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_state_enters_outgoing_multiplication",
+        "from": "value_sites.msa_module_pair_state_read",
+        "to": "modules.msa_triangle_multiplication_outgoing",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "compute_msa_module_outgoing_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_outgoing_multiplication_updates_pair_state",
+        "from": "modules.msa_triangle_multiplication_outgoing",
+        "to": "value_sites.msa_pair_after_outgoing_multiplication",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_msa_module_outgoing_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_outgoing_pair_state_enters_incoming_multiplication",
+        "from": "value_sites.msa_pair_after_outgoing_multiplication",
+        "to": "modules.msa_triangle_multiplication_incoming",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "compute_msa_module_incoming_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_incoming_multiplication_updates_pair_state",
+        "from": "modules.msa_triangle_multiplication_incoming",
+        "to": "value_sites.msa_pair_after_incoming_multiplication",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_msa_module_incoming_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_incoming_pair_state_enters_starting_attention",
+        "from": "value_sites.msa_pair_after_incoming_multiplication",
+        "to": "modules.msa_pair_attention_starting_node",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "attend_msa_module_starting_node_axis",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_starting_attention_updates_pair_state",
+        "from": "modules.msa_pair_attention_starting_node",
+        "to": "value_sites.msa_pair_after_starting_attention",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_msa_module_starting_node_attention_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_starting_pair_state_enters_ending_attention",
+        "from": "value_sites.msa_pair_after_starting_attention",
+        "to": "modules.msa_pair_attention_ending_node",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "attend_msa_module_ending_node_axis",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_ending_attention_updates_pair_state",
+        "from": "modules.msa_pair_attention_ending_node",
+        "to": "value_sites.msa_pair_after_ending_attention",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_msa_module_ending_node_attention_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_ending_pair_state_enters_pair_transition",
+        "from": "value_sites.msa_pair_after_ending_attention",
+        "to": "modules.msa_pair_transition",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "compute_msa_module_pair_transition_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_pair_transition_updates_pair_state",
+        "from": "modules.msa_pair_transition",
+        "to": "value_sites.msa_pair_after_transition",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_msa_module_pair_transition_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_module_pair_output_becomes_pair_state_input",
+        "from": "value_sites.msa_pair_after_transition",
+        "to": "value_sites.pair_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "expose_msa_module_final_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 line 15 (#kw[return] {z_ij}) -- only z_ij is returned, the MSA representation is discarded; this is the module's actual contribution to the architecture's persistent pair_state_input, per Algorithm 1 line 10 ({z_ij} += MsaModule(...)) feeding the 48-block PairformerStack call on line 12"
+            }
+          ]
+        }
       }
     ],
     "claims": [
@@ -4590,14 +5259,14 @@ export const manifest = {
     "openQuestions": [
       {
         "id": "relative_position_encoding_and_token_bonds_unmodeled",
-        "question": "Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_pair_state_input; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to pair_state_input that are not yet represented as their own value sites, modules, or relations.",
+        "question": "Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_z_init; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to z_init that are not yet represented as their own value sites, modules, or relations.",
         "status": "deferred",
         "affected_refs": [
-          "value_sites.pair_state_input",
-          "relations.pair_state_projection_produces_pair_state_input",
+          "value_sites.z_init",
+          "relations.pair_state_projection_produces_z_init",
           "modules.pair_state_input_projection"
         ],
-        "resolution_criteria": "Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding pair_state_input, alongside the existing s_inputs outer-sum contribution.",
+        "resolution_criteria": "Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding z_init, alongside the existing s_inputs outer-sum contribution.",
         "evidence": {
           "status": "open_question",
           "refs": [
@@ -4605,27 +5274,6 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 1 lines 4-5"
-            }
-          ]
-        }
-      },
-      {
-        "id": "msa_module_pair_representation_wiring_deferred",
-        "question": "OuterProductMean's pair-representation contribution (value_sites.outer_product_mean_pair_contribution) and MSAPairWeightedAveraging's pair-representation read (value_sites.msa_module_pair_state_read) are modeled as module-scoped facts of this task's two mechanisms, but neither is yet wired into the architecture's actual persistent pair representation chain (pair_state_input_projection -> pair_state_input). Doing so correctly requires the z_init value site and the retargeted pair_state_input_projection -> z_init -> msa_module -> pair_state_input chain, which is a follow-up task's job (it also depends on this module's own pair-stack, added by that same follow-up task).",
-        "status": "deferred",
-        "affected_refs": [
-          "value_sites.outer_product_mean_pair_contribution",
-          "value_sites.msa_module_pair_state_read",
-          "modules.msa_module"
-        ],
-        "resolution_criteria": "Add value_sites.z_init, retarget relations.pair_state_projection_produces_pair_state_input to produce z_init instead of pair_state_input, and add relations wiring z_init into msa_module (producing value_sites.msa_module_pair_state_read and consuming value_sites.outer_product_mean_pair_contribution) and msa_module's final pair output into the retargeted pair_state_input.",
-        "evidence": {
-          "status": "open_question",
-          "refs": [
-            {
-              "source_ref": "af3_2024",
-              "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 8 lines 6-7; Algorithm 1 lines 9-10 (MsaModule called before Pairformer within the recycle)"
             }
           ]
         }
@@ -4646,27 +5294,6 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 8 line 2"
-            }
-          ]
-        }
-      },
-      {
-        "id": "msa_row_embedding_s_inputs_edge_deferred",
-        "question": "Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) means msa_row_embedding genuinely reads value_sites.s_inputs, and modules.msa_row_embedding's own role documents this. A canonical relations entry for that read is not yet added, because value_sites.s_inputs is already visible on the pairformer_overview root board and modules.msa_row_embedding is not on any board yet (this task's file scope is architectures/alphafold3-pairformer.yaml only) -- the projector rejects a relation connecting an already-visible root-board object to a depth-hidden one with no visible or elided ancestor (unmapped_boundary).",
-        "status": "deferred",
-        "affected_refs": [
-          "modules.msa_row_embedding",
-          "value_sites.s_inputs",
-          "value_sites.msa_activations"
-        ],
-        "resolution_criteria": "Once a follow-up task gives msa_module (or a suitable ancestor) a visible or elided presence on a board, add a canonical relation from value_sites.s_inputs to modules.msa_row_embedding (or directly to value_sites.msa_activations) carrying representations.s_inputs.",
-        "evidence": {
-          "status": "open_question",
-          "refs": [
-            {
-              "source_ref": "af3_2024",
-              "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 8 line 4"
             }
           ]
         }
@@ -7004,7 +7631,7 @@ export const manifest = {
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 9,
+          "columns": 11,
           "rows": 5,
           "column_sizing": "content",
           "col_gap": 40,
@@ -7113,12 +7740,52 @@ export const manifest = {
             "row": 5
           },
           {
+            "id": "msa_input",
+            "ref": "value_sites.msa_input",
+            "label": "MSA identity",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 1
+          },
+          {
+            "id": "has_deletion_input",
+            "ref": "value_sites.has_deletion_input",
+            "label": "has deletion",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "deletion_value_input",
+            "ref": "value_sites.deletion_value_input",
+            "label": "deletion value",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 4
+          },
+          {
+            "id": "msa_module",
+            "ref": "modules.msa_module",
+            "label": "MSA Module",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 7,
+            "row": 3,
+            "board_ref": "msa_module_detail"
+          },
+          {
             "id": "pairformer_stack",
             "ref": "modules.pairformer_stack",
             "label": "48-block Pairformer",
             "prominence": "primary",
             "treatment": "block",
-            "col": 7,
+            "col": 9,
             "row": 3,
             "board_ref": "pairformer_block"
           },
@@ -7130,7 +7797,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 9,
+            "col": 11,
             "row": 2
           },
           {
@@ -7141,7 +7808,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 9,
+            "col": 11,
             "row": 4
           }
         ],
@@ -7175,6 +7842,9 @@ export const manifest = {
           },
           {
             "ref": "value_sites.pair_state_input"
+          },
+          {
+            "ref": "value_sites.z_init"
           }
         ],
         "projection_mode": "derived",
@@ -7228,6 +7898,54 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_2ec3a4250502",
+            "from": "deletion_value_input",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.deletion_value_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.deletion_value_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.deletion_value"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_47ae297573c2",
+            "from": "has_deletion_input",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.has_deletion_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.has_deletion_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.has_deletion"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_ed195414faf6",
             "from": "input_feature_embedder",
             "to": "s_inputs",
@@ -7247,6 +7965,58 @@ export const manifest = {
             ],
             "carries": [
               "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c21ce4106938",
+            "from": "msa_input",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_input_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_input_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_identity"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_11ee4bd8bcaf",
+            "from": "msa_module",
+            "to": "pairformer_stack",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_module_pair_output_becomes_pair_state_input",
+              "relations.input_pair_state_initializes_block_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_module_pair_output_becomes_pair_state_input"
+              },
+              {
+                "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.pair_state_input"
+            ],
+            "carries": [
+              "representations.pair_state"
             ],
             "presentation": {
             }
@@ -7348,26 +8118,26 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_a6a29a735a80",
+            "id": "projection_dba7f39ba072",
             "from": "pair_state_input_projection",
-            "to": "pairformer_stack",
+            "to": "msa_module",
             "projection": "contracted",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
-              "relations.pair_state_projection_produces_pair_state_input",
-              "relations.input_pair_state_initializes_block_pair_state"
+              "relations.pair_state_projection_produces_z_init",
+              "relations.z_init_initializes_msa_module_pair_state"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.pair_state_projection_produces_pair_state_input"
+                "relation_ref": "relations.pair_state_projection_produces_z_init"
               },
               {
-                "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
+                "relation_ref": "relations.z_init_initializes_msa_module_pair_state"
               }
             ],
             "hidden_refs": [
-              "value_sites.pair_state_input"
+              "value_sites.z_init"
             ],
             "carries": [
               "representations.pair_state"
@@ -7484,6 +8254,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_f4545d04684c",
+            "from": "s_inputs",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_msa_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_msa_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_e702e26247ec",
             "from": "s_inputs",
             "to": "pair_state_input_projection",
@@ -7588,10 +8382,16 @@ export const manifest = {
           "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_embedder": "visible",
-          "modules.msa_pair_weighted_averaging": "depth_hidden",
-          "modules.msa_row_embedding": "depth_hidden",
-          "modules.msa_transition": "depth_hidden",
-          "modules.outer_product_mean": "depth_hidden",
+          "modules.msa_module": "visible",
+          "modules.msa_pair_attention_ending_node": "collapsed:modules.msa_module",
+          "modules.msa_pair_attention_starting_node": "collapsed:modules.msa_module",
+          "modules.msa_pair_transition": "collapsed:modules.msa_module",
+          "modules.msa_pair_weighted_averaging": "collapsed:modules.msa_module",
+          "modules.msa_row_embedding": "collapsed:modules.msa_module",
+          "modules.msa_transition": "collapsed:modules.msa_module",
+          "modules.msa_triangle_multiplication_incoming": "collapsed:modules.msa_module",
+          "modules.msa_triangle_multiplication_outgoing": "collapsed:modules.msa_module",
+          "modules.outer_product_mean": "collapsed:modules.msa_module",
           "modules.pair_attention_ending_node": "collapsed:modules.pairformer_stack",
           "modules.pair_attention_starting_node": "collapsed:modules.pairformer_stack",
           "modules.pair_state_input_projection": "visible",
@@ -7607,21 +8407,26 @@ export const manifest = {
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
           "value_sites.deletion_mean_input": "visible",
-          "value_sites.deletion_value_input": "depth_hidden",
-          "value_sites.has_deletion_input": "depth_hidden",
-          "value_sites.msa_activations": "depth_hidden",
-          "value_sites.msa_activations_after_pair_weighted_averaging": "depth_hidden",
-          "value_sites.msa_activations_after_transition": "depth_hidden",
-          "value_sites.msa_input": "depth_hidden",
-          "value_sites.msa_module_pair_state_read": "depth_hidden",
-          "value_sites.msa_pair_weighted_averaging_gate": "depth_hidden",
-          "value_sites.msa_pair_weighted_averaging_pair_bias": "depth_hidden",
-          "value_sites.msa_pair_weighted_averaging_value": "depth_hidden",
-          "value_sites.msa_pair_weighted_averaging_weights": "depth_hidden",
-          "value_sites.outer_product_mean_flattened": "depth_hidden",
-          "value_sites.outer_product_mean_pair_contribution": "depth_hidden",
-          "value_sites.outer_product_mean_projection_a": "depth_hidden",
-          "value_sites.outer_product_mean_projection_b": "depth_hidden",
+          "value_sites.deletion_value_input": "visible",
+          "value_sites.has_deletion_input": "visible",
+          "value_sites.msa_activations": "collapsed:modules.msa_module",
+          "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.msa_module",
+          "value_sites.msa_activations_after_transition": "collapsed:modules.msa_module",
+          "value_sites.msa_input": "visible",
+          "value_sites.msa_module_pair_state_read": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_after_ending_attention": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_after_incoming_multiplication": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_after_outgoing_multiplication": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_after_starting_attention": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_after_transition": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_weighted_averaging_gate": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_weighted_averaging_value": "collapsed:modules.msa_module",
+          "value_sites.msa_pair_weighted_averaging_weights": "collapsed:modules.msa_module",
+          "value_sites.outer_product_mean_flattened": "collapsed:modules.msa_module",
+          "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.msa_module",
+          "value_sites.outer_product_mean_projection_a": "collapsed:modules.msa_module",
+          "value_sites.outer_product_mean_projection_b": "collapsed:modules.msa_module",
           "value_sites.pair_after_ending_attention": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_incoming_multiplication": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_outgoing_multiplication": "collapsed:modules.pairformer_stack",
@@ -7638,7 +8443,8 @@ export const manifest = {
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
           "value_sites.single_state_input": "elided",
           "value_sites.single_state_output": "visible",
-          "value_sites.token_mask_input": "visible"
+          "value_sites.token_mask_input": "visible",
+          "value_sites.z_init": "elided"
         },
         "projectionMode": "derived"
       },
@@ -9638,6 +10444,830 @@ export const manifest = {
           "value_sites.profile_input": "visible",
           "value_sites.restype_input": "visible",
           "value_sites.s_inputs": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "msa_module_detail",
+        "title": "The MSA Module",
+        "summary": "Raw per-row MSA features are embedded and anchored to s_inputs, then read into OuterProductMean, which contributes evolutionary coupling (correlated variation across the alignment) into the pair representation before that block's pair-stack runs. MSAPairWeightedAveraging updates the MSA rows using attention weights derived entirely from the pair representation, never from row content. Only the final pair state is returned; the MSA representation itself is discarded.",
+        "subject_ref": "modules.msa_module",
+        "expansion_depth": 1,
+        "parent": "pairformer_overview",
+        "grid": {
+          "columns": 13,
+          "rows": 5,
+          "column_sizing": "content",
+          "col_gap": 24,
+          "row_gap": 26
+        },
+        "nodes": [
+          {
+            "id": "value_msa_input",
+            "ref": "value_sites.msa_input",
+            "label": "MSA identity",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "value_has_deletion_input",
+            "ref": "value_sites.has_deletion_input",
+            "label": "has deletion",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "value_deletion_value_input",
+            "ref": "value_sites.deletion_value_input",
+            "label": "deletion value",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "value_s_inputs",
+            "ref": "value_sites.s_inputs",
+            "label": "input embedding",
+            "notation": "s^{inputs}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "value_z_init",
+            "ref": "value_sites.z_init",
+            "label": "initial pairs",
+            "notation": "z^{init}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "module_msa_row_embedding",
+            "ref": "modules.msa_row_embedding",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "module_outer_product_mean",
+            "ref": "modules.outer_product_mean",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "value_msa_module_pair_state_read",
+            "ref": "value_sites.msa_module_pair_state_read",
+            "label": "pairs after communication",
+            "notation": "z",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "module_msa_pair_weighted_averaging",
+            "ref": "modules.msa_pair_weighted_averaging",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "module_msa_triangle_multiplication_outgoing",
+            "ref": "modules.msa_triangle_multiplication_outgoing",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 4,
+            "row": 5
+          },
+          {
+            "id": "value_msa_pair_after_outgoing_multiplication",
+            "ref": "value_sites.msa_pair_after_outgoing_multiplication",
+            "label": "outgoing-updated pairs",
+            "notation": "z^{out}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 5,
+            "row": 5
+          },
+          {
+            "id": "module_msa_triangle_multiplication_incoming",
+            "ref": "modules.msa_triangle_multiplication_incoming",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 6,
+            "row": 5
+          },
+          {
+            "id": "value_msa_pair_after_incoming_multiplication",
+            "ref": "value_sites.msa_pair_after_incoming_multiplication",
+            "label": "incoming-updated pairs",
+            "notation": "z^{in}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 7,
+            "row": 5
+          },
+          {
+            "id": "module_msa_transition",
+            "ref": "modules.msa_transition",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "module_msa_pair_attention_starting_node",
+            "ref": "modules.msa_pair_attention_starting_node",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 8,
+            "row": 5
+          },
+          {
+            "id": "value_msa_pair_after_starting_attention",
+            "ref": "value_sites.msa_pair_after_starting_attention",
+            "label": "start-attended pairs",
+            "notation": "z^{start}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 9,
+            "row": 5
+          },
+          {
+            "id": "module_msa_pair_attention_ending_node",
+            "ref": "modules.msa_pair_attention_ending_node",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 10,
+            "row": 5
+          },
+          {
+            "id": "value_msa_pair_after_ending_attention",
+            "ref": "value_sites.msa_pair_after_ending_attention",
+            "label": "end-attended pairs",
+            "notation": "z^{end}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 11,
+            "row": 5
+          },
+          {
+            "id": "module_msa_pair_transition",
+            "ref": "modules.msa_pair_transition",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 12,
+            "row": 5
+          },
+          {
+            "id": "value_pair_state_input",
+            "ref": "value_sites.pair_state_input",
+            "label": "module output",
+            "notation": "z",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 13,
+            "row": 5
+          }
+        ],
+        "elide": [
+          {
+            "ref": "value_sites.msa_pair_after_transition"
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.s_inputs_enters_msa_row_embedding"
+            },
+            "label": "s^{inputs}",
+            "connection": {
+              "title": "Anchor every row to s_inputs",
+              "role": "shared row anchor",
+              "inside": "The same raw input embedding used everywhere else in AF3 is added identically into every MSA row."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.z_init_initializes_msa_module_pair_state"
+            },
+            "label": "z^{init}",
+            "connection": {
+              "title": "Pair state enters the block",
+              "role": "block-input pair state",
+              "inside": "The module reads the same z_init that also seeds the Pairformer, before either has processed it."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+            },
+            "label": "+ Δz_comm",
+            "connection": {
+              "title": "Communication writes into the pair state",
+              "role": "evolutionary-coupling contribution",
+              "inside": "OuterProductMean's averaged cross-covariance is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.pair_state_conditions_msa_pair_weighted_averaging"
+            },
+            "label": "z",
+            "connection": {
+              "title": "Pair state conditions MSA attention",
+              "role": "pair-derived routing table",
+              "inside": "Attention weights come entirely from the pair representation, never from MSA row content, so every row is pulled through the same shared routing table."
+            }
+          },
+          {
+            "match": {
+              "relation_path": [
+                "relations.msa_pair_transition_updates_pair_state",
+                "relations.msa_module_pair_output_becomes_pair_state_input"
+              ]
+            },
+            "label": "z_{ij}",
+            "connection": {
+              "title": "Only z_ij is returned",
+              "role": "module output",
+              "inside": "The MSA representation is discarded every call; only the pair-stack's final state becomes the architecture's pair_state_input."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_b076db6527ef",
+            "from": "module_msa_pair_attention_ending_node",
+            "to": "value_msa_pair_after_ending_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_ending_attention_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_ending_attention_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8a124356becb",
+            "from": "module_msa_pair_attention_starting_node",
+            "to": "value_msa_pair_after_starting_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_starting_attention_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_starting_attention_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_5a698eeaf46e",
+            "from": "module_msa_pair_transition",
+            "to": "value_pair_state_input",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_pair_transition_updates_pair_state",
+              "relations.msa_module_pair_output_becomes_pair_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_transition_updates_pair_state"
+              },
+              {
+                "relation_ref": "relations.msa_module_pair_output_becomes_pair_state_input"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.msa_pair_after_transition"
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z_{ij}",
+              "connection": {
+                "title": "Only z_ij is returned",
+                "role": "module output",
+                "inside": "The MSA representation is discarded every call; only the pair-stack's final state becomes the architecture's pair_state_input."
+              }
+            }
+          },
+          {
+            "id": "projection_b02784aeb729",
+            "from": "module_msa_pair_weighted_averaging",
+            "to": "module_msa_transition",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.updated_activations_enter_transition"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.updated_activations_enter_transition"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_activations"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e66d29b3df6e",
+            "from": "module_msa_row_embedding",
+            "to": "module_msa_pair_weighted_averaging",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_activations_enters_msa_pair_weighted_averaging"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_activations_enters_msa_pair_weighted_averaging"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_activations"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_374fc0c2a94b",
+            "from": "module_msa_row_embedding",
+            "to": "module_outer_product_mean",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_activations_enters_outer_product_mean"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_activations_enters_outer_product_mean"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_activations"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_084fd7882134",
+            "from": "module_msa_triangle_multiplication_incoming",
+            "to": "value_msa_pair_after_incoming_multiplication",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_incoming_multiplication_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_incoming_multiplication_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_82547df153c1",
+            "from": "module_msa_triangle_multiplication_outgoing",
+            "to": "value_msa_pair_after_outgoing_multiplication",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_outgoing_multiplication_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_outgoing_multiplication_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_dac8b43d993c",
+            "from": "module_outer_product_mean",
+            "to": "value_msa_module_pair_state_read",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_comm",
+              "connection": {
+                "title": "Communication writes into the pair state",
+                "role": "evolutionary-coupling contribution",
+                "inside": "OuterProductMean's averaged cross-covariance is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation."
+              }
+            }
+          },
+          {
+            "id": "projection_401cbdd1b98e",
+            "from": "value_deletion_value_input",
+            "to": "module_msa_row_embedding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.deletion_value_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.deletion_value_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.deletion_value"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_1a70183d87d1",
+            "from": "value_has_deletion_input",
+            "to": "module_msa_row_embedding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.has_deletion_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.has_deletion_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.has_deletion"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_67e83da3517a",
+            "from": "value_msa_input",
+            "to": "module_msa_row_embedding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_input_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_input_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_identity"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_6a372305a8cd",
+            "from": "value_msa_module_pair_state_read",
+            "to": "module_msa_pair_weighted_averaging",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_state_conditions_msa_pair_weighted_averaging"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_conditions_msa_pair_weighted_averaging"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z",
+              "connection": {
+                "title": "Pair state conditions MSA attention",
+                "role": "pair-derived routing table",
+                "inside": "Attention weights come entirely from the pair representation, never from MSA row content, so every row is pulled through the same shared routing table."
+              }
+            }
+          },
+          {
+            "id": "projection_9b50414c4ca3",
+            "from": "value_msa_module_pair_state_read",
+            "to": "module_msa_triangle_multiplication_outgoing",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_state_enters_outgoing_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_state_enters_outgoing_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_617cbf4c6f14",
+            "from": "value_msa_pair_after_ending_attention",
+            "to": "module_msa_pair_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_ending_pair_state_enters_pair_transition"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_ending_pair_state_enters_pair_transition"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8b266e42aebc",
+            "from": "value_msa_pair_after_incoming_multiplication",
+            "to": "module_msa_pair_attention_starting_node",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_incoming_pair_state_enters_starting_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_incoming_pair_state_enters_starting_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_19d128554a79",
+            "from": "value_msa_pair_after_outgoing_multiplication",
+            "to": "module_msa_triangle_multiplication_incoming",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_445e976ed882",
+            "from": "value_msa_pair_after_starting_attention",
+            "to": "module_msa_pair_attention_ending_node",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_starting_pair_state_enters_ending_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_starting_pair_state_enters_ending_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_17c1759edf95",
+            "from": "value_s_inputs",
+            "to": "module_msa_row_embedding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_msa_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_msa_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+              "label": "s^{inputs}",
+              "connection": {
+                "title": "Anchor every row to s_inputs",
+                "role": "shared row anchor",
+                "inside": "The same raw input embedding used everywhere else in AF3 is added identically into every MSA row."
+              }
+            }
+          },
+          {
+            "id": "projection_9206d2d96c72",
+            "from": "value_z_init",
+            "to": "value_msa_module_pair_state_read",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.z_init_initializes_msa_module_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.z_init_initializes_msa_module_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z^{init}",
+              "connection": {
+                "title": "Pair state enters the block",
+                "role": "block-input pair state",
+                "inside": "The module reads the same z_init that also seeds the Pairformer, before either has processed it."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.msa_pair_attention_ending_node": "visible",
+          "modules.msa_pair_attention_starting_node": "visible",
+          "modules.msa_pair_transition": "visible",
+          "modules.msa_pair_weighted_averaging": "visible",
+          "modules.msa_row_embedding": "visible",
+          "modules.msa_transition": "visible",
+          "modules.msa_triangle_multiplication_incoming": "visible",
+          "modules.msa_triangle_multiplication_outgoing": "visible",
+          "modules.outer_product_mean": "visible",
+          "value_sites.deletion_value_input": "visible",
+          "value_sites.has_deletion_input": "visible",
+          "value_sites.msa_activations": "collapsed:modules.msa_row_embedding",
+          "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.msa_pair_weighted_averaging",
+          "value_sites.msa_activations_after_transition": "collapsed:modules.msa_transition",
+          "value_sites.msa_input": "visible",
+          "value_sites.msa_module_pair_state_read": "visible",
+          "value_sites.msa_pair_after_ending_attention": "visible",
+          "value_sites.msa_pair_after_incoming_multiplication": "visible",
+          "value_sites.msa_pair_after_outgoing_multiplication": "visible",
+          "value_sites.msa_pair_after_starting_attention": "visible",
+          "value_sites.msa_pair_after_transition": "elided",
+          "value_sites.msa_pair_weighted_averaging_gate": "collapsed:modules.msa_pair_weighted_averaging",
+          "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.msa_pair_weighted_averaging",
+          "value_sites.msa_pair_weighted_averaging_value": "collapsed:modules.msa_pair_weighted_averaging",
+          "value_sites.msa_pair_weighted_averaging_weights": "collapsed:modules.msa_pair_weighted_averaging",
+          "value_sites.outer_product_mean_flattened": "collapsed:modules.outer_product_mean",
+          "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.outer_product_mean",
+          "value_sites.outer_product_mean_projection_a": "collapsed:modules.outer_product_mean",
+          "value_sites.outer_product_mean_projection_b": "collapsed:modules.outer_product_mean",
+          "value_sites.pair_state_input": "visible",
+          "value_sites.s_inputs": "visible",
+          "value_sites.z_init": "visible"
         },
         "projectionMode": "derived"
       }

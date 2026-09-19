@@ -11,7 +11,7 @@ boards:
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 9
+      columns: 11
       rows: 5
       column_sizing: content
       col_gap: 40
@@ -98,12 +98,44 @@ boards:
       density: micro
       col: 5
       row: 5
+    - id: msa_input
+      ref: value_sites.msa_input
+      label: MSA identity
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 1
+    - id: has_deletion_input
+      ref: value_sites.has_deletion_input
+      label: has deletion
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 2
+    - id: deletion_value_input
+      ref: value_sites.deletion_value_input
+      label: deletion value
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 4
+    - id: msa_module
+      ref: modules.msa_module
+      label: MSA Module
+      prominence: primary
+      treatment: block
+      col: 7
+      row: 3
+      board_ref: msa_module_detail
     - id: pairformer_stack
       ref: modules.pairformer_stack
       label: 48-block Pairformer
       prominence: primary
       treatment: block
-      col: 7
+      col: 9
       row: 3
       board_ref: pairformer_block
     - id: single_state_output
@@ -113,7 +145,7 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 9
+      col: 11
       row: 2
     - id: pair_state_output
       ref: value_sites.pair_state_output
@@ -122,7 +154,7 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 9
+      col: 11
       row: 4
     edge_overrides:
     - match:
@@ -142,6 +174,7 @@ boards:
     elide:
     - ref: value_sites.single_state_input
     - ref: value_sites.pair_state_input
+    - ref: value_sites.z_init
 
   - id: pairformer_block
     title: One Pairformer Block, Repeated 48 Times
@@ -675,3 +708,207 @@ boards:
       col: 4
       row: 2
     parent: pairformer_overview
+
+  - id: msa_module_detail
+    title: The MSA Module
+    summary: Raw per-row MSA features are embedded and anchored to s_inputs, then read into OuterProductMean, which contributes evolutionary coupling (correlated variation across the alignment) into the pair representation before that block's pair-stack runs. MSAPairWeightedAveraging updates the MSA rows using attention weights derived entirely from the pair representation, never from row content. Only the final pair state is returned; the MSA representation itself is discarded.
+    subject_ref: modules.msa_module
+    expansion_depth: 1
+    parent: pairformer_overview
+    grid:
+      columns: 13
+      rows: 5
+      column_sizing: content
+      col_gap: 24
+      row_gap: 26
+    nodes:
+    - id: value_msa_input
+      ref: value_sites.msa_input
+      label: MSA identity
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 1
+    - id: value_has_deletion_input
+      ref: value_sites.has_deletion_input
+      label: has deletion
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 2
+    - id: value_deletion_value_input
+      ref: value_sites.deletion_value_input
+      label: deletion value
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 3
+    - id: value_s_inputs
+      ref: value_sites.s_inputs
+      label: input embedding
+      notation: 's^{inputs}'
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 1
+      row: 4
+    - id: value_z_init
+      ref: value_sites.z_init
+      label: initial pairs
+      notation: 'z^{init}'
+      prominence: context
+      treatment: compact
+      density: compact
+      col: 1
+      row: 5
+    - id: module_msa_row_embedding
+      ref: modules.msa_row_embedding
+      prominence: primary
+      treatment: block
+      col: 2
+      row: 2
+    - id: module_outer_product_mean
+      ref: modules.outer_product_mean
+      prominence: primary
+      treatment: block
+      col: 3
+      row: 2
+    - id: value_msa_module_pair_state_read
+      ref: value_sites.msa_module_pair_state_read
+      label: pairs after communication
+      notation: z
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 3
+      row: 5
+    - id: module_msa_pair_weighted_averaging
+      ref: modules.msa_pair_weighted_averaging
+      prominence: primary
+      treatment: block
+      col: 4
+      row: 2
+    - id: module_msa_triangle_multiplication_outgoing
+      ref: modules.msa_triangle_multiplication_outgoing
+      prominence: primary
+      treatment: block
+      col: 4
+      row: 5
+    - id: value_msa_pair_after_outgoing_multiplication
+      ref: value_sites.msa_pair_after_outgoing_multiplication
+      label: outgoing-updated pairs
+      notation: z^{out}
+      prominence: context
+      treatment: compact
+      density: micro
+      col: 5
+      row: 5
+    - id: module_msa_triangle_multiplication_incoming
+      ref: modules.msa_triangle_multiplication_incoming
+      prominence: primary
+      treatment: block
+      col: 6
+      row: 5
+    - id: value_msa_pair_after_incoming_multiplication
+      ref: value_sites.msa_pair_after_incoming_multiplication
+      label: incoming-updated pairs
+      notation: z^{in}
+      prominence: context
+      treatment: compact
+      density: micro
+      col: 7
+      row: 5
+    - id: module_msa_transition
+      ref: modules.msa_transition
+      prominence: primary
+      treatment: block
+      col: 6
+      row: 2
+    - id: module_msa_pair_attention_starting_node
+      ref: modules.msa_pair_attention_starting_node
+      prominence: primary
+      treatment: block
+      col: 8
+      row: 5
+    - id: value_msa_pair_after_starting_attention
+      ref: value_sites.msa_pair_after_starting_attention
+      label: start-attended pairs
+      notation: z^{start}
+      prominence: context
+      treatment: compact
+      density: micro
+      col: 9
+      row: 5
+    - id: module_msa_pair_attention_ending_node
+      ref: modules.msa_pair_attention_ending_node
+      prominence: primary
+      treatment: block
+      col: 10
+      row: 5
+    - id: value_msa_pair_after_ending_attention
+      ref: value_sites.msa_pair_after_ending_attention
+      label: end-attended pairs
+      notation: z^{end}
+      prominence: context
+      treatment: compact
+      density: micro
+      col: 11
+      row: 5
+    - id: module_msa_pair_transition
+      ref: modules.msa_pair_transition
+      prominence: primary
+      treatment: block
+      col: 12
+      row: 5
+    - id: value_pair_state_input
+      ref: value_sites.pair_state_input
+      label: module output
+      notation: z
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 13
+      row: 5
+    elide:
+    - ref: value_sites.msa_pair_after_transition
+    edge_overrides:
+    - match:
+        relation_ref: relations.s_inputs_enters_msa_row_embedding
+      label: s^{inputs}
+      connection:
+        title: Anchor every row to s_inputs
+        role: shared row anchor
+        inside: The same raw input embedding used everywhere else in AF3 is added identically into every MSA row.
+    - match:
+        relation_ref: relations.z_init_initializes_msa_module_pair_state
+      label: z^{init}
+      connection:
+        title: Pair state enters the block
+        role: block-input pair state
+        inside: The module reads the same z_init that also seeds the Pairformer, before either has processed it.
+    - match:
+        relation_ref: relations.outer_product_mean_contribution_updates_msa_module_pair_state
+      label: '+ Δz_comm'
+      connection:
+        title: Communication writes into the pair state
+        role: evolutionary-coupling contribution
+        inside: OuterProductMean's averaged cross-covariance is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation.
+    - match:
+        relation_ref: relations.pair_state_conditions_msa_pair_weighted_averaging
+      label: z
+      connection:
+        title: Pair state conditions MSA attention
+        role: pair-derived routing table
+        inside: Attention weights come entirely from the pair representation, never from MSA row content, so every row is pulled through the same shared routing table.
+    - match:
+        relation_path:
+          - relations.msa_pair_transition_updates_pair_state
+          - relations.msa_module_pair_output_becomes_pair_state_input
+      label: z_{ij}
+      connection:
+        title: Only z_ij is returned
+        role: module output
+        inside: The MSA representation is discarded every call; only the pair-stack's final state becomes the architecture's pair_state_input.

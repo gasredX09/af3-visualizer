@@ -611,6 +611,16 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2; Supplementary Algorithm 1 lines 2-3 (independently read by both the single_state_input and pair_state_input projections)
+  - id: z_init
+    representation_ref: representations.pair_state
+    scope_ref: architecture
+    role: outer_sum_projected_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs)); Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument) -- the pair representation as it exists right after the outer-sum projection of s_inputs, before Template/MSA processing; only one representative pass is modeled, so this value site stands in for what Algorithm 1 line 8 would otherwise reconstruct at the start of every recycle
   - id: block_pair_state
     representation_ref: representations.pair_state
     scope_ref: modules.pairformer_stack
@@ -675,7 +685,8 @@ value_sites:
     evidence: *pair_shape_evidence
   - id: msa_input
     representation_ref: representations.msa_identity
-    scope_ref: modules.msa_row_embedding
+    scope_ref: architecture
+    boundary: input
     role: raw_msa_identity_input
     evidence:
       status: confirmed_from_paper
@@ -685,7 +696,8 @@ value_sites:
           locator: Supplementary Algorithm 8 line 1 (f_Si^msa)
   - id: has_deletion_input
     representation_ref: representations.has_deletion
-    scope_ref: modules.msa_row_embedding
+    scope_ref: architecture
+    boundary: input
     role: raw_deletion_flag_input
     evidence:
       status: confirmed_from_paper
@@ -695,7 +707,8 @@ value_sites:
           locator: Supplementary Algorithm 8 line 1 (f_Si^has_deletion)
   - id: deletion_value_input
     representation_ref: representations.deletion_value
-    scope_ref: modules.msa_row_embedding
+    scope_ref: architecture
+    boundary: input
     role: raw_deletion_value_input
     evidence:
       status: confirmed_from_paper
@@ -752,7 +765,7 @@ value_sites:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij), z_ij in R^c_z, c_z=128); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this value site is OuterProductMean's own returned contribution; wiring its += into the architecture's persistent pair representation is out of this task's scope (see open_questions.msa_module_pair_representation_wiring_deferred)
+          locator: Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij), z_ij in R^c_z, c_z=128); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this value site is OuterProductMean's own returned contribution, added into value_sites.msa_module_pair_state_read alongside value_sites.z_init by relations.outer_product_mean_contribution_updates_msa_module_pair_state
   - id: msa_pair_weighted_averaging_value
     representation_ref: representations.msa_pair_weighted_averaging_value
     scope_ref: modules.msa_pair_weighted_averaging
@@ -795,14 +808,14 @@ value_sites:
           locator: Supplementary Algorithm 10 line 5
   - id: msa_module_pair_state_read
     representation_ref: representations.pair_state
-    scope_ref: modules.msa_pair_weighted_averaging
-    role: msa_stack_pair_state_read
+    scope_ref: modules.msa_module
+    role: post_communication_pair_state
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 8 line 7 (MSAPairWeightedAveraging({m_si}, {z_ij}, c=8) reads the pair representation); this value site marks the read occurrence only -- wiring its producer to the architecture's persistent pair representation (z_init) is out of this task's scope (see open_questions.msa_module_pair_representation_wiring_deferred)
+          locator: Supplementary Algorithm 8 lines 6-9 -- z_ij as it stands right after OuterProductMean's communication write (line 6), before MSAPairWeightedAveraging reads it to condition attention (line 7) and before the pair-stack's first step reads it (line 9); lines 7-8 update only {m_si}, never {z_ij}, so this is the same value read at both points. Re-scoped from modules.msa_pair_weighted_averaging (its original, narrower scope when only the MSA-stack read was modeled) to modules.msa_module now that it also feeds this module's own pair-stack.
   - id: msa_activations_after_pair_weighted_averaging
     representation_ref: representations.msa_activations
     scope_ref: modules.msa_pair_weighted_averaging
@@ -823,6 +836,56 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition)
+  - id: msa_pair_after_outgoing_multiplication
+    representation_ref: representations.pair_state
+    scope_ref: modules.msa_module
+    role: msa_module_outgoing_triangle_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 9
+  - id: msa_pair_after_incoming_multiplication
+    representation_ref: representations.pair_state
+    scope_ref: modules.msa_module
+    role: msa_module_incoming_triangle_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 10
+  - id: msa_pair_after_starting_attention
+    representation_ref: representations.pair_state
+    scope_ref: modules.msa_module
+    role: msa_module_starting_node_attention_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 11
+  - id: msa_pair_after_ending_attention
+    representation_ref: representations.pair_state
+    scope_ref: modules.msa_module
+    role: msa_module_ending_node_attention_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 12
+  - id: msa_pair_after_transition
+    representation_ref: representations.pair_state
+    scope_ref: modules.msa_module
+    role: msa_module_final_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 13; line 15 (#kw[return] {z_ij}) -- this is the module's own returned z_ij, the final value written into value_sites.pair_state_input
 
 modules:
   - id: pairformer_stack
@@ -1073,19 +1136,19 @@ modules:
   - id: msa_module
     parent_ref: architecture
     decomposition:
-      status: partial
-      reason: This task (row setup, OuterProductMean communication, and the MSA stack's MSAPairWeightedAveraging plus Transition) covers Algorithm 8 lines 1-4 and 6-8 only. A follow-up task adds this module's own pair-stack children (lines 9-13 -- TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, and a pair Transition) and flips this status to complete.
+      status: complete
     label: MSA Module
     kind: refiner
-    mechanisms: [msa_row_embedding, outer_product_mean, msa_pair_weighted_averaging, transition]
-    role: embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation and update the activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; only one representative pass through the module's row setup, communication, and MSA-stack steps is modeled here, not the N_block=4 loop or the outer per-recycle loop
+    mechanisms: [msa_row_embedding, outer_product_mean, msa_pair_weighted_averaging, transition, triangle_multiplication, axial_pair_attention]
+    role: embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation; update the MSA activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; and run the resulting pair state through the module's own pair-stack (triangle multiplication x2, triangle attention x2, transition), architecturally identical to the Pairformer's own pair-stack mechanism but with its own parameters, run N_block=4 times instead of 48; only z_ij is returned, the MSA representation itself is discarded every call; only one representative pass through the module is modeled here, not the N_block=4 loop or the outer per-recycle loop
     scale: msa
+    repeats: 4
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 8 (MsaModule), lines 1-4 and 6-8
+          locator: Supplementary Algorithm 8 (MsaModule), lines 1-15
   - id: msa_row_embedding
     parent_ref: modules.msa_module
     decomposition:
@@ -1146,6 +1209,99 @@ modules:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition, a shared SwiGLU utility also independently instantiated by single_transition and pair_transition elsewhere in this source set)
+  - id: msa_triangle_multiplication_outgoing
+    parent_ref: modules.msa_module
+    decomposition:
+      status: leaf
+    label: MSA Triangle Multiplication Outgoing
+    kind: operator
+    mechanisms: [triangle_multiplication, gated_projection, residual_update]
+    role: aggregate products over shared outgoing edges and add the result to the pair representation; the same TriangleMultiplicationOutgoing mechanism the Pairformer uses (own parameters, not shared weights), run here as the first step of the MSA module's own N_block=4 pair-stack instead of the Pairformer's 48-block stack
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 9 ({z_ij} += DropoutRowwise_0.25(TriangleMultiplicationOutgoing({z_ij}))); Algorithm 12 (TriangleMultiplicationOutgoing) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 2, not modeled as its own fact here (dropout is not modeled anywhere else in this source set, including the Pairformer's own pair-stack)
+  - id: msa_triangle_multiplication_incoming
+    parent_ref: modules.msa_module
+    decomposition:
+      status: leaf
+    label: MSA Triangle Multiplication Incoming
+    kind: operator
+    mechanisms: [triangle_multiplication, gated_projection, residual_update]
+    role: aggregate products over shared incoming edges and add the result to the pair representation; the same TriangleMultiplicationIncoming mechanism the Pairformer uses (own parameters, not shared weights), run here as the second step of the MSA module's own pair-stack
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 10 ({z_ij} += DropoutRowwise_0.25(TriangleMultiplicationIncoming({z_ij}))); Algorithm 13 (TriangleMultiplicationIncoming) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 3, not modeled as its own fact here
+  - id: msa_pair_attention_starting_node
+    parent_ref: modules.msa_module
+    decomposition:
+      status: leaf
+    label: MSA Triangle Attention Starting Node
+    kind: attention
+    mechanisms: [axial_attention, self_derived_pair_bias, query_gating, residual_update]
+    role: update each ordered pair by attending along the starting-node pair-grid axis; the same TriangleAttentionStartingNode mechanism the Pairformer uses (own parameters, not shared weights), run here as the third step of the MSA module's own pair-stack
+    scale: token_pair
+    attention:
+      pattern: pair_grid_starting_node
+      query_scale: token_pair
+      key_value_scale: token_pair
+      heads: 4
+      pair_bias: true
+      pair_bias_source: normalized_pair_state
+      positional_encoding:
+        kind: none
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 11 ({z_ij} += DropoutRowwise_0.25(TriangleAttentionStartingNode({z_ij}))); Algorithm 14 (TriangleAttentionStartingNode, N_head=4, c=32) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 4, not modeled as its own fact here
+  - id: msa_pair_attention_ending_node
+    parent_ref: modules.msa_module
+    decomposition:
+      status: leaf
+    label: MSA Triangle Attention Ending Node
+    kind: attention
+    mechanisms: [axial_attention, self_derived_pair_bias, query_gating, residual_update]
+    role: transpose the pair grid, attend along the complementary ending-node axis, and add the result to the pair representation; the same TriangleAttentionEndingNode mechanism the Pairformer uses (own parameters, not shared weights), run here as the fourth step of the MSA module's own pair-stack
+    scale: token_pair
+    attention:
+      pattern: pair_grid_ending_node
+      query_scale: token_pair
+      key_value_scale: token_pair
+      heads: 4
+      pair_bias: true
+      pair_bias_source: normalized_pair_state
+      positional_encoding:
+        kind: none
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 12 ({z_ij} += DropoutColumnwise_0.25(TriangleAttentionEndingNode({z_ij}))); Algorithm 15 (TriangleAttentionEndingNode, N_head=4, c=32) -- same DropoutColumnwise_0.25 scheme as the Pairformer's own Algorithm 17 line 5 (columnwise here, unlike the other three steps' rowwise dropout, since this step attends along the transposed axis), not modeled as its own fact here
+  - id: msa_pair_transition
+    parent_ref: modules.msa_module
+    decomposition:
+      status: leaf
+    label: MSA Pair Transition
+    kind: feed_forward
+    mechanisms: [layer_normalization, swiglu, residual_update]
+    role: apply a pointwise 4x SwiGLU transition and add its 128-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights), run here as the final step of the MSA module's own pair-stack, whose output is the module's returned z_ij
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 13 ({z_ij} += Transition({z_ij})); Algorithm 11 (Transition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6)
 
 relations:
   - id: input_pair_state_initializes_block_pair_state
@@ -1460,18 +1616,18 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 1 line 3
-  - id: pair_state_projection_produces_pair_state_input
+  - id: pair_state_projection_produces_z_init
     from: modules.pair_state_input_projection
-    to: value_sites.pair_state_input
+    to: value_sites.z_init
     kind: state_update
     carries: [representations.pair_state]
-    operation: outer_sum_project_s_inputs_to_pair_state_input
+    operation: outer_sum_project_s_inputs_to_z_init
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)
+          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8).
   - id: msa_input_enters_row_embedding
     from: value_sites.msa_input
     to: modules.msa_row_embedding
@@ -1591,7 +1747,7 @@ relations:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij)); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- the += into the architecture's persistent pair representation is wired in a follow-up task, see open_questions.msa_module_pair_representation_wiring_deferred
+          locator: Supplementary Algorithm 9 line 4 (z_ij = Linear(o_ij)); Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- this contribution's own += into the pair representation is relations.outer_product_mean_contribution_updates_msa_module_pair_state
   - id: pair_state_conditions_msa_pair_weighted_averaging
     from: value_sites.msa_module_pair_state_read
     to: modules.msa_pair_weighted_averaging
@@ -1688,6 +1844,129 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition)
+  - id: s_inputs_enters_msa_row_embedding
+    from: value_sites.s_inputs
+    to: modules.msa_row_embedding
+    kind: data_flow
+    carries: [representations.s_inputs]
+    operation: read_s_inputs_for_msa_row_embedding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) -- s_inputs is added into every MSA row identically
+  - id: z_init_initializes_msa_module_pair_state
+    from: value_sites.z_init
+    to: value_sites.msa_module_pair_state_read
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: initialize_msa_module_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument); Algorithm 1 line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer
+  - id: outer_product_mean_contribution_updates_msa_module_pair_state
+    from: value_sites.outer_product_mean_pair_contribution
+    to: value_sites.msa_module_pair_state_read
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_outer_product_mean_contribution_to_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 6 ({z_ij} += OuterProductMean({m_si})) -- communication writes into z_ij before the MSA stack (line 7) or this block's pair-stack (lines 9-13) run
+  - id: msa_pair_state_enters_outgoing_multiplication
+    from: value_sites.msa_module_pair_state_read
+    to: modules.msa_triangle_multiplication_outgoing
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: compute_msa_module_outgoing_triangle_delta
+    evidence: &msa_pair_stack_evidence
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 lines 9-13 -- the pair-stack reads the same z_ij that communication (line 6) just wrote into and MSAPairWeightedAveraging (line 7) read, since lines 7-8 update only {m_si}
+  - id: msa_outgoing_multiplication_updates_pair_state
+    from: modules.msa_triangle_multiplication_outgoing
+    to: value_sites.msa_pair_after_outgoing_multiplication
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_msa_module_outgoing_triangle_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_outgoing_pair_state_enters_incoming_multiplication
+    from: value_sites.msa_pair_after_outgoing_multiplication
+    to: modules.msa_triangle_multiplication_incoming
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: compute_msa_module_incoming_triangle_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_incoming_multiplication_updates_pair_state
+    from: modules.msa_triangle_multiplication_incoming
+    to: value_sites.msa_pair_after_incoming_multiplication
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_msa_module_incoming_triangle_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_incoming_pair_state_enters_starting_attention
+    from: value_sites.msa_pair_after_incoming_multiplication
+    to: modules.msa_pair_attention_starting_node
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: attend_msa_module_starting_node_axis
+    evidence: *msa_pair_stack_evidence
+  - id: msa_starting_attention_updates_pair_state
+    from: modules.msa_pair_attention_starting_node
+    to: value_sites.msa_pair_after_starting_attention
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_msa_module_starting_node_attention_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_starting_pair_state_enters_ending_attention
+    from: value_sites.msa_pair_after_starting_attention
+    to: modules.msa_pair_attention_ending_node
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: attend_msa_module_ending_node_axis
+    evidence: *msa_pair_stack_evidence
+  - id: msa_ending_attention_updates_pair_state
+    from: modules.msa_pair_attention_ending_node
+    to: value_sites.msa_pair_after_ending_attention
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_msa_module_ending_node_attention_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_ending_pair_state_enters_pair_transition
+    from: value_sites.msa_pair_after_ending_attention
+    to: modules.msa_pair_transition
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: compute_msa_module_pair_transition_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_pair_transition_updates_pair_state
+    from: modules.msa_pair_transition
+    to: value_sites.msa_pair_after_transition
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_msa_module_pair_transition_delta
+    evidence: *msa_pair_stack_evidence
+  - id: msa_module_pair_output_becomes_pair_state_input
+    from: value_sites.msa_pair_after_transition
+    to: value_sites.pair_state_input
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: expose_msa_module_final_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 line 15 (#kw[return] {z_ij}) -- only z_ij is returned, the MSA representation is discarded; this is the module's actual contribution to the architecture's persistent pair_state_input, per Algorithm 1 line 10 ({z_ij} += MsaModule(...)) feeding the 48-block PairformerStack call on line 12
 
 claims:
   - id: pairformer_has_no_msa_state
@@ -1723,33 +2002,19 @@ claims:
 
 open_questions:
   - id: relative_position_encoding_and_token_bonds_unmodeled
-    question: Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_pair_state_input; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to pair_state_input that are not yet represented as their own value sites, modules, or relations.
+    question: Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_z_init; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to z_init that are not yet represented as their own value sites, modules, or relations.
     status: deferred
     affected_refs:
-      - value_sites.pair_state_input
-      - relations.pair_state_projection_produces_pair_state_input
+      - value_sites.z_init
+      - relations.pair_state_projection_produces_z_init
       - modules.pair_state_input_projection
-    resolution_criteria: Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding pair_state_input, alongside the existing s_inputs outer-sum contribution.
+    resolution_criteria: Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding z_init, alongside the existing s_inputs outer-sum contribution.
     evidence:
       status: open_question
       refs:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 1 lines 4-5
-  - id: msa_module_pair_representation_wiring_deferred
-    question: OuterProductMean's pair-representation contribution (value_sites.outer_product_mean_pair_contribution) and MSAPairWeightedAveraging's pair-representation read (value_sites.msa_module_pair_state_read) are modeled as module-scoped facts of this task's two mechanisms, but neither is yet wired into the architecture's actual persistent pair representation chain (pair_state_input_projection -> pair_state_input). Doing so correctly requires the z_init value site and the retargeted pair_state_input_projection -> z_init -> msa_module -> pair_state_input chain, which is a follow-up task's job (it also depends on this module's own pair-stack, added by that same follow-up task).
-    status: deferred
-    affected_refs:
-      - value_sites.outer_product_mean_pair_contribution
-      - value_sites.msa_module_pair_state_read
-      - modules.msa_module
-    resolution_criteria: Add value_sites.z_init, retarget relations.pair_state_projection_produces_pair_state_input to produce z_init instead of pair_state_input, and add relations wiring z_init into msa_module (producing value_sites.msa_module_pair_state_read and consuming value_sites.outer_product_mean_pair_contribution) and msa_module's final pair output into the retargeted pair_state_input.
-    evidence:
-      status: open_question
-      refs:
-        - source_ref: af3_2024
-          role: paper_evidence
-          locator: Supplementary Algorithm 8 lines 6-7; Algorithm 1 lines 9-10 (MsaModule called before Pairformer within the recycle)
   - id: msa_row_resampling_unmodeled
     question: Algorithm 8 line 2 (SampleRandomWithoutReplacement) draws a random subset of MSA rows fresh at every recycle before line 3's embedding. This resampling step is not modeled as its own value site, module, or relation; value_sites.msa_activations treats N_msa as the working (already-sampled) row count without a separate value site distinguishing the full alignment depth from the per-recycle sampled subset.
     status: deferred
@@ -1763,17 +2028,3 @@ open_questions:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 2
-  - id: msa_row_embedding_s_inputs_edge_deferred
-    question: Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) means msa_row_embedding genuinely reads value_sites.s_inputs, and modules.msa_row_embedding's own role documents this. A canonical relations entry for that read is not yet added, because value_sites.s_inputs is already visible on the pairformer_overview root board and modules.msa_row_embedding is not on any board yet (this task's file scope is architectures/alphafold3-pairformer.yaml only) -- the projector rejects a relation connecting an already-visible root-board object to a depth-hidden one with no visible or elided ancestor (unmapped_boundary).
-    status: deferred
-    affected_refs:
-      - modules.msa_row_embedding
-      - value_sites.s_inputs
-      - value_sites.msa_activations
-    resolution_criteria: Once a follow-up task gives msa_module (or a suitable ancestor) a visible or elided presence on a board, add a canonical relation from value_sites.s_inputs to modules.msa_row_embedding (or directly to value_sites.msa_activations) carrying representations.s_inputs.
-    evidence:
-      status: open_question
-      refs:
-        - source_ref: af3_2024
-          role: paper_evidence
-          locator: Supplementary Algorithm 8 line 4

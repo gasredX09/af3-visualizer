@@ -262,7 +262,23 @@ condition that made module 1's edit-plan attempt fail `prepare`):
 board from the start (following the `pairformer_block`/
 `input_feature_embedder_detail` precedent), rather than adding its own
 substantial internal detail to the root board and needing a follow-up
-curation pass the way module 1 did.
+curation pass the way module 1 did. In practice, tagging the three raw MSA
+value sites `boundary: input` forces them onto the root board too (the
+projector's `missing_root_boundary` check requires every `boundary`-tagged
+value site to be visible specifically on the root board, the same rule that
+already puts `restype_input`/`profile_input`/`deletion_mean_input` there) —
+so the root board carries `msa_module` plus its three raw inputs, 17 nodes
+total, still one `dense_board` warning (now 17 nodes, not 14). The child
+board (`msa_module_detail`) itself also trips a `dense_board` warning (20
+nodes): the projector's `mixed_flow_kinds` check refuses to elide a value
+site whose producer and consumer relations differ in kind (`state_update`
+in, `data_flow` out), which is true of every intermediate pair-stack delta
+here, so all five pair-stack leaf modules and four of their five
+intermediate pair states need real nodes, mirroring `pair_track`'s own
+12-node board for the identical Pairformer mechanism. Root board edges also
+land one over the `dense_edge_set` threshold (21 vs. 20). All three are
+verifier warnings, not failures; the build passes with 3 warnings instead of
+module 1's 1.
 
 **Verification**: same pipeline as module 1 — `lint_sources.rb`,
 `verify_architecture.rb --source-set alphafold3`, `build-manifest.rb
