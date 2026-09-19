@@ -1,0 +1,596 @@
+<title>Atom-Token-Atom Hourglass</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.18.6/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.18.6/katex.min.js"></script>
+<style>
+  /* ============================================================
+     TOKENS: same palette as the other screens, the project's
+     shared visual identity. Two additions specific to this
+     screen's cost-bar chart: --chart-a/--chart-b are validated
+     categorical colors from the dataviz skill's reference palette
+     (its slots 2/orange and 3/aqua), not this project's own
+     --accent/--accent-2. Running the skill's validator on
+     --accent+--accent-2 as a categorical bar-identity pair failed
+     (light mode: chroma floor and normal-vision floor both FAIL,
+     worst adjacent Delta E 14.3, below the 15 hard-fail line) --
+     they were never chosen for that job, only for diagram
+     fills/strokes backed by position and text labels. --chart-a/b
+     pass every check in both modes (light: CVD 9.2, normal-vision
+     27.6; dark: CVD 9.4, normal-vision 26.5), used only in the cost
+     comparison chart below.
+     ============================================================ */
+  :root {
+    --bg: #f5f7f3;
+    --surface: #ffffff;
+    --surface-2: #eef3ea;
+    --text: #1b231f;
+    --text-secondary: #5b6b62;
+    --accent: #2b6e63;
+    --accent-2: #8a5a12;
+    --danger: #b23a22;
+    --border: #d7e1d8;
+    --chart-a: #eb6834;  /* local atom attention (actual) */
+    --chart-b: #1baf7a;  /* full token attention (actual) */
+
+    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+      Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+      Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10150e;
+      --surface: #171d15;
+      --surface-2: #1e2a1e;
+      --text: #e7ece4;
+      --text-secondary: #93a68e;
+      --accent: #5cb39e;
+      --accent-2: #d9a855;
+      --danger: #e2694c;
+      --border: #2a332a;
+      --chart-a: #d95926;
+      --chart-b: #199e70;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10150e;
+    --surface: #171d15;
+    --surface-2: #1e2a1e;
+    --text: #e7ece4;
+    --text-secondary: #93a68e;
+    --accent: #5cb39e;
+    --accent-2: #d9a855;
+    --danger: #e2694c;
+    --border: #2a332a;
+    --chart-a: #d95926;
+    --chart-b: #199e70;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    padding-inline: clamp(16px, 4vw, 48px);
+    padding-block: clamp(24px, 5vw, 56px);
+  }
+
+  .page {
+    max-width: 860px;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+  .katex-target, .katex-target .katex { color: inherit; }
+
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 1.5rem + 1.6vw, 2.5rem);
+    font-weight: 600;
+    margin-top: 6px;
+  }
+
+  .subhead {
+    max-width: 68ch;
+    font-size: 1.02rem;
+    color: var(--text-secondary);
+  }
+
+  .subhead strong { color: var(--text); font-weight: 600; }
+
+  .takeaway {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 1rem + 0.7vw, 1.4rem);
+    font-style: italic;
+    color: var(--text);
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent-2);
+    border-radius: 4px;
+    padding: 16px 20px;
+    text-wrap: balance;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  h2.panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .panel-subtitle {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+
+  /* ============================================================
+     HOURGLASS DIAGRAM
+     ============================================================ */
+  svg#hourglass-svg {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    display: block;
+    margin-inline: auto;
+  }
+
+  .level-shape {
+    fill: var(--accent);
+    fill-opacity: 0.35;
+    stroke: var(--border);
+    stroke-width: 1.5;
+    cursor: pointer;
+    transition: fill-opacity 150ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .level-shape { transition: none; }
+  }
+
+  .level-shape.selected {
+    fill-opacity: 0.85;
+    stroke: var(--accent-2);
+    stroke-width: 3;
+  }
+
+  .level-shape:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .waist-shape { fill: var(--accent-2); }
+
+  /* pointer-events: none on both -- these sit on top of the clickable
+     level-shape polygons in paint order, and without this a click
+     landing on a glyph (verified: the waist's "N tokens" label covers
+     its own shape's screen-space center exactly) is captured by the
+     label instead of reaching the shape underneath. */
+  .level-label {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    fill: var(--text);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  .level-sublabel {
+    font-family: var(--font-body);
+    font-size: 15px;
+    fill: var(--text-secondary);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     ENTITY BREAKDOWN
+     ============================================================ */
+  .breakdown-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+  }
+
+  .breakdown-row:last-child { border-bottom: none; }
+
+  .breakdown-name { font-weight: 500; }
+  .breakdown-detail { font-size: 0.85rem; color: var(--text-secondary); }
+
+  .breakdown-count {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 4ch;
+  }
+
+  .breakdown-header {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ============================================================
+     COST COMPARISON CHART
+     ============================================================ */
+  .cost-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .cost-panels { grid-template-columns: 1fr; }
+  }
+
+  .cost-panel-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .cost-panel-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+  }
+
+  .cost-bar-row {
+    display: grid;
+    grid-template-columns: 128px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+  }
+
+  .cost-bar-track {
+    height: 22px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .cost-bar-fill {
+    display: block; /* width has no effect on the default inline span otherwise */
+    height: 100%;
+    border-radius: 4px;
+  }
+
+  .cost-bar-fill.hypothetical {
+    background: transparent;
+    border: 2px dashed var(--text-secondary);
+    box-sizing: border-box;
+  }
+
+  .cost-bar-fill.local { background: var(--chart-a); }
+  .cost-bar-fill.token { background: var(--chart-b); }
+
+  .cost-bar-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    text-align: right;
+    min-width: 9ch;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .legend-swatch.hypothetical {
+    background: transparent;
+    border: 2px dashed var(--text-secondary);
+    box-sizing: border-box;
+  }
+
+  .legend-swatch.local { background: var(--chart-a); }
+  .legend-swatch.token { background: var(--chart-b); }
+
+  .citation {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+</style>
+
+<div class="page">
+
+  <header>
+    <div class="eyebrow">AF3 Visualizer &middot; Supporting Visualization</div>
+    <h1>Atom-Token-Atom Hourglass</h1>
+    <p class="subhead">
+      AF3's diffusion module never runs full attention over every atom, that
+      would cost <strong class="katex-target" data-tex="O(N_{\text{atoms}}^2)">O(atoms squared)</strong>.
+      Instead it encodes atoms with the sequence-local attention from the
+      previous screen, compresses them down to one vector per
+      <strong>token</strong> (machine-learning terms; a <strong>token</strong>
+      is one amino acid residue, or one heavy atom of anything else, in
+      structural-biology terms), runs full attention only on that much
+      smaller set, then broadcasts the result back down to atoms.
+    </p>
+  </header>
+
+  <p class="takeaway">
+    Full attention only ever touches the narrow waist, tokens, never the
+    wide ends, atoms, that is what makes global reasoning affordable at all.
+  </p>
+
+  <div class="panel">
+    <h2 class="panel-title">Our fixed example complex</h2>
+    <p class="panel-subtitle">Ala-Gly-Val-Leu-Ser-Lys peptide + ATP + Mg&#178;&#8314;. Click a level to see its breakdown.</p>
+    <svg id="hourglass-svg" viewBox="0 0 520 420" role="img"
+         aria-label="An hourglass shape: 71 atoms enter at the wide top, compress to 38 tokens at the narrow waist where full attention happens, then broadcast back out to 71 atoms at the wide bottom.">
+      <g id="hourglass-shapes"></g>
+      <g id="hourglass-labels"></g>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-title" id="breakdown-title">Atoms in: 71 total</h2>
+    <p class="panel-subtitle" id="breakdown-subtitle">Every heavy atom in the complex, before any compression.</p>
+    <div class="breakdown-header">
+      <span>Entity</span>
+      <span style="text-align: right;">Atoms</span>
+      <span style="text-align: right;">Tokens</span>
+    </div>
+    <div id="breakdown-rows"></div>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-title">What full attention would actually cost</h2>
+    <p class="panel-subtitle">
+      Comparisons in pairwise attention computations
+      (<span class="katex-target" data-tex="N^2">N^2</span> for full
+      attention over N items, <span class="katex-target" data-tex="N \times 128">N x 128</span>
+      for local attention with the previous screen's 128-atom window).
+    </p>
+    <div class="cost-panels">
+      <div>
+        <div class="cost-panel-title">Our example complex</div>
+        <div class="cost-panel-subtitle">71 atoms, 38 tokens</div>
+        <div id="cost-ours"></div>
+      </div>
+      <div>
+        <div class="cost-panel-title">A larger complex (illustrative)</div>
+        <div class="cost-panel-subtitle">12,000 atoms, 800 tokens, not our complex</div>
+        <div id="cost-large"></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch hypothetical"></span>Full attention (hypothetical, AF3 never computes this)</span>
+      <span class="legend-item"><span class="legend-swatch local"></span>Local atom attention (actual)</span>
+      <span class="legend-item"><span class="legend-swatch token"></span>Full token attention (actual, the only real O(N&#178;) step)</span>
+    </div>
+    <p class="citation">
+      At our own small scale, the 128-atom window from the previous screen
+      buys nothing: with only 71 atoms, a "local" 128-atom window already
+      covers the whole complex, so local and full attention cost the same
+      here. The real saving from windowing only appears once a complex
+      exceeds 128 atoms, and grows without bound from there, which is why
+      AF3's own paper frames the motivation at "tens of thousands of atoms
+      for a large complex, vs. hundreds of tokens" rather than at our
+      example's scale.
+    </p>
+  </div>
+
+</div>
+
+<script>
+  // Typeset every math expression with KaTeX.
+  document.querySelectorAll('.katex-target').forEach((el) => {
+    katex.render(el.dataset.tex, el, { throwOnError: false });
+  });
+</script>
+
+<script>
+  (function () {
+    // The fixed example complex, DECISIONS.md (2026-09-18 entry). Heavy
+    // atoms only (AF3 filters hydrogens; verified against the reference
+    // codebase). A standard residue is one token; ATP and Mg2+ are
+    // non-standard, so each of their heavy atoms is its own token.
+    const ENTITIES = [
+      { name: 'Peptide', detail: 'Ala-Gly-Val-Leu-Ser-Lys, 6 residues', atoms: 39, tokens: 6 },
+      { name: 'ATP', detail: 'ligand, 1 token per heavy atom', atoms: 31, tokens: 31 },
+      { name: 'Mg²⁺', detail: 'ion, 1 atom = 1 token', atoms: 1, tokens: 1 },
+    ];
+    const TOTAL_ATOMS = ENTITIES.reduce((s, e) => s + e.atoms, 0); // 71
+    const TOTAL_TOKENS = ENTITIES.reduce((s, e) => s + e.tokens, 0); // 38
+    const WINDOW = 128; // sequence-local atom window, previous screen
+
+    const LEVELS = {
+      'atoms-in': { count: TOTAL_ATOMS, label: TOTAL_ATOMS + ' atoms in', getCount: (e) => e.atoms, title: 'Atoms in: ' + TOTAL_ATOMS + ' total', subtitle: 'Every heavy atom in the complex, before any compression.' },
+      'tokens': { count: TOTAL_TOKENS, label: TOTAL_TOKENS + ' tokens (full attention here)', getCount: (e) => e.tokens, title: 'Tokens: ' + TOTAL_TOKENS + ' total', subtitle: 'One token per residue for the peptide; one token per atom for ATP and Mg²⁺, they were already at atom resolution.' },
+      'atoms-out': { count: TOTAL_ATOMS, label: TOTAL_ATOMS + ' atoms out', getCount: (e) => e.atoms, title: 'Atoms out: ' + TOTAL_ATOMS + ' total', subtitle: 'The same atoms as the top, positions updated via skip connections from the encoder.' },
+    };
+
+    // --- Hourglass geometry ---
+    const VIEW_W = 520, VIEW_H = 420;
+    const CENTER_X = VIEW_W / 2;
+    const TOP_Y = 30, WAIST_TOP_Y = 165, WAIST_BOTTOM_Y = 235, BOTTOM_Y = 390;
+    const MAX_HALF_WIDTH = 220;
+    const MIN_HALF_WIDTH = 40; // floor so the waist stays a visible, clickable band
+
+    function halfWidthFor(count) {
+      const scale = MAX_HALF_WIDTH / TOTAL_ATOMS; // atoms-in/out define the widest point
+      return Math.max(MIN_HALF_WIDTH, count * scale);
+    }
+
+    const hwAtoms = halfWidthFor(TOTAL_ATOMS);
+    const hwTokens = halfWidthFor(TOTAL_TOKENS);
+
+    const shapesGroup = document.getElementById('hourglass-shapes');
+    const labelsGroup = document.getElementById('hourglass-labels');
+
+    function poly(points, className, id) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      el.setAttribute('points', points.map((p) => p.join(',')).join(' '));
+      el.setAttribute('class', className);
+      el.setAttribute('id', id);
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      return el;
+    }
+
+    // Top trapezoid (wide top, narrows to the waist).
+    const topShape = poly([
+      [CENTER_X - hwAtoms, TOP_Y], [CENTER_X + hwAtoms, TOP_Y],
+      [CENTER_X + hwTokens, WAIST_TOP_Y], [CENTER_X - hwTokens, WAIST_TOP_Y],
+    ], 'level-shape', 'shape-atoms-in');
+    topShape.setAttribute('aria-label', LEVELS['atoms-in'].title);
+
+    // Waist rectangle (the narrow band where full attention happens).
+    const waistShape = poly([
+      [CENTER_X - hwTokens, WAIST_TOP_Y], [CENTER_X + hwTokens, WAIST_TOP_Y],
+      [CENTER_X + hwTokens, WAIST_BOTTOM_Y], [CENTER_X - hwTokens, WAIST_BOTTOM_Y],
+    ], 'level-shape waist-shape', 'shape-tokens');
+    waistShape.setAttribute('aria-label', LEVELS['tokens'].title);
+
+    // Bottom trapezoid (widens back out from the waist).
+    const bottomShape = poly([
+      [CENTER_X - hwTokens, WAIST_BOTTOM_Y], [CENTER_X + hwTokens, WAIST_BOTTOM_Y],
+      [CENTER_X + hwAtoms, BOTTOM_Y], [CENTER_X - hwAtoms, BOTTOM_Y],
+    ], 'level-shape', 'shape-atoms-out');
+    bottomShape.setAttribute('aria-label', LEVELS['atoms-out'].title);
+
+    shapesGroup.appendChild(topShape);
+    shapesGroup.appendChild(waistShape);
+    shapesGroup.appendChild(bottomShape);
+
+    function addLabel(y, text, cls) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      el.setAttribute('x', CENTER_X);
+      el.setAttribute('y', y);
+      el.setAttribute('class', cls);
+      el.textContent = text;
+      labelsGroup.appendChild(el);
+    }
+
+    addLabel(TOP_Y - 10, LEVELS['atoms-in'].label, 'level-sublabel');
+    addLabel((WAIST_TOP_Y + WAIST_BOTTOM_Y) / 2 + 7, LEVELS['tokens'].label, 'level-label');
+    addLabel(BOTTOM_Y + 26, LEVELS['atoms-out'].label, 'level-sublabel');
+
+    const shapeById = {
+      'atoms-in': topShape,
+      'tokens': waistShape,
+      'atoms-out': bottomShape,
+    };
+
+    let selectedLevel = null;
+
+    function selectLevel(levelKey) {
+      selectedLevel = levelKey;
+      Object.entries(shapeById).forEach(([key, el]) => {
+        el.classList.toggle('selected', key === levelKey);
+      });
+      renderBreakdown(levelKey);
+    }
+
+    Object.entries(shapeById).forEach(([key, el]) => {
+      el.addEventListener('click', () => selectLevel(key));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectLevel(key); }
+      });
+    });
+
+    // --- Entity breakdown ---
+    const breakdownTitle = document.getElementById('breakdown-title');
+    const breakdownSubtitle = document.getElementById('breakdown-subtitle');
+    const breakdownRows = document.getElementById('breakdown-rows');
+
+    function renderBreakdown(levelKey) {
+      const level = LEVELS[levelKey];
+      breakdownTitle.textContent = level.title;
+      breakdownSubtitle.textContent = level.subtitle;
+      breakdownRows.innerHTML = '';
+      for (const e of ENTITIES) {
+        const row = document.createElement('div');
+        row.className = 'breakdown-row';
+        row.innerHTML =
+          '<span><span class="breakdown-name">' + e.name + '</span><br>' +
+          '<span class="breakdown-detail">' + e.detail + '</span></span>' +
+          '<span class="breakdown-count">' + e.atoms + '</span>' +
+          '<span class="breakdown-count">' + e.tokens + '</span>';
+        breakdownRows.appendChild(row);
+      }
+    }
+
+    // --- Cost comparison bars ---
+    function renderCostPanel(containerId, atoms, tokens, window) {
+      const container = document.getElementById(containerId);
+      const full = atoms * atoms;
+      const local = atoms * Math.min(atoms, window);
+      const tokenCost = tokens * tokens;
+      const maxCost = Math.max(full, local, tokenCost);
+
+      function bar(labelText, value, cls) {
+        const pct = (value / maxCost) * 100;
+        const row = document.createElement('div');
+        row.className = 'cost-bar-row';
+        row.innerHTML =
+          '<span>' + labelText + '</span>' +
+          '<span class="cost-bar-track"><span class="cost-bar-fill ' + cls + '" style="width:' + pct.toFixed(2) + '%"></span></span>' +
+          '<span class="cost-bar-value">' + value.toLocaleString() + '</span>';
+        container.appendChild(row);
+      }
+
+      container.innerHTML = '';
+      bar('Full attention', full, 'hypothetical');
+      bar('Local attention', local, 'local');
+      bar('Token attention', tokenCost, 'token');
+    }
+
+    renderCostPanel('cost-ours', TOTAL_ATOMS, TOTAL_TOKENS, WINDOW);
+    renderCostPanel('cost-large', 12000, 800, WINDOW);
+
+    // Initial state: no level selected, show the atoms-in breakdown by default.
+    selectLevel('atoms-in');
+  })();
+</script>
