@@ -113,26 +113,20 @@ export const manifest = {
           "reason": "Search tools, database-specific limits, deduplication, clustering, and extra-MSA processing are reserved for a later data-pipeline board.",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.sequence_pairing": {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.structure_database_search": {
           "status": "partial",
           "reason": "Hit filtering, realignment, atom extraction, and template featurization are reserved for a later template-pipeline board.",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.alphafold_iteration": {
           "status": "complete",
@@ -150,35 +144,27 @@ export const manifest = {
           "reason": "Template pair attention, template-angle concatenation, extra-MSA processing, and the exact recycling additions will be expanded on child boards.",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.evoformer_stack": {
           "status": "partial",
           "reason": "The two-tower Evoformer block internals and their bidirectional MSA-pair communication are reserved for the next architecture level.",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.structure_module": {
           "status": "partial",
           "reason": "Invariant point attention, rigid-frame updates, torsion prediction, and atom reconstruction are reserved for the structure-module board.",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.recycling_embedder": {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         }
       },
       "summary": {
@@ -191,9 +177,7 @@ export const manifest = {
         "partialFrontierCount": 5,
         "maximumAuthoredDepth": 2
       },
-      "opaqueFrontierRefs": [
-
-      ],
+      "opaqueFrontierRefs": [],
       "partialScopeRefs": [
         "modules.genetic_database_search",
         "modules.structure_database_search",
@@ -496,9 +480,7 @@ export const manifest = {
         }
       }
     ],
-    "blockInstances": [
-
-    ],
+    "blockInstances": [],
     "representations": [
       {
         "id": "amino_acid_sequence",
@@ -1148,17 +1130,13 @@ export const manifest = {
     ],
     "valueSiteInterfaces": {
       "input_sequence": {
-        "incomingRelationRefs": [
-
-        ],
+        "incomingRelationRefs": [],
         "outgoingRelationRefs": [
           "relations.input_sequence_queries_genetic_database",
           "relations.input_sequence_enters_pairing",
           "relations.input_sequence_queries_structure_database"
         ],
-        "producerRefs": [
-
-        ],
+        "producerRefs": [],
         "consumerRefs": [
           "modules.genetic_database_search",
           "modules.sequence_pairing",
@@ -1827,9 +1805,7 @@ export const manifest = {
         "target": "value_sites.recycled_msa_after_iteration",
         "from_scale": "msa",
         "to_scale": "residue",
-        "projection_refs": [
-
-        ]
+        "projection_refs": []
       },
       {
         "id": "pseudo_beta_coordinates_to_pair_update",
@@ -3458,8 +3434,7 @@ export const manifest = {
       }
     ]
   },
-  "standardBlocks": {
-  },
+  "standardBlocks": {},
   "pseudocode": {
     "alphafold2": {
       "schemaVersion": "pseudocode-v0.2",
@@ -4917,9 +4892,7 @@ export const manifest = {
           ]
         }
       ],
-      "claims": [
-
-      ],
+      "claims": [],
       "sourceYaml": "../../pseudocode/alphafold2.yaml"
     }
   },
@@ -5457,9 +5430,7 @@ export const manifest = {
                 "relation_ref": "relations.evoformer_produces_processed_msa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.msa_representation"
             ],
@@ -5487,9 +5458,7 @@ export const manifest = {
                 "relation_ref": "relations.evoformer_produces_processed_pair"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_representation"
             ],
@@ -5517,9 +5486,7 @@ export const manifest = {
                 "relation_ref": "relations.evoformer_projects_single_representation"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_representation"
             ],
@@ -5547,9 +5514,7 @@ export const manifest = {
                 "relation_ref": "relations.genetic_search_produces_msa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.msa_features"
             ],
@@ -5577,9 +5542,7 @@ export const manifest = {
                 "relation_ref": "relations.input_embedder_initializes_msa_representation"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.msa_representation"
             ],
@@ -5607,9 +5570,7 @@ export const manifest = {
                 "relation_ref": "relations.input_embedder_initializes_pair_representation"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_representation"
             ],
@@ -5637,9 +5598,7 @@ export const manifest = {
                 "relation_ref": "relations.input_sequence_queries_genetic_database"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.amino_acid_sequence"
             ],
@@ -5667,9 +5626,7 @@ export const manifest = {
                 "relation_ref": "relations.input_sequence_enters_pairing"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.amino_acid_sequence"
             ],
@@ -5697,9 +5654,7 @@ export const manifest = {
                 "relation_ref": "relations.input_sequence_queries_structure_database"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.amino_acid_sequence"
             ],
@@ -5768,9 +5723,7 @@ export const manifest = {
                 "relation_ref": "relations.initial_msa_enters_evoformer"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.msa_representation"
             ],
@@ -5798,9 +5751,7 @@ export const manifest = {
                 "relation_ref": "relations.msa_features_enter_input_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.msa_features"
             ],
@@ -5869,9 +5820,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_representation_enters_structure_module"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_representation"
             ],
@@ -5899,9 +5848,7 @@ export const manifest = {
                 "relation_ref": "relations.initial_pair_enters_evoformer"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_representation"
             ],
@@ -6076,9 +6023,7 @@ export const manifest = {
                 "relation_ref": "relations.single_representation_enters_structure_module"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_representation"
             ],
@@ -6106,9 +6051,7 @@ export const manifest = {
                 "relation_ref": "relations.templates_enter_input_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.template_features"
             ],
@@ -6136,9 +6079,7 @@ export const manifest = {
                 "relation_ref": "relations.structure_search_produces_templates"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.template_features"
             ],
@@ -6166,9 +6107,7 @@ export const manifest = {
                 "relation_ref": "relations.structure_module_predicts_structure_and_confidence"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.structure_prediction"
             ],

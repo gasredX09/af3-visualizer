@@ -129,17 +129,13 @@ export const manifest = {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.coordinate_initializer": {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.reverse_diffusion_step": {
           "status": "complete",
@@ -156,17 +152,13 @@ export const manifest = {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.frenet_frame_builder": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.denoiser": {
           "status": "complete",
@@ -193,33 +185,25 @@ export const manifest = {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.ddim_update": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.sequence_sampler": {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.single_feature_embedder": {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.pair_feature_embedder": {
           "status": "complete",
@@ -251,9 +235,7 @@ export const manifest = {
           "status": "leaf",
           "depth": 4,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.structure_decoder": {
           "status": "complete",
@@ -270,97 +252,73 @@ export const manifest = {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.pair_biased_attention_update": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.latent_single_residual_norm": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.latent_single_transition": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.single_to_pair_update": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.triangle_multiplication_stack": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.pair_transition": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.invariant_point_attention": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.ipa_residual_norm": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.structure_transition": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.frame_update": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.task_source_router": {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.unconditional_featurizer": {
           "status": "complete",
@@ -398,121 +356,91 @@ export const manifest = {
           "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.unconditional_token_layout": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.unconditional_placeholder_initializer": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.unconditional_frame_indices": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.motif_problem_parser": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.motif_scaffold_tokens": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.motif_conditioned_tokens": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.motif_feature_assembler": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.target_problem_parser": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.binder_tokens": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.target_conditioned_tokens": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.binder_target_feature_assembler": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.endpoint_pair_constructor": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.relative_position_embedder": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.noisy_frame_pair_encoder": {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.conditioned_pair_geometry_encoder": {
           "status": "complete",
@@ -530,49 +458,37 @@ export const manifest = {
           "status": "leaf",
           "depth": 5,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.conditioned_pair_mask_builder": {
           "status": "leaf",
           "depth": 6,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.conditional_structure_frame_builder": {
           "status": "leaf",
           "depth": 6,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.conditioned_distance_binner": {
           "status": "leaf",
           "depth": 6,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.conditioned_orientation_encoder": {
           "status": "leaf",
           "depth": 6,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.conditioned_geometry_projector": {
           "status": "leaf",
           "depth": 6,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         }
       },
       "summary": {
@@ -585,12 +501,8 @@ export const manifest = {
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 6
       },
-      "opaqueFrontierRefs": [
-
-      ],
-      "partialScopeRefs": [
-
-      ]
+      "opaqueFrontierRefs": [],
+      "partialScopeRefs": []
     },
     "modules": [
       {
@@ -5958,15 +5870,11 @@ export const manifest = {
     ],
     "valueSiteInterfaces": {
       "design_request": {
-        "incomingRelationRefs": [
-
-        ],
+        "incomingRelationRefs": [],
         "outgoingRelationRefs": [
           "relations.design_request_enters_feature_builder"
         ],
-        "producerRefs": [
-
-        ],
+        "producerRefs": [],
         "consumerRefs": [
           "modules.task_source_router"
         ]
@@ -6463,15 +6371,11 @@ export const manifest = {
         "incomingRelationRefs": [
           "relations.sequence_head_produces_logits"
         ],
-        "outgoingRelationRefs": [
-
-        ],
+        "outgoingRelationRefs": [],
         "producerRefs": [
           "modules.sequence_head"
         ],
-        "consumerRefs": [
-
-        ]
+        "consumerRefs": []
       },
       "predicted_sequence": {
         "incomingRelationRefs": [
@@ -6491,15 +6395,11 @@ export const manifest = {
         "incomingRelationRefs": [
           "relations.pdb_exporter_writes_design_pdb"
         ],
-        "outgoingRelationRefs": [
-
-        ],
+        "outgoingRelationRefs": [],
         "producerRefs": [
           "modules.pdb_exporter"
         ],
-        "consumerRefs": [
-
-        ]
+        "consumerRefs": []
       },
       "token_structure_frame_mask": {
         "incomingRelationRefs": [
@@ -6688,9 +6588,7 @@ export const manifest = {
             "modules.triangle_multiplication_stack",
             "modules.pair_transition"
           ],
-          "cached": [
-
-          ],
+          "cached": [],
           "notes": [
             "Every block communicates pair information into singles, then singles back into pairs before triangular pair refinement.",
             "One block maps the indexed state pair (s_i, z_i) to (s_(i+1), z_(i+1)); for the first four blocks those writes become the next block's reads, and global tokens are removed only after block five."
@@ -15429,9 +15327,7 @@ export const manifest = {
             "execution.loops.reverse_diffusion_loop"
           ],
           "operation": "select_sampling_timestep",
-          "inputs": [
-
-          ],
+          "inputs": [],
           "outputs": [
             "timestep"
           ],
@@ -16794,9 +16690,7 @@ export const manifest = {
                 "relation_ref": "relations.design_request_enters_feature_builder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -16824,9 +16718,7 @@ export const manifest = {
                 "relation_ref": "relations.terminal_coordinates_become_final_coordinates"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -16854,9 +16746,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_builder_produces_feature_bundle"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -16884,9 +16774,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_sizes_coordinate_initializer"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -16913,14 +16801,11 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_exposes_token_structure_frame_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_structure_frame_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_60325d5ce7a8",
@@ -16937,14 +16822,11 @@ export const manifest = {
                 "relation_ref": "relations.final_coordinates_enter_pdb_exporter"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_811bc68c0781",
@@ -16961,9 +16843,7 @@ export const manifest = {
                 "relation_ref": "relations.pdb_exporter_writes_design_pdb"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.protein_pdb"
             ],
@@ -16991,9 +16871,7 @@ export const manifest = {
                 "relation_ref": "relations.predicted_sequence_enters_pdb_exporter"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.protein_sequence"
             ],
@@ -17386,9 +17264,7 @@ export const manifest = {
                 "relation_ref": "relations.current_coordinates_enter_reverse_step"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -17416,9 +17292,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_sizes_coordinate_initializer"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -17447,9 +17321,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_frame_builder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -17478,14 +17350,11 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_exposes_token_structure_frame_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_structure_frame_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_7d68a4f2ddd3",
@@ -17502,14 +17371,11 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_sequence_sampler"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_650c3880a40d",
@@ -17526,9 +17392,7 @@ export const manifest = {
                 "relation_ref": "relations.final_coordinates_enter_sequence_sampler"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -17557,14 +17421,11 @@ export const manifest = {
                 "relation_ref": "relations.next_coordinates_reenter_sampling_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_bc3b2cb9c02f",
@@ -17581,9 +17442,7 @@ export const manifest = {
                 "relation_ref": "relations.terminal_coordinates_become_final_coordinates"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -17611,9 +17470,7 @@ export const manifest = {
                 "relation_ref": "relations.ddim_update_produces_next_coordinates"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -17641,14 +17498,11 @@ export const manifest = {
                 "relation_ref": "relations.sequence_sampler_produces_predicted_sequence"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.protein_sequence"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           }
         ],
         "classifications": {
@@ -18001,9 +17855,7 @@ export const manifest = {
                 "relation_ref": "relations.current_frames_initialize_decoder_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
@@ -18065,9 +17917,7 @@ export const manifest = {
                 "relation_ref": "relations.ddim_update_produces_next_coordinates"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18095,9 +17945,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_single_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -18126,14 +17974,11 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_exposes_token_structure_frame_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_structure_frame_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_db706d71ad18",
@@ -18150,9 +17995,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_frame_builder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -18181,9 +18024,7 @@ export const manifest = {
                 "relation_ref": "relations.frame_builder_produces_current_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
@@ -18211,9 +18052,7 @@ export const manifest = {
                 "relation_ref": "relations.step_coordinates_enter_sampler_math"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18243,9 +18082,7 @@ export const manifest = {
                 "relation_ref": "relations.step_coordinates_enter_frame_builder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18273,9 +18110,7 @@ export const manifest = {
                 "relation_ref": "relations.timestep_conditions_single_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.timestep"
             ],
@@ -18304,9 +18139,7 @@ export const manifest = {
                 "relation_ref": "relations.timestep_enters_ddim_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.timestep"
             ],
@@ -18594,9 +18427,7 @@ export const manifest = {
                 "relation_ref": "relations.coordinate_prediction_enters_noise_readout"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18624,9 +18455,7 @@ export const manifest = {
                 "relation_ref": "relations.ddim_update_produces_next_coordinates"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18654,9 +18483,7 @@ export const manifest = {
                 "relation_ref": "relations.noise_readout_produces_predicted_noise"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.coordinate_noise"
             ],
@@ -18684,9 +18511,7 @@ export const manifest = {
                 "relation_ref": "relations.predicted_noise_enters_ddim_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.coordinate_noise"
             ],
@@ -18714,9 +18539,7 @@ export const manifest = {
                 "relation_ref": "relations.sampler_coordinates_enter_ddim_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18746,9 +18569,7 @@ export const manifest = {
                 "relation_ref": "relations.sampler_coordinates_enter_noise_readout"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -18776,9 +18597,7 @@ export const manifest = {
                 "relation_ref": "relations.timestep_enters_ddim_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.timestep"
             ],
@@ -19084,9 +18903,7 @@ export const manifest = {
                 "relation_ref": "relations.current_frames_enter_pair_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
@@ -19114,14 +18931,11 @@ export const manifest = {
                 "relation_ref": "relations.current_frames_initialize_decoder_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_f8c564c15031",
@@ -19138,9 +18952,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_pair_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -19169,9 +18981,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_single_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -19200,14 +19010,11 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_exposes_token_structure_frame_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_structure_frame_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_5750bbfb9ba1",
@@ -19224,14 +19031,11 @@ export const manifest = {
                 "relation_ref": "relations.block_pair_output_becomes_refined_pair_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_73e0a465c195",
@@ -19248,14 +19052,11 @@ export const manifest = {
                 "relation_ref": "relations.block_single_output_becomes_refined_single_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_c68389374239",
@@ -19282,8 +19083,7 @@ export const manifest = {
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_3766d538c25b",
@@ -19300,14 +19100,11 @@ export const manifest = {
                 "relation_ref": "relations.refined_pair_features_bias_ipa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_34ec5ca69023",
@@ -19324,14 +19121,11 @@ export const manifest = {
                 "relation_ref": "relations.refined_single_features_enter_sequence_head"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_57e1a910dcf8",
@@ -19348,9 +19142,7 @@ export const manifest = {
                 "relation_ref": "relations.refined_single_features_initialize_decoder_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -19378,9 +19170,7 @@ export const manifest = {
                 "relation_ref": "relations.sequence_head_produces_logits"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sequence_logits"
             ],
@@ -19418,8 +19208,7 @@ export const manifest = {
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_04423d70e07a",
@@ -19446,8 +19235,7 @@ export const manifest = {
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_3de50b35db7d",
@@ -19464,14 +19252,11 @@ export const manifest = {
                 "relation_ref": "relations.updated_frames_become_decoder_output_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_a8946ce7c53f",
@@ -19488,14 +19273,11 @@ export const manifest = {
                 "relation_ref": "relations.timestep_conditions_single_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.timestep"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_11c65f7ec586",
@@ -19512,9 +19294,7 @@ export const manifest = {
                 "relation_ref": "relations.updated_frames_produce_coordinate_prediction"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_coordinates"
             ],
@@ -19940,14 +19720,11 @@ export const manifest = {
                 "relation_ref": "relations.global_adapter_produces_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_b456f42fcf82",
@@ -19964,14 +19741,11 @@ export const manifest = {
                 "relation_ref": "relations.global_adapter_produces_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_dbfc26f83475",
@@ -19988,14 +19762,11 @@ export const manifest = {
                 "relation_ref": "relations.initial_pair_features_enter_global_adapter"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_0ca8f8cb557f",
@@ -20012,14 +19783,11 @@ export const manifest = {
                 "relation_ref": "relations.initial_single_features_enter_global_adapter"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_b3616346319f",
@@ -20036,9 +19804,7 @@ export const manifest = {
                 "relation_ref": "relations.latent_single_residual_norm_produces_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -20066,9 +19832,7 @@ export const manifest = {
                 "relation_ref": "relations.latent_single_transition_produces_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -20096,14 +19860,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_after_single_update_enters_triangle_stack"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_9cae0bd08deb",
@@ -20120,14 +19881,11 @@ export const manifest = {
                 "relation_ref": "relations.block_pair_output_reenters_next_latent_block"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_a62c21b61028",
@@ -20144,14 +19902,11 @@ export const manifest = {
                 "relation_ref": "relations.block_pair_output_becomes_refined_pair_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_67fc06360f07",
@@ -20168,14 +19923,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_after_triangle_updates_enter_transition"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_595b994c0837",
@@ -20192,9 +19944,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_attention_produces_single_delta"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -20222,9 +19972,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_transition_produces_block_pair_output"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
@@ -20252,9 +20000,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_with_global_tokens_bias_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
@@ -20283,14 +20029,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_with_global_tokens_enters_single_to_pair_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_e1d5baf9ff0e",
@@ -20307,14 +20050,11 @@ export const manifest = {
                 "relation_ref": "relations.single_after_residual_norm_enters_latent_transition"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_add6fbfbdc4c",
@@ -20331,14 +20071,11 @@ export const manifest = {
                 "relation_ref": "relations.block_single_output_becomes_refined_single_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_48d272b07aa3",
@@ -20355,9 +20092,7 @@ export const manifest = {
                 "relation_ref": "relations.single_after_pair_attention_enters_single_to_pair_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -20385,14 +20120,11 @@ export const manifest = {
                 "relation_ref": "relations.block_single_output_reenters_next_latent_block"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_b1259f5f70d2",
@@ -20409,14 +20141,11 @@ export const manifest = {
                 "relation_ref": "relations.single_attention_delta_enters_residual_norm"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_162a900ee1ac",
@@ -20433,14 +20162,11 @@ export const manifest = {
                 "relation_ref": "relations.single_to_pair_update_produces_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_ac7dd6089943",
@@ -20457,14 +20183,11 @@ export const manifest = {
                 "relation_ref": "relations.single_with_global_tokens_skip_to_residual_norm"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_92dbab50c8f3",
@@ -20481,14 +20204,11 @@ export const manifest = {
                 "relation_ref": "relations.single_with_global_tokens_enters_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_d09b81537023",
@@ -20505,9 +20225,7 @@ export const manifest = {
                 "relation_ref": "relations.triangle_stack_produces_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
@@ -20879,14 +20597,11 @@ export const manifest = {
                 "relation_ref": "relations.decoder_frames_enter_frame_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_09522ef9e305",
@@ -20903,9 +20618,7 @@ export const manifest = {
                 "relation_ref": "relations.decoder_frames_condition_ipa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
@@ -20934,14 +20647,11 @@ export const manifest = {
                 "relation_ref": "relations.decoder_single_state_enters_ipa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_e4ea3b2c4d7c",
@@ -20958,9 +20668,7 @@ export const manifest = {
                 "relation_ref": "relations.decoder_single_state_skips_to_ipa_residual_norm"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -20991,9 +20699,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_exposes_token_structure_frame_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_structure_frame_mask"
             ],
@@ -21021,14 +20727,11 @@ export const manifest = {
                 "relation_ref": "relations.frame_update_produces_updated_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_bcdb9aa0d2dc",
@@ -21045,9 +20748,7 @@ export const manifest = {
                 "relation_ref": "relations.ipa_produces_delta"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -21075,14 +20776,11 @@ export const manifest = {
                 "relation_ref": "relations.ipa_delta_enters_residual_norm"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_ce41232b0bb0",
@@ -21099,9 +20797,7 @@ export const manifest = {
                 "relation_ref": "relations.ipa_residual_norm_produces_updated_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -21129,9 +20825,7 @@ export const manifest = {
                 "relation_ref": "relations.refined_pair_features_bias_ipa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
@@ -21160,14 +20854,11 @@ export const manifest = {
                 "relation_ref": "relations.ipa_state_enters_structure_transition"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_91f79a01c402",
@@ -21184,14 +20875,11 @@ export const manifest = {
                 "relation_ref": "relations.transition_state_reenters_decoder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_776d95717f8f",
@@ -21208,9 +20896,7 @@ export const manifest = {
                 "relation_ref": "relations.transition_state_enters_frame_update"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -21238,9 +20924,7 @@ export const manifest = {
                 "relation_ref": "relations.structure_transition_produces_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
@@ -21268,9 +20952,7 @@ export const manifest = {
                 "relation_ref": "relations.token_structure_frame_mask_masks_ipa"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_structure_frame_mask"
             ],
@@ -21299,14 +20981,11 @@ export const manifest = {
                 "relation_ref": "relations.updated_frames_reenter_decoder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_d75b76a327c4",
@@ -21323,9 +21002,7 @@ export const manifest = {
                 "relation_ref": "relations.updated_frames_become_decoder_output_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
@@ -21845,9 +21522,7 @@ export const manifest = {
             "from": "project_qkv",
             "to": "queries",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -21866,9 +21541,7 @@ export const manifest = {
             "from": "project_qkv",
             "to": "keys",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -21887,9 +21560,7 @@ export const manifest = {
             "from": "project_qkv",
             "to": "scalar_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -21908,9 +21579,7 @@ export const manifest = {
             "from": "queries",
             "to": "scalar_logits_step",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -21929,9 +21598,7 @@ export const manifest = {
             "from": "keys",
             "to": "scalar_logits_step",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -21950,9 +21617,7 @@ export const manifest = {
             "from": "scalar_logits_step",
             "to": "scalar_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -21996,9 +21661,7 @@ export const manifest = {
             "from": "project_pair_bias",
             "to": "pair_bias",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22017,9 +21680,7 @@ export const manifest = {
             "from": "scalar_logits",
             "to": "combine_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22038,9 +21699,7 @@ export const manifest = {
             "from": "pair_bias",
             "to": "combine_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22059,9 +21718,7 @@ export const manifest = {
             "from": "combine_logits",
             "to": "biased_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22080,9 +21737,7 @@ export const manifest = {
             "from": "biased_logits",
             "to": "apply_attention_mask",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22101,9 +21756,7 @@ export const manifest = {
             "from": "attention_mask",
             "to": "apply_attention_mask",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22122,9 +21775,7 @@ export const manifest = {
             "from": "apply_attention_mask",
             "to": "masked_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22143,9 +21794,7 @@ export const manifest = {
             "from": "masked_logits",
             "to": "softmax_attention_masked",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22164,9 +21813,7 @@ export const manifest = {
             "from": "softmax_attention_masked",
             "to": "attention_weights",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22185,9 +21832,7 @@ export const manifest = {
             "from": "attention_weights",
             "to": "aggregate_scalar_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22206,9 +21851,7 @@ export const manifest = {
             "from": "scalar_values",
             "to": "aggregate_scalar_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22227,9 +21870,7 @@ export const manifest = {
             "from": "aggregate_scalar_values",
             "to": "scalar_context",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22248,9 +21889,7 @@ export const manifest = {
             "from": "attention_weights",
             "to": "aggregate_pair_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22294,9 +21933,7 @@ export const manifest = {
             "from": "aggregate_pair_values",
             "to": "pair_value_context",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22315,9 +21952,7 @@ export const manifest = {
             "from": "scalar_context",
             "to": "project_reduced_output",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -22336,9 +21971,7 @@ export const manifest = {
             "from": "pair_value_context",
             "to": "project_reduced_output",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-biased-attention.yaml",
             "standard_block_id": "pair_biased_attention",
@@ -23763,9 +23396,7 @@ export const manifest = {
             "from": "project_scalar_terms",
             "to": "scalar_terms",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23808,9 +23439,7 @@ export const manifest = {
             "from": "project_local_points",
             "to": "local_points",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23829,9 +23458,7 @@ export const manifest = {
             "from": "local_points",
             "to": "transform_points_to_global",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23875,9 +23502,7 @@ export const manifest = {
             "from": "transform_points_to_global",
             "to": "global_points",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23896,9 +23521,7 @@ export const manifest = {
             "from": "scalar_terms",
             "to": "scalar_attention_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23917,9 +23540,7 @@ export const manifest = {
             "from": "scalar_attention_logits",
             "to": "scalar_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23938,9 +23559,7 @@ export const manifest = {
             "from": "global_points",
             "to": "point_distance_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -23959,9 +23578,7 @@ export const manifest = {
             "from": "point_distance_logits",
             "to": "point_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24005,9 +23622,7 @@ export const manifest = {
             "from": "project_pair_bias",
             "to": "pair_bias",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24026,9 +23641,7 @@ export const manifest = {
             "from": "scalar_logits",
             "to": "combine_and_mask_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24047,9 +23660,7 @@ export const manifest = {
             "from": "point_logits",
             "to": "combine_and_mask_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24068,9 +23679,7 @@ export const manifest = {
             "from": "pair_bias",
             "to": "combine_and_mask_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24114,9 +23723,7 @@ export const manifest = {
             "from": "combine_and_mask_logits",
             "to": "combined_logits",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24135,9 +23742,7 @@ export const manifest = {
             "from": "combined_logits",
             "to": "softmax_attention",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24156,9 +23761,7 @@ export const manifest = {
             "from": "softmax_attention",
             "to": "attention_weights",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24177,9 +23780,7 @@ export const manifest = {
             "from": "attention_weights",
             "to": "aggregate_scalar_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24198,9 +23799,7 @@ export const manifest = {
             "from": "scalar_terms",
             "to": "aggregate_scalar_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24219,9 +23818,7 @@ export const manifest = {
             "from": "aggregate_scalar_values",
             "to": "scalar_context",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24240,9 +23837,7 @@ export const manifest = {
             "from": "attention_weights",
             "to": "aggregate_global_points",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24261,9 +23856,7 @@ export const manifest = {
             "from": "global_points",
             "to": "aggregate_global_points",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24282,9 +23875,7 @@ export const manifest = {
             "from": "aggregate_global_points",
             "to": "global_point_context",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24303,9 +23894,7 @@ export const manifest = {
             "from": "global_point_context",
             "to": "return_points_to_local_frame",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24349,9 +23938,7 @@ export const manifest = {
             "from": "return_points_to_local_frame",
             "to": "local_point_context",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24370,9 +23957,7 @@ export const manifest = {
             "from": "attention_weights",
             "to": "aggregate_pair_values",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24416,9 +24001,7 @@ export const manifest = {
             "from": "aggregate_pair_values",
             "to": "pair_value_context",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24437,9 +24020,7 @@ export const manifest = {
             "from": "scalar_context",
             "to": "project_ipa_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24458,9 +24039,7 @@ export const manifest = {
             "from": "local_point_context",
             "to": "project_ipa_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -24479,9 +24058,7 @@ export const manifest = {
             "from": "pair_value_context",
             "to": "project_ipa_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/invariant-point-attention.yaml",
             "standard_block_id": "invariant_point_attention",
@@ -25829,9 +25406,7 @@ export const manifest = {
             "from": "project_first",
             "to": "hidden_1",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -25850,9 +25425,7 @@ export const manifest = {
             "from": "hidden_1",
             "to": "project_second",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -25871,9 +25444,7 @@ export const manifest = {
             "from": "project_second",
             "to": "hidden_2",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -25892,9 +25463,7 @@ export const manifest = {
             "from": "hidden_2",
             "to": "project_final_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -25913,9 +25482,7 @@ export const manifest = {
             "from": "project_final_delta",
             "to": "transition_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -25958,9 +25525,7 @@ export const manifest = {
             "from": "transition_delta",
             "to": "residual_add",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -25979,9 +25544,7 @@ export const manifest = {
             "from": "residual_add",
             "to": "residual_single",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26000,9 +25563,7 @@ export const manifest = {
             "from": "residual_single",
             "to": "dropout_layer_norm",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26689,9 +26250,7 @@ export const manifest = {
             "from": "project_first",
             "to": "hidden_1",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26710,9 +26269,7 @@ export const manifest = {
             "from": "hidden_1",
             "to": "project_second",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26731,9 +26288,7 @@ export const manifest = {
             "from": "project_second",
             "to": "hidden_2",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26752,9 +26307,7 @@ export const manifest = {
             "from": "hidden_2",
             "to": "project_final_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26773,9 +26326,7 @@ export const manifest = {
             "from": "project_final_delta",
             "to": "transition_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26818,9 +26369,7 @@ export const manifest = {
             "from": "transition_delta",
             "to": "residual_add",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26839,9 +26388,7 @@ export const manifest = {
             "from": "residual_add",
             "to": "residual_single",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -26860,9 +26407,7 @@ export const manifest = {
             "from": "residual_single",
             "to": "dropout_layer_norm",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/structure-transition.yaml",
             "standard_block_id": "structure_transition",
@@ -27612,9 +27157,7 @@ export const manifest = {
             "from": "project_left_single",
             "to": "left_single",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27657,9 +27200,7 @@ export const manifest = {
             "from": "project_right_single",
             "to": "right_single",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27678,9 +27219,7 @@ export const manifest = {
             "from": "left_single",
             "to": "broadcast_endpoint_sum",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27699,9 +27238,7 @@ export const manifest = {
             "from": "right_single",
             "to": "broadcast_endpoint_sum",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27720,9 +27257,7 @@ export const manifest = {
             "from": "broadcast_endpoint_sum",
             "to": "pair_activations",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27741,9 +27276,7 @@ export const manifest = {
             "from": "pair_activations",
             "to": "project_pair_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27762,9 +27295,7 @@ export const manifest = {
             "from": "project_pair_delta",
             "to": "pair_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -27807,9 +27338,7 @@ export const manifest = {
             "from": "pair_delta",
             "to": "add_pair_residual",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/single-to-pair-endpoint-update.yaml",
             "standard_block_id": "single_to_pair_endpoint_update",
@@ -28609,9 +28138,7 @@ export const manifest = {
             "from": "normalize_pair_state",
             "to": "normalized_pair_state",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28630,9 +28157,7 @@ export const manifest = {
             "from": "normalized_pair_state",
             "to": "expand_and_activate",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28651,9 +28176,7 @@ export const manifest = {
             "from": "expand_and_activate",
             "to": "expanded_pair_state",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28672,9 +28195,7 @@ export const manifest = {
             "from": "expanded_pair_state",
             "to": "project_pair_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28693,9 +28214,7 @@ export const manifest = {
             "from": "project_pair_delta",
             "to": "projected_pair_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28714,9 +28233,7 @@ export const manifest = {
             "from": "projected_pair_delta",
             "to": "apply_pair_mask",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28735,9 +28252,7 @@ export const manifest = {
             "from": "pair_mask",
             "to": "apply_pair_mask",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28756,9 +28271,7 @@ export const manifest = {
             "from": "apply_pair_mask",
             "to": "transition_delta",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -28801,9 +28314,7 @@ export const manifest = {
             "from": "transition_delta",
             "to": "add_pair_residual",
             "kind": "data_flow",
-            "carries": [
-
-            ],
+            "carries": [],
             "grounding": "standard_block_template",
             "standard_block_ref": "standard_blocks/pair-transition.yaml",
             "standard_block_id": "pair_transition",
@@ -29320,9 +28831,7 @@ export const manifest = {
                 "relation_ref": "relations.feature_builder_produces_feature_bundle"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
@@ -29350,9 +28859,7 @@ export const manifest = {
                 "relation_ref": "relations.motif_featurizer_produces_sample_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -29380,9 +28887,7 @@ export const manifest = {
                 "relation_ref": "relations.target_featurizer_produces_sample_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -29410,9 +28915,7 @@ export const manifest = {
                 "relation_ref": "relations.task_router_dispatches_motif_request"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -29440,9 +28943,7 @@ export const manifest = {
                 "relation_ref": "relations.task_router_dispatches_target_request"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -29470,9 +28971,7 @@ export const manifest = {
                 "relation_ref": "relations.task_router_dispatches_unconditional_request"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -29500,9 +28999,7 @@ export const manifest = {
                 "relation_ref": "relations.unconditional_featurizer_produces_sample_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -29530,9 +29027,7 @@ export const manifest = {
                 "relation_ref": "relations.design_request_enters_feature_builder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -29658,9 +29153,7 @@ export const manifest = {
                 "relation_ref": "relations.unconditional_unknown_features_derive_frame_indices"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -29688,9 +29181,7 @@ export const manifest = {
                 "relation_ref": "relations.unconditional_layout_initializes_unknown_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -29847,9 +29338,7 @@ export const manifest = {
                 "relation_ref": "relations.motif_conditioned_tokens_enter_assembler"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -29877,9 +29366,7 @@ export const manifest = {
                 "relation_ref": "relations.motif_parser_selects_conditioned_segments"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -29907,9 +29394,7 @@ export const manifest = {
                 "relation_ref": "relations.motif_parser_defines_scaffold_layout"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -29937,9 +29422,7 @@ export const manifest = {
                 "relation_ref": "relations.motif_scaffold_tokens_enter_assembler"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -30097,9 +29580,7 @@ export const manifest = {
                 "relation_ref": "relations.binder_tokens_enter_target_assembler"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -30127,9 +29608,7 @@ export const manifest = {
                 "relation_ref": "relations.target_tokens_enter_target_assembler"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.sample_feature_dictionary"
             ],
@@ -30157,9 +29636,7 @@ export const manifest = {
                 "relation_ref": "relations.target_parser_defines_binder_request"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -30187,9 +29664,7 @@ export const manifest = {
                 "relation_ref": "relations.target_parser_selects_target_interface"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.design_request"
             ],
@@ -30568,9 +30043,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_embedder_produces_initial_pair_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
@@ -30632,14 +30105,11 @@ export const manifest = {
                 "relation_ref": "relations.current_frames_enter_pair_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_e5f99d8f1e27",
@@ -30792,14 +30262,11 @@ export const manifest = {
                 "relation_ref": "relations.initial_single_features_enter_pair_embedder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           }
         ],
         "classifications": {
@@ -30974,14 +30441,11 @@ export const manifest = {
                 "relation_ref": "relations.conditional_frame_builder_produces_frames"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_de9d5c1badbd",
@@ -30998,14 +30462,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_distance_binner_produces_bins"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_distance_bins"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_a4f199da145f",
@@ -31022,14 +30483,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_pair_encoder_produces_pair_features"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_features"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_a098fb7bdf9e",
@@ -31046,14 +30504,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_orientation_encoder_produces_quaternions"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_relative_orientations"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_57374d47b247",
@@ -31070,14 +30525,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_encoder_routes_fields_to_frame_builder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_4d8722f330aa",
@@ -31094,14 +30546,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_encoder_routes_fields_to_pair_masks"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_b8f85d059390",
@@ -31118,14 +30567,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_pair_mask_builder_produces_frame_pair_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_508afa38c0d6",
@@ -31142,14 +30588,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_pair_mask_builder_produces_group_mask"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_7726d8963249",
@@ -31166,14 +30609,11 @@ export const manifest = {
                 "relation_ref": "relations.feature_bundle_conditions_conditioned_pair_encoder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.feature_bundle"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_358478eff8b6",
@@ -31190,14 +30630,11 @@ export const manifest = {
                 "relation_ref": "relations.conditional_frames_enter_distance_binner"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_7379b91d19b8",
@@ -31214,14 +30651,11 @@ export const manifest = {
                 "relation_ref": "relations.conditional_frames_enter_orientation_encoder"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_token_frames"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_a859427acb25",
@@ -31238,14 +30672,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_distance_bins_enter_projector"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_distance_bins"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_c8d678d3070a",
@@ -31262,14 +30693,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_frame_pair_mask_enters_projector"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_81e2b486c2e0",
@@ -31286,14 +30714,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_frame_pair_mask_gates_orientations"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_ada5cf397970",
@@ -31310,14 +30735,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_group_pair_mask_enters_projector"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_198c38547a75",
@@ -31334,14 +30756,11 @@ export const manifest = {
                 "relation_ref": "relations.conditioned_orientations_enter_projector"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.conditioned_relative_orientations"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           }
         ],
         "classifications": {

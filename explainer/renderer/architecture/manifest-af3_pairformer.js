@@ -92,41 +92,31 @@ export const manifest = {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.triangle_multiplication_incoming": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.pair_attention_starting_node": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.pair_attention_ending_node": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.pair_transition": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.single_update_stage": {
           "status": "complete",
@@ -142,25 +132,19 @@ export const manifest = {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.single_attention_with_pair_bias": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         },
         "modules.single_transition": {
           "status": "leaf",
           "depth": 3,
           "immediateModuleCount": 0,
-          "immediateModuleRefs": [
-
-          ]
+          "immediateModuleRefs": []
         }
       },
       "summary": {
@@ -173,12 +157,8 @@ export const manifest = {
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 3
       },
-      "opaqueFrontierRefs": [
-
-      ],
-      "partialScopeRefs": [
-
-      ]
+      "opaqueFrontierRefs": [],
+      "partialScopeRefs": []
     },
     "modules": [
       {
@@ -512,9 +492,7 @@ export const manifest = {
         }
       }
     ],
-    "blockInstances": [
-
-    ],
+    "blockInstances": [],
     "representations": [
       {
         "id": "single_state",
@@ -945,60 +923,44 @@ export const manifest = {
     ],
     "valueSiteInterfaces": {
       "single_state_input": {
-        "incomingRelationRefs": [
-
-        ],
+        "incomingRelationRefs": [],
         "outgoingRelationRefs": [
           "relations.input_single_state_initializes_block_single_state"
         ],
-        "producerRefs": [
-
-        ],
+        "producerRefs": [],
         "consumerRefs": [
           "value_sites.block_single_state"
         ]
       },
       "pair_state_input": {
-        "incomingRelationRefs": [
-
-        ],
+        "incomingRelationRefs": [],
         "outgoingRelationRefs": [
           "relations.input_pair_state_initializes_block_pair_state"
         ],
-        "producerRefs": [
-
-        ],
+        "producerRefs": [],
         "consumerRefs": [
           "value_sites.block_pair_state"
         ]
       },
       "token_mask_input": {
-        "incomingRelationRefs": [
-
-        ],
+        "incomingRelationRefs": [],
         "outgoingRelationRefs": [
           "relations.token_mask_conditions_single_attention"
         ],
-        "producerRefs": [
-
-        ],
+        "producerRefs": [],
         "consumerRefs": [
           "modules.single_attention_with_pair_bias"
         ]
       },
       "pair_mask_input": {
-        "incomingRelationRefs": [
-
-        ],
+        "incomingRelationRefs": [],
         "outgoingRelationRefs": [
           "relations.pair_mask_conditions_outgoing_multiplication",
           "relations.pair_mask_conditions_incoming_multiplication",
           "relations.pair_mask_conditions_starting_attention",
           "relations.pair_mask_conditions_ending_attention"
         ],
-        "producerRefs": [
-
-        ],
+        "producerRefs": [],
         "consumerRefs": [
           "modules.triangle_multiplication_outgoing",
           "modules.triangle_multiplication_incoming",
@@ -1160,29 +1122,21 @@ export const manifest = {
         "incomingRelationRefs": [
           "relations.final_single_block_state_becomes_output"
         ],
-        "outgoingRelationRefs": [
-
-        ],
+        "outgoingRelationRefs": [],
         "producerRefs": [
           "value_sites.single_after_transition"
         ],
-        "consumerRefs": [
-
-        ]
+        "consumerRefs": []
       },
       "pair_state_output": {
         "incomingRelationRefs": [
           "relations.final_pair_block_state_becomes_output"
         ],
-        "outgoingRelationRefs": [
-
-        ],
+        "outgoingRelationRefs": [],
         "producerRefs": [
           "value_sites.pair_after_transition"
         ],
-        "consumerRefs": [
-
-        ]
+        "consumerRefs": []
       }
     },
     "execution": {
@@ -1887,9 +1841,7 @@ export const manifest = {
         "target": "value_sites.single_pair_attention_logits"
       }
     ],
-    "scaleTransitions": [
-
-    ],
+    "scaleTransitions": [],
     "trainingInference": {
       "objective": {
         "kind": "component_only",
@@ -2691,9 +2643,7 @@ export const manifest = {
         }
       }
     ],
-    "openQuestions": [
-
-    ]
+    "openQuestions": []
   },
   "bibliography": {
     "schemaVersion": "bibliography-v0.1",
@@ -3360,8 +3310,7 @@ export const manifest = {
       }
     ]
   },
-  "standardBlocks": {
-  },
+  "standardBlocks": {},
   "pseudocode": {
     "alphafold3_pairformer": {
       "schemaVersion": "pseudocode-v0.2",
@@ -5149,14 +5098,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_ending_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_f24e2d2d57f1",
@@ -5173,14 +5119,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_incoming_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_42be7a59d897",
@@ -5197,14 +5140,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_outgoing_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_fe4f7af85d32",
@@ -5221,14 +5161,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_starting_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_ebfe5c7e75c5",
@@ -5245,14 +5182,11 @@ export const manifest = {
                 "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_97d1e9fd492c",
@@ -5269,9 +5203,7 @@ export const manifest = {
                 "relation_ref": "relations.final_pair_block_state_becomes_output"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -5299,9 +5231,7 @@ export const manifest = {
                 "relation_ref": "relations.final_single_block_state_becomes_output"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -5329,14 +5259,11 @@ export const manifest = {
                 "relation_ref": "relations.input_single_state_initializes_block_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_d3b940b30ce4",
@@ -5353,14 +5280,11 @@ export const manifest = {
                 "relation_ref": "relations.token_mask_conditions_single_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           }
         ],
         "classifications": {
@@ -5685,9 +5609,7 @@ export const manifest = {
                 "relation_ref": "relations.block_pair_state_enters_outgoing_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -5715,9 +5637,7 @@ export const manifest = {
                 "relation_ref": "relations.block_single_state_enters_pair_biased_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -5745,9 +5665,7 @@ export const manifest = {
                 "relation_ref": "relations.block_pair_output_reenters_next_pairformer_block"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -5778,14 +5696,11 @@ export const manifest = {
                 "relation_ref": "relations.final_pair_block_state_becomes_output"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_0178261d0909",
@@ -5802,9 +5717,7 @@ export const manifest = {
                 "relation_ref": "relations.updated_pair_state_enters_bias_projection"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -5833,14 +5746,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_ending_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_5632d5bece0f",
@@ -5857,14 +5767,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_incoming_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_8b70fcfbce9d",
@@ -5881,14 +5788,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_outgoing_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_453c9a37c45e",
@@ -5905,14 +5809,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_starting_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_603e772b1d95",
@@ -5929,9 +5830,7 @@ export const manifest = {
                 "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -5959,9 +5858,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_transition_updates_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -5989,9 +5886,7 @@ export const manifest = {
                 "relation_ref": "relations.block_single_output_reenters_next_pairformer_block"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -6022,14 +5917,11 @@ export const manifest = {
                 "relation_ref": "relations.final_single_block_state_becomes_output"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_6627248ace90",
@@ -6046,9 +5938,7 @@ export const manifest = {
                 "relation_ref": "relations.input_single_state_initializes_block_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -6076,9 +5966,7 @@ export const manifest = {
                 "relation_ref": "relations.single_transition_updates_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -6106,14 +5994,11 @@ export const manifest = {
                 "relation_ref": "relations.token_mask_conditions_single_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           }
         ],
         "classifications": {
@@ -6373,9 +6258,7 @@ export const manifest = {
                 "relation_ref": "relations.block_pair_state_enters_outgoing_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6403,14 +6286,11 @@ export const manifest = {
                 "relation_ref": "relations.ending_pair_state_enters_pair_transition"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_6fba0c2b8712",
@@ -6427,14 +6307,11 @@ export const manifest = {
                 "relation_ref": "relations.incoming_pair_state_enters_starting_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_8ae44737cd9e",
@@ -6451,14 +6328,11 @@ export const manifest = {
                 "relation_ref": "relations.outgoing_pair_state_enters_incoming_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_5b23b86c9092",
@@ -6475,14 +6349,11 @@ export const manifest = {
                 "relation_ref": "relations.starting_pair_state_enters_ending_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_9e40a3cacd4f",
@@ -6499,9 +6370,7 @@ export const manifest = {
                 "relation_ref": "relations.ending_attention_updates_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6529,9 +6398,7 @@ export const manifest = {
                 "relation_ref": "relations.starting_attention_updates_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6559,14 +6426,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_ending_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_336d3a4cf8de",
@@ -6583,14 +6447,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_starting_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_6078dc05e461",
@@ -6607,14 +6468,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_incoming_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_3bd720537f77",
@@ -6631,14 +6489,11 @@ export const manifest = {
                 "relation_ref": "relations.pair_mask_conditions_outgoing_multiplication"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_a4c16e146db3",
@@ -6655,9 +6510,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_transition_updates_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6685,9 +6538,7 @@ export const manifest = {
                 "relation_ref": "relations.incoming_multiplication_updates_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6715,9 +6566,7 @@ export const manifest = {
                 "relation_ref": "relations.outgoing_multiplication_updates_pair_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6930,14 +6779,11 @@ export const manifest = {
                 "relation_ref": "relations.block_single_state_enters_pair_biased_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_5700ccbaf9eb",
@@ -6954,9 +6800,7 @@ export const manifest = {
                 "relation_ref": "relations.updated_pair_state_enters_bias_projection"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_state"
             ],
@@ -6984,14 +6828,11 @@ export const manifest = {
                 "relation_ref": "relations.attention_updated_single_enters_transition"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           },
           {
             "id": "projection_c675c08fcfa2",
@@ -7008,9 +6849,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_biased_attention_updates_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -7038,9 +6877,7 @@ export const manifest = {
                 "relation_ref": "relations.pair_logits_bias_single_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_attention_logits"
             ],
@@ -7069,9 +6906,7 @@ export const manifest = {
                 "relation_ref": "relations.bias_projection_produces_pair_logits"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.pair_attention_logits"
             ],
@@ -7099,9 +6934,7 @@ export const manifest = {
                 "relation_ref": "relations.single_transition_updates_single_state"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.single_state"
             ],
@@ -7129,14 +6962,11 @@ export const manifest = {
                 "relation_ref": "relations.token_mask_conditions_single_attention"
               }
             ],
-            "hidden_refs": [
-
-            ],
+            "hidden_refs": [],
             "carries": [
               "representations.token_mask"
             ],
-            "presentation": {
-            }
+            "presentation": {}
           }
         ],
         "classifications": {
