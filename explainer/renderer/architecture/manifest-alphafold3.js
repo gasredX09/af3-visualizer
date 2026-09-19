@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "f9fb8d80c5e2b5ebb8011cbc0733daae4c5878c6b5e8f8363dff637b8e61abec",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "3978a4c18d06c27104497dce4c349e90e65ea95f684ddf878f22c323badc440b",
+      "architectures/alphafold3-pairformer.yaml": "55fc6ef051795f7561db77b390cfdd94fa1fc99de89d0e38e3a1670c62a07751",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "0ae9aa357b4b1bdd6e6a95d4a882e3ac88cd4e0cebe5073ef4355f15e2b21339",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -51,7 +51,13 @@ export const manifest = {
             "source_ref": "af3_pairformer_code",
             "role": "implementation_evidence",
             "locator": "PairFormerIteration.__call__",
-            "note": "The source set deliberately stops at the already-embedded single and pair representations."
+            "note": "The Pairformer half of the source set stops at the single and pair representations PairFormerIteration itself reads and writes."
+          },
+          {
+            "source_ref": "af3_2024",
+            "role": "paper_evidence",
+            "locator": "Supplementary Algorithm 2 (InputFeatureEmbedder)",
+            "note": "The source set's task-native boundary is now the raw per-token/per-atom input features InputFeatureEmbedder consumes (reference-conformer geometry, restype, profile, deletion_mean); single_state_input and pair_state_input are internal hand-offs produced from those features, not the architecture's own boundary."
           }
         ]
       }
@@ -62,9 +68,10 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 1,
+          "immediateModuleCount": 2,
           "immediateModuleRefs": [
-            "modules.pairformer_stack"
+            "modules.pairformer_stack",
+            "modules.input_feature_embedder"
           ]
         },
         "modules.pairformer_stack": {
@@ -161,20 +168,46 @@ export const manifest = {
           "immediateModuleRefs": [
 
           ]
+        },
+        "modules.input_feature_embedder": {
+          "status": "complete",
+          "depth": 1,
+          "immediateModuleCount": 2,
+          "immediateModuleRefs": [
+            "modules.atom_attention_encoder_bare",
+            "modules.input_feature_concatenation"
+          ]
+        },
+        "modules.atom_attention_encoder_bare": {
+          "status": "opaque",
+          "reason": "AtomAttentionEncoder (Algorithm 5) is the same reusable routine called a second time, in conditioned mode with real trunk single/pair and noisy-position arguments, inside the Diffusion Module. Modeling its internals here, against only this bare-mode call, would either duplicate that modeling effort or model only half the routine's real requirements; its internals become a reusable standard_block the first time a module actually needs them modeled, likely the Diffusion Module pass.",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.input_feature_concatenation": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
-        "scopeCount": 12,
-        "expandedScopeCount": 4,
-        "completeExpandedScopeCount": 4,
+        "scopeCount": 15,
+        "expandedScopeCount": 5,
+        "completeExpandedScopeCount": 5,
         "partialScopeCount": 0,
-        "leafFrontierCount": 8,
-        "opaqueFrontierCount": 0,
+        "leafFrontierCount": 9,
+        "opaqueFrontierCount": 1,
         "partialFrontierCount": 0,
         "maximumAuthoredDepth": 3
       },
       "opaqueFrontierRefs": [
-
+        "modules.atom_attention_encoder_bare"
       ],
       "partialScopeRefs": [
 
@@ -510,6 +543,81 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "input_feature_embedder",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Input Feature Embedder",
+        "kind": "encoder",
+        "mechanisms": [
+          "atom_attention_encoding",
+          "per_token_feature_concatenation"
+        ],
+        "role": "build s_inputs by mean-pooling a bare-mode AtomAttentionEncoder pass over each token's isolated reference-conformer geometry, then concatenating that per-token vector with restype, profile, and deletion_mean",
+        "scale": "token",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 (InputFeatureEmbedder)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_bare",
+        "parent_ref": "modules.input_feature_embedder",
+        "decomposition": {
+          "status": "opaque",
+          "reason": "AtomAttentionEncoder (Algorithm 5) is the same reusable routine called a second time, in conditioned mode with real trunk single/pair and noisy-position arguments, inside the Diffusion Module. Modeling its internals here, against only this bare-mode call, would either duplicate that modeling effort or model only half the routine's real requirements; its internals become a reusable standard_block the first time a module actually needs them modeled, likely the Diffusion Module pass."
+        },
+        "label": "Atom Attention Encoder (bare mode)",
+        "kind": "encoder",
+        "mechanisms": [
+          "sequence_local_atom_attention",
+          "per_atom_to_per_token_mean_pooling"
+        ],
+        "role": "encode each token's isolated reference-conformer geometry and identity into one per-token vector via local self-attention over that token's own atoms, with no trunk single/pair or noisy-position conditioning",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 (AtomAttentionEncoder), called from Supplementary Algorithm 2 line 1 with {r_l}, {s_trunk}, {z_ij} all None"
+            }
+          ]
+        }
+      },
+      {
+        "id": "input_feature_concatenation",
+        "parent_ref": "modules.input_feature_embedder",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Input Feature Concatenation",
+        "kind": "operator",
+        "mechanisms": [
+          "feature_concatenation"
+        ],
+        "role": "concatenate the pooled per-token atom encoding with restype, profile, and deletion_mean to produce s_inputs",
+        "scale": "token",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))"
+            }
+          ]
+        }
       }
     ],
     "blockInstances": [
@@ -632,6 +740,116 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "atom_reference_features",
+        "scale": "atom",
+        "semantic_role": "raw per-atom reference-conformer geometry and identity, the slice of f* that AtomAttentionEncoder consumes in bare mode",
+        "shape": "heterogeneous fields sharing an N_atom prefix (see field_groups)",
+        "glyph": "dictionary",
+        "carries": [
+          "isolated reference-conformer 3D position per atom",
+          "element and formal charge identity per atom",
+          "character-encoded atom name per atom",
+          "same-instance (residue/ligand) grouping used to mask cross-instance atom pairs"
+        ],
+        "field_groups": [
+          {
+            "id": "reference_conformer_geometry_and_identity",
+            "label": "Reference conformer geometry and identity",
+            "axis": "atom",
+            "shape": "N_atom x {ref_pos: 3, ref_mask: 1, ref_element: 128, ref_charge: 1, ref_atom_name_chars: 4x64, ref_space_uid: 1}",
+            "fields": [
+              "ref_pos",
+              "ref_mask",
+              "ref_element",
+              "ref_charge",
+              "ref_atom_name_chars",
+              "ref_space_uid"
+            ],
+            "semantic_role": "Each atom's isolated idealized 3D shape (reference conformer, randomly rotated/translated), independent of any other token's conformer, plus the identity and same-instance grouping fields AtomAttentionEncoder needs to mask cross-instance atom pairs.",
+            "evidence": {
+              "status": "confirmed_from_paper",
+              "refs": [
+                {
+                  "source_ref": "af3_2024",
+                  "role": "paper_evidence",
+                  "locator": "Supplementary Table 5 (ref_pos, ref_mask, ref_element, ref_charge, ref_atom_name_chars, ref_space_uid)"
+                }
+              ]
+            }
+          }
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 (per-atom reference-conformer embedding and pairwise validity masking); Supplementary Table 5 (raw feature list)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "restype",
+        "scale": "token",
+        "semantic_role": "one-hot per-token sequence identity (residue/nucleotide/ligand-as-unknown-amino-acid), concatenated directly into s_inputs",
+        "shape": "N_token x 32",
+        "glyph": "matrix",
+        "carries": [
+          "one-hot residue/nucleotide/ligand type per token"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (f_i^restype); Supplementary Table 5 restype [N_token, 32]"
+            }
+          ]
+        }
+      },
+      {
+        "id": "profile",
+        "scale": "token",
+        "semantic_role": "per-token MSA amino-acid distribution, a compressed evolutionary summary computed before MSA processing, concatenated directly into s_inputs",
+        "shape": "N_token x 32",
+        "glyph": "matrix",
+        "carries": [
+          "per-column amino-acid distribution from the main MSA"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (f_i^profile); Supplementary Table 5 profile [N_token, 32]"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deletion_mean",
+        "scale": "token",
+        "semantic_role": "per-token mean MSA deletion rate, computed before MSA processing, concatenated directly into s_inputs",
+        "shape": "N_token",
+        "glyph": "vector",
+        "carries": [
+          "average deletion rate at this token's MSA column"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (f_i^deletion_mean); Supplementary Table 5 deletion_mean [N_token]"
+            }
+          ]
+        }
       }
     ],
     "valueSites": [
@@ -639,7 +857,6 @@ export const manifest = {
         "id": "single_state_input",
         "representation_ref": "representations.single_state",
         "scope_ref": "architecture",
-        "boundary": "input",
         "role": "component_input",
         "evidence": {
           "status": "confirmed_from_code",
@@ -661,7 +878,6 @@ export const manifest = {
         "id": "pair_state_input",
         "representation_ref": "representations.pair_state",
         "scope_ref": "architecture",
-        "boundary": "input",
         "role": "component_input",
         "evidence": {
           "status": "confirmed_from_code",
@@ -709,6 +925,74 @@ export const manifest = {
               "source_ref": "af3_pairformer_code",
               "role": "implementation_evidence",
               "locator": "PairFormerIteration.__call__"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_reference_features_input",
+        "representation_ref": "representations.atom_reference_features",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "component_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 1 (f* passed into AtomAttentionEncoder)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "restype_input",
+        "representation_ref": "representations.restype",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "component_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (f_i^restype)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "profile_input",
+        "representation_ref": "representations.profile",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "component_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (f_i^profile)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deletion_mean_input",
+        "representation_ref": "representations.deletion_mean",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "component_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (f_i^deletion_mean)"
             }
           ]
         }
@@ -946,27 +1230,29 @@ export const manifest = {
     "valueSiteInterfaces": {
       "single_state_input": {
         "incomingRelationRefs": [
-
+          "relations.concatenation_produces_single_state_input"
         ],
         "outgoingRelationRefs": [
-          "relations.input_single_state_initializes_block_single_state"
+          "relations.input_single_state_initializes_block_single_state",
+          "relations.single_state_input_outer_sum_initializes_pair_state_input"
         ],
         "producerRefs": [
-
+          "modules.input_feature_concatenation"
         ],
         "consumerRefs": [
-          "value_sites.block_single_state"
+          "value_sites.block_single_state",
+          "value_sites.pair_state_input"
         ]
       },
       "pair_state_input": {
         "incomingRelationRefs": [
-
+          "relations.single_state_input_outer_sum_initializes_pair_state_input"
         ],
         "outgoingRelationRefs": [
           "relations.input_pair_state_initializes_block_pair_state"
         ],
         "producerRefs": [
-
+          "value_sites.single_state_input"
         ],
         "consumerRefs": [
           "value_sites.block_pair_state"
@@ -1004,6 +1290,62 @@ export const manifest = {
           "modules.triangle_multiplication_incoming",
           "modules.pair_attention_starting_node",
           "modules.pair_attention_ending_node"
+        ]
+      },
+      "atom_reference_features_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.atom_reference_features_enter_atom_attention_encoder"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.atom_attention_encoder_bare"
+        ]
+      },
+      "restype_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.restype_enters_concatenation"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.input_feature_concatenation"
+        ]
+      },
+      "profile_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.profile_enters_concatenation"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.input_feature_concatenation"
+        ]
+      },
+      "deletion_mean_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.deletion_mean_enters_concatenation"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.input_feature_concatenation"
         ]
       },
       "block_pair_state": {
@@ -2616,6 +2958,146 @@ export const manifest = {
               "source_ref": "af3_pairformer_code",
               "role": "implementation_evidence",
               "locator": "PairFormerIteration.__call__"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_reference_features_enter_atom_attention_encoder",
+        "from": "value_sites.atom_reference_features_input",
+        "to": "modules.atom_attention_encoder_bare",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_reference_features"
+        ],
+        "operation": "encode_isolated_reference_conformer_geometry",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_feeds_concatenation",
+        "from": "modules.atom_attention_encoder_bare",
+        "to": "modules.input_feature_concatenation",
+        "kind": "data_flow",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "pool_atom_encoding_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 lines 1-2 (a_i, discarding the encoder's skip-connection outputs, then concat(a_i, ...))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "restype_enters_concatenation",
+        "from": "value_sites.restype_input",
+        "to": "modules.input_feature_concatenation",
+        "kind": "data_flow",
+        "carries": [
+          "representations.restype"
+        ],
+        "operation": "provide_restype_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "profile_enters_concatenation",
+        "from": "value_sites.profile_input",
+        "to": "modules.input_feature_concatenation",
+        "kind": "data_flow",
+        "carries": [
+          "representations.profile"
+        ],
+        "operation": "provide_profile_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deletion_mean_enters_concatenation",
+        "from": "value_sites.deletion_mean_input",
+        "to": "modules.input_feature_concatenation",
+        "kind": "data_flow",
+        "carries": [
+          "representations.deletion_mean"
+        ],
+        "operation": "provide_deletion_mean_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "concatenation_produces_single_state_input",
+        "from": "modules.input_feature_concatenation",
+        "to": "value_sites.single_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "concat_pooled_atom_encoding_and_per_token_features",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 2 line 2 (s_i = concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_state_input_outer_sum_initializes_pair_state_input",
+        "from": "value_sites.single_state_input",
+        "to": "value_sites.pair_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "outer_sum_project_single_state_into_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 3 (z_init as an outer sum of two LinearNoBias projections of s_inputs; lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)"
             }
           ]
         }
@@ -5026,7 +5508,7 @@ export const manifest = {
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 5,
+          "columns": 7,
           "rows": 5,
           "column_sizing": "content",
           "col_gap": 40,
@@ -5034,13 +5516,62 @@ export const manifest = {
         },
         "nodes": [
           {
+            "id": "atom_reference_features_input",
+            "ref": "value_sites.atom_reference_features_input",
+            "label": "reference conformer",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "restype_input",
+            "ref": "value_sites.restype_input",
+            "label": "restype",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "profile_input",
+            "ref": "value_sites.profile_input",
+            "label": "MSA profile",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "deletion_mean_input",
+            "ref": "value_sites.deletion_mean_input",
+            "label": "deletion mean",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "input_feature_embedder",
+            "ref": "modules.input_feature_embedder",
+            "label": "Input Feature Embedder",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 3
+          },
+          {
             "id": "token_mask_input",
             "ref": "value_sites.token_mask_input",
             "label": "token mask",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 1,
+            "col": 3,
             "row": 1
           },
           {
@@ -5051,7 +5582,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 1,
+            "col": 3,
             "row": 2
           },
           {
@@ -5062,7 +5593,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 1,
+            "col": 3,
             "row": 4
           },
           {
@@ -5072,7 +5603,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 1,
+            "col": 3,
             "row": 5
           },
           {
@@ -5081,7 +5612,7 @@ export const manifest = {
             "label": "48-block Pairformer",
             "prominence": "primary",
             "treatment": "block",
-            "col": 3,
+            "col": 5,
             "row": 3,
             "board_ref": "pairformer_block"
           },
@@ -5093,7 +5624,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 5,
+            "col": 7,
             "row": 2
           },
           {
@@ -5104,7 +5635,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 5,
+            "col": 7,
             "row": 4
           }
         ],
@@ -5134,6 +5665,78 @@ export const manifest = {
         ],
         "projection_mode": "derived",
         "edges": [
+          {
+            "id": "projection_8c664ba9889f",
+            "from": "atom_reference_features_input",
+            "to": "input_feature_embedder",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_reference_features_enter_atom_attention_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_reference_features_enter_atom_attention_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a0bc60a6e04d",
+            "from": "deletion_mean_input",
+            "to": "input_feature_embedder",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.deletion_mean_enters_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.deletion_mean_enters_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.deletion_mean"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_59432a759c5c",
+            "from": "input_feature_embedder",
+            "to": "single_state_input",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.concatenation_produces_single_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.concatenation_produces_single_state_input"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
           {
             "id": "projection_7d57332cdd97",
             "from": "pair_mask_input",
@@ -5315,6 +5918,78 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_2ecd6694aa72",
+            "from": "profile_input",
+            "to": "input_feature_embedder",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.profile_enters_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.profile_enters_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.profile"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_64699a528d0f",
+            "from": "restype_input",
+            "to": "input_feature_embedder",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.restype_enters_concatenation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.restype_enters_concatenation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.restype"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_0f2a901f09c7",
+            "from": "single_state_input",
+            "to": "pair_state_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_state_input_outer_sum_initializes_pair_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_input_outer_sum_initializes_pair_state_input"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_f1044b987a6f",
             "from": "single_state_input",
             "to": "pairformer_stack",
@@ -5364,6 +6039,9 @@ export const manifest = {
           }
         ],
         "classifications": {
+          "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
+          "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
+          "modules.input_feature_embedder": "visible",
           "modules.pair_attention_ending_node": "collapsed:modules.pairformer_stack",
           "modules.pair_attention_starting_node": "collapsed:modules.pairformer_stack",
           "modules.pair_transition": "collapsed:modules.pairformer_stack",
@@ -5373,8 +6051,10 @@ export const manifest = {
           "modules.single_transition": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
+          "value_sites.atom_reference_features_input": "visible",
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
+          "value_sites.deletion_mean_input": "visible",
           "value_sites.pair_after_ending_attention": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_incoming_multiplication": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_outgoing_multiplication": "collapsed:modules.pairformer_stack",
@@ -5383,6 +6063,8 @@ export const manifest = {
           "value_sites.pair_mask_input": "visible",
           "value_sites.pair_state_input": "visible",
           "value_sites.pair_state_output": "visible",
+          "value_sites.profile_input": "visible",
+          "value_sites.restype_input": "visible",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",

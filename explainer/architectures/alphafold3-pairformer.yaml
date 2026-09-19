@@ -27,7 +27,11 @@ decomposition:
       - source_ref: af3_pairformer_code
         role: implementation_evidence
         locator: PairFormerIteration.__call__
-        note: The source set deliberately stops at the already-embedded single and pair representations.
+        note: The Pairformer half of the source set stops at the single and pair representations PairFormerIteration itself reads and writes.
+      - source_ref: af3_2024
+        role: paper_evidence
+        locator: Supplementary Algorithm 2 (InputFeatureEmbedder)
+        note: The source set's task-native boundary is now the raw per-token/per-atom input features InputFeatureEmbedder consumes (reference-conformer geometry, restype, profile, deletion_mean); single_state_input and pair_state_input are internal hand-offs produced from those features, not the architecture's own boundary.
 
 execution:
   loops:
@@ -288,18 +292,84 @@ representations:
         - source_ref: af3_self_attention_code
           role: configuration_evidence
           locator: SelfAttentionConfig.num_head=16
+  - id: atom_reference_features
+    scale: atom
+    semantic_role: raw per-atom reference-conformer geometry and identity, the slice of f* that AtomAttentionEncoder consumes in bare mode
+    shape: "heterogeneous fields sharing an N_atom prefix (see field_groups)"
+    glyph: dictionary
+    carries:
+      - isolated reference-conformer 3D position per atom
+      - element and formal charge identity per atom
+      - character-encoded atom name per atom
+      - same-instance (residue/ligand) grouping used to mask cross-instance atom pairs
+    field_groups:
+      - id: reference_conformer_geometry_and_identity
+        label: Reference conformer geometry and identity
+        axis: atom
+        shape: "N_atom x {ref_pos: 3, ref_mask: 1, ref_element: 128, ref_charge: 1, ref_atom_name_chars: 4x64, ref_space_uid: 1}"
+        fields: [ref_pos, ref_mask, ref_element, ref_charge, ref_atom_name_chars, ref_space_uid]
+        semantic_role: Each atom's isolated idealized 3D shape (reference conformer, randomly rotated/translated), independent of any other token's conformer, plus the identity and same-instance grouping fields AtomAttentionEncoder needs to mask cross-instance atom pairs.
+        evidence:
+          status: confirmed_from_paper
+          refs:
+            - source_ref: af3_2024
+              role: paper_evidence
+              locator: Supplementary Table 5 (ref_pos, ref_mask, ref_element, ref_charge, ref_atom_name_chars, ref_space_uid)
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 (per-atom reference-conformer embedding and pairwise validity masking); Supplementary Table 5 (raw feature list)
+  - id: restype
+    scale: token
+    semantic_role: one-hot per-token sequence identity (residue/nucleotide/ligand-as-unknown-amino-acid), concatenated directly into s_inputs
+    shape: "N_token x 32"
+    glyph: matrix
+    carries:
+      - one-hot residue/nucleotide/ligand type per token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (f_i^restype); Supplementary Table 5 restype [N_token, 32]
+  - id: profile
+    scale: token
+    semantic_role: per-token MSA amino-acid distribution, a compressed evolutionary summary computed before MSA processing, concatenated directly into s_inputs
+    shape: "N_token x 32"
+    glyph: matrix
+    carries:
+      - per-column amino-acid distribution from the main MSA
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (f_i^profile); Supplementary Table 5 profile [N_token, 32]
+  - id: deletion_mean
+    scale: token
+    semantic_role: per-token mean MSA deletion rate, computed before MSA processing, concatenated directly into s_inputs
+    shape: "N_token"
+    glyph: vector
+    carries:
+      - average deletion rate at this token's MSA column
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (f_i^deletion_mean); Supplementary Table 5 deletion_mean [N_token]
 
 value_sites:
   - id: single_state_input
     representation_ref: representations.single_state
     scope_ref: architecture
-    boundary: input
     role: component_input
     evidence: *single_shape_evidence
   - id: pair_state_input
     representation_ref: representations.pair_state
     scope_ref: architecture
-    boundary: input
     role: component_input
     evidence: *pair_shape_evidence
   - id: token_mask_input
@@ -314,6 +384,50 @@ value_sites:
     boundary: input
     role: component_input
     evidence: *pair_code_evidence
+  - id: atom_reference_features_input
+    representation_ref: representations.atom_reference_features
+    scope_ref: architecture
+    boundary: input
+    role: component_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 1 (f* passed into AtomAttentionEncoder)
+  - id: restype_input
+    representation_ref: representations.restype
+    scope_ref: architecture
+    boundary: input
+    role: component_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (f_i^restype)
+  - id: profile_input
+    representation_ref: representations.profile
+    scope_ref: architecture
+    boundary: input
+    role: component_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (f_i^profile)
+  - id: deletion_mean_input
+    representation_ref: representations.deletion_mean
+    scope_ref: architecture
+    boundary: input
+    role: component_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (f_i^deletion_mean)
   - id: block_pair_state
     representation_ref: representations.pair_state
     scope_ref: modules.pairformer_stack
@@ -547,6 +661,52 @@ modules:
     role: apply a pointwise 4x SwiGLU transition and add its 384-channel projection back to each token state
     scale: token
     evidence: *transition_code_evidence
+  - id: input_feature_embedder
+    parent_ref: architecture
+    decomposition:
+      status: complete
+    label: Input Feature Embedder
+    kind: encoder
+    mechanisms: [atom_attention_encoding, per_token_feature_concatenation]
+    role: build s_inputs by mean-pooling a bare-mode AtomAttentionEncoder pass over each token's isolated reference-conformer geometry, then concatenating that per-token vector with restype, profile, and deletion_mean
+    scale: token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 (InputFeatureEmbedder)
+  - id: atom_attention_encoder_bare
+    parent_ref: modules.input_feature_embedder
+    decomposition:
+      status: opaque
+      reason: AtomAttentionEncoder (Algorithm 5) is the same reusable routine called a second time, in conditioned mode with real trunk single/pair and noisy-position arguments, inside the Diffusion Module. Modeling its internals here, against only this bare-mode call, would either duplicate that modeling effort or model only half the routine's real requirements; its internals become a reusable standard_block the first time a module actually needs them modeled, likely the Diffusion Module pass.
+    label: Atom Attention Encoder (bare mode)
+    kind: encoder
+    mechanisms: [sequence_local_atom_attention, per_atom_to_per_token_mean_pooling]
+    role: encode each token's isolated reference-conformer geometry and identity into one per-token vector via local self-attention over that token's own atoms, with no trunk single/pair or noisy-position conditioning
+    scale: atom
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 (AtomAttentionEncoder), called from Supplementary Algorithm 2 line 1 with {r_l}, {s_trunk}, {z_ij} all None
+  - id: input_feature_concatenation
+    parent_ref: modules.input_feature_embedder
+    decomposition:
+      status: leaf
+    label: Input Feature Concatenation
+    kind: operator
+    mechanisms: [feature_concatenation]
+    role: concatenate the pooled per-token atom encoding with restype, profile, and deletion_mean to produce s_inputs
+    scale: token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))
 
 relations:
   - id: input_pair_state_initializes_block_pair_state
@@ -753,6 +913,90 @@ relations:
     carries: [representations.single_state]
     operation: expose_final_single_state
     evidence: *pair_relation_evidence
+  - id: atom_reference_features_enter_atom_attention_encoder
+    from: value_sites.atom_reference_features_input
+    to: modules.atom_attention_encoder_bare
+    kind: data_flow
+    carries: [representations.atom_reference_features]
+    operation: encode_isolated_reference_conformer_geometry
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 1
+  - id: atom_attention_encoder_feeds_concatenation
+    from: modules.atom_attention_encoder_bare
+    to: modules.input_feature_concatenation
+    kind: data_flow
+    carries: [representations.single_state]
+    operation: pool_atom_encoding_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 lines 1-2 (a_i, discarding the encoder's skip-connection outputs, then concat(a_i, ...))
+  - id: restype_enters_concatenation
+    from: value_sites.restype_input
+    to: modules.input_feature_concatenation
+    kind: data_flow
+    carries: [representations.restype]
+    operation: provide_restype_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2
+  - id: profile_enters_concatenation
+    from: value_sites.profile_input
+    to: modules.input_feature_concatenation
+    kind: data_flow
+    carries: [representations.profile]
+    operation: provide_profile_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2
+  - id: deletion_mean_enters_concatenation
+    from: value_sites.deletion_mean_input
+    to: modules.input_feature_concatenation
+    kind: data_flow
+    carries: [representations.deletion_mean]
+    operation: provide_deletion_mean_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2
+  - id: concatenation_produces_single_state_input
+    from: modules.input_feature_concatenation
+    to: value_sites.single_state_input
+    kind: state_update
+    carries: [representations.single_state]
+    operation: concat_pooled_atom_encoding_and_per_token_features
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 2 line 2 (s_i = concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))
+  - id: single_state_input_outer_sum_initializes_pair_state_input
+    from: value_sites.single_state_input
+    to: value_sites.pair_state_input
+    kind: state_update
+    carries: [representations.single_state]
+    operation: outer_sum_project_single_state_into_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 3 (z_init as an outer sum of two LinearNoBias projections of s_inputs; lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation)
 
 claims:
   - id: pairformer_has_no_msa_state

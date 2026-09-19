@@ -11,19 +11,58 @@ boards:
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 5
+      columns: 7
       rows: 5
       column_sizing: content
       col_gap: 40
       row_gap: 32
     nodes:
+      - id: atom_reference_features_input
+        ref: value_sites.atom_reference_features_input
+        label: reference conformer
+        prominence: context
+        treatment: chip
+        density: micro
+        col: 1
+        row: 1
+      - id: restype_input
+        ref: value_sites.restype_input
+        label: restype
+        prominence: context
+        treatment: chip
+        density: micro
+        col: 1
+        row: 2
+      - id: profile_input
+        ref: value_sites.profile_input
+        label: MSA profile
+        prominence: context
+        treatment: chip
+        density: micro
+        col: 1
+        row: 4
+      - id: deletion_mean_input
+        ref: value_sites.deletion_mean_input
+        label: deletion mean
+        prominence: context
+        treatment: chip
+        density: micro
+        col: 1
+        row: 5
+      - id: input_feature_embedder
+        ref: modules.input_feature_embedder
+        label: Input Feature Embedder
+        prominence: primary
+        treatment: block
+        col: 2
+        row: 3
       - id: token_mask_input
         ref: value_sites.token_mask_input
         label: token mask
         prominence: context
         treatment: chip
         density: micro
-        col: 1
+        col: 3
         row: 1
       - id: single_state_input
         ref: value_sites.single_state_input
@@ -32,7 +71,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 1
+        col: 3
         row: 2
       - id: pair_state_input
         ref: value_sites.pair_state_input
@@ -41,7 +80,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 1
+        col: 3
         row: 4
       - id: pair_mask_input
         ref: value_sites.pair_mask_input
@@ -49,14 +88,14 @@ boards:
         prominence: context
         treatment: chip
         density: micro
-        col: 1
+        col: 3
         row: 5
       - id: pairformer_stack
         ref: modules.pairformer_stack
         label: 48-block Pairformer
         prominence: primary
         treatment: block
-        col: 3
+        col: 5
         row: 3
         board_ref: pairformer_block
       - id: single_state_output
@@ -66,7 +105,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 5
+        col: 7
         row: 2
       - id: pair_state_output
         ref: value_sites.pair_state_output
@@ -75,7 +114,7 @@ boards:
         prominence: secondary
         treatment: compact
         density: compact
-        col: 5
+        col: 7
         row: 4
     edge_overrides:
       - match: { relation_ref: relations.final_single_block_state_becomes_output }
