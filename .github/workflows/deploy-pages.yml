@@ -19,7 +19,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build static site
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Lint explainer sources
+        run: ruby explainer/scripts/lint_sources.rb
+      - name: Build architecture explainer (site root)
+        run: ruby explainer/scripts/build_pages.rb --source-set af3_pairformer --output dist
+      - name: Build legacy screens (dist/screens/)
         run: node scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
