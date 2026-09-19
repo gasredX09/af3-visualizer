@@ -47,6 +47,38 @@ impractical for a given screen, but is not the plan.
 Several screens listed below need no model output at all and are unaffected by
 this decision either way.
 
+## Delivery architecture: the Architecture Explainer (2026-09-18 pivot)
+
+Full rationale in `DECISIONS.md` (2026-09-18 entry, "Pivot to the Architecture
+Explainer framework"). All future AF3 content is built with `explainer/`, a
+vendored copy of `ramithuh/explainer`: a declarative YAML DSL for architecture
+facts (modules, representations, relations, evidence), a Ruby compiler and
+verifier, and a JS renderer with semantic zoom, a synchronized pseudocode
+inspector, and shareable deep links. It replaces the one-HTML-artifact-per-
+screen model in "Core screens" and "Supporting visualizations" below for
+anything not already built; the three screens already built stay live as-is
+at `/screens/` (see Delivery).
+
+Authoring an AF3 module means editing YAML under `explainer/architectures/`,
+`explainer/views/`, and `explainer/pseudocode/`, following
+`explainer/AGENTS.md`'s rules exactly (stable snake_case IDs, one owner per
+fact, every claim tagged `confirmed_from_code` / `confirmed_from_paper` /
+`confirmed_from_docs` / `inferred` / `open_question`) — the same accuracy bar
+this project already holds itself to, just enforced by the tool's own
+verifier instead of by hand.
+
+Two sequential sub-projects:
+
+- **Sub-project 0 (infrastructure, current work).** Get the pipeline itself
+  live on `af3-visualizer`'s GitHub Pages, publishing only the existing
+  `af3_pairformer` source set with no content changes, so the build/deploy
+  machine is proven before new content goes on top of it.
+- **Sub-project 1 (content, next).** Expand that source set into a full AF3
+  architecture, module by module: input embedder, MSA module (MSA stack plus
+  `OuterProductMean`), template module, the Pairformer (already authored
+  upstream), the atom-to-token-to-atom diffusion module, confidence heads.
+  Each module gets its own design/plan pass once sub-project 0 lands.
+
 ## Core screens
 
 These four carry the main narrative: what AF3 takes in, how it transforms it,
@@ -242,6 +274,16 @@ which auto-deploys on every push to `main`, no separate publish step. Claude
 Artifact links (created while building each screen) are a development
 convenience, not the distribution channel; see `DECISIONS.md`
 (2026-09-18 entry, "Pages is the actual delivery channel").
+
+Site layout as of the Architecture Explainer pivot: the explainer's own
+landing page and semantic-zoom boards are the site root; the three screens
+built before the pivot (triangle inequality sandbox, sequence-local
+attention mask, atom-token-atom hourglass) live at `/screens/`, linked from
+the explainer's landing page, with a link back from `/screens/` to the
+explainer root. Both are produced by the same GitHub Actions build: the
+Ruby build (`explainer/scripts/build_pages.rb`) runs first since it
+replaces its whole output directory, then the Node build
+(`scripts/build-pages.mjs`) adds `/screens/` into the same `dist/`.
 
 ## Presentation notes (separate deliverable, kept here for context)
 

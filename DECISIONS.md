@@ -251,3 +251,68 @@ deliberately small per `CLAUDE.md`'s shippability constraint. Screens
 using these numbers should show the real small-scale figures plus that
 larger-scale citation, not let the modest ratio understate why the
 architecture exists.
+
+## 2026-09-18: Pivot to the Architecture Explainer framework for all future content
+
+**Decision:** Adopt `ramithuh/explainer` (a source-first architecture-diagram
+tool the user co-built: a declarative YAML DSL for architecture facts, a
+Ruby compiler/verifier, and a JS renderer with semantic zoom, a
+synchronized pseudocode inspector, and shareable deep links) as this
+project's framework for all AF3 content going forward, replacing the
+one-HTML-artifact-per-screen model for anything not already built.
+
+The tool is vendored as a self-contained subtree at `explainer/` (its own
+tooling assumes "the directory containing `scripts/` is project root," so
+it works unmodified when nested rather than flattened into repo root).
+`explainer/` follows its own `AGENTS.md` authoring rules; this project's
+`CLAUDE.md`/`SPEC.md`/`DECISIONS.md` govern everything else and are
+unchanged by the vendoring itself.
+
+The work is split into two sequential sub-projects:
+- **Sub-project 0** (infrastructure): get the pipeline itself working end
+  to end on `af3-visualizer`'s GitHub Pages, publishing only the tool's
+  existing `af3_pairformer` source set (already fully authored upstream)
+  with no content changes, so the machine is proven before new content is
+  authored on top of it.
+- **Sub-project 1** (content): expand that source set into a full,
+  evidence-grounded AlphaFold 3 architecture (input embedder, MSA module,
+  template module, the existing Pairformer, the atom-to-token-to-atom
+  diffusion module, confidence heads), module by module.
+
+**Options considered:**
+- Keep building new screens as standalone HTML artifacts, one per concept
+  (status quo).
+- Vendor the explainer tool into a **new**, separate repo dedicated to AF3,
+  retiring `af3-visualizer`.
+- Extend AF3 coverage directly upstream in `ramithuh/explainer` itself,
+  deploying a filtered AF3-only build from there.
+- This decision: vendor into `af3-visualizer`, nested under `explainer/`,
+  publish only the AF3 source set.
+
+**Why:** the user builds and maintains the explainer tool and wants AF3's
+explainer to look and behave exactly like it, not like a reimplementation
+of its ideas in the per-screen HTML approach. Vendoring into the existing
+`af3-visualizer` repo (rather than a new repo, or working upstream) keeps
+one public repo and one Pages URL as the actual student-facing link,
+matching the 2026-09-18 "Pages is the actual delivery channel" entry's
+own reasoning. Nesting under `explainer/` rather than flattening into
+root avoids every namespace collision with this repo's existing
+`scripts/`/`docs/`-shaped conventions and keeps the vendored tree
+recognizable as vendored. Publishing only `af3_pairformer` (via the
+tool's own `--source-set` build flag) keeps the audience-facing site
+AF3-only even though the vendored tree still carries the other
+architectures (af2, dit, genie2, genie3) the tool ships with; those stay
+because their `standard_blocks` (pair-biased attention, AdaLN-zero
+conditioning, structure transition) are plausibly reusable when
+authoring AF3's diffusion module in sub-project 1, which is
+architecturally similar to DiT and Genie 3.
+
+**Supersedes:** for all *future* screens/content, this replaces the
+2026-09-17 "Screen delivery architecture" entry's one-Artifact-per-screen
+model. It does not retroactively change the three screens already built
+(triangle inequality sandbox, sequence-local attention mask,
+atom-token-atom hourglass): they stay exactly as they are, live at
+`/screens/` under the new site layout, per explicit decision to keep both
+for now rather than port or retire them. The 2026-09-18 "Pages is the
+actual delivery channel" entry's reasoning (Pages over Artifacts) is
+unaffected and still applies to the explainer build.
