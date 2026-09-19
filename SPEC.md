@@ -125,27 +125,40 @@ is built. Its real internals become a `standard_block` (reusable, typed,
 with explicit `variant`/`conformance`) the first time a module actually
 needs them modeled — likely the Diffusion Module pass.
 
-**New facts to add** (`explainer/architectures/alphafold3.yaml`, via an
-`architecture-edit-v0.2` plan, not hand-edited):
-- Module `input_feature_embedder` (`parent_ref: architecture`), with one
-  child module `atom_attention_encoder_bare` marked `decomposition.status:
-  opaque`.
+**New facts added** (`explainer/architectures/alphafold3-pairformer.yaml`,
+hand-edited — see `DECISIONS.md`'s 2026-09-19 "Hand-edit the Input Feature
+Embedder instead of using architecture-edit-v0.2" entry for why the
+`architecture-edit-v0.2` plan tool could not express this task):
+- Module `input_feature_embedder` (`parent_ref: architecture`,
+  `decomposition.status: complete`), with two children: `atom_attention_encoder_bare`
+  (`decomposition.status: opaque`, the bare-mode `AtomAttentionEncoder` call)
+  and `input_feature_concatenation` (`decomposition.status: leaf`, the
+  per-token feature concat).
+- Two further root-level modules, `single_state_input_projection` and
+  `pair_state_input_projection`, modeling Algorithm 1 lines 2-3's projection
+  of `s_inputs` into `single_state_input` and (via two independent
+  `LinearNoBias` layers outer-summed) `pair_state_input`.
 - New `boundary: input` value sites for the true raw features this module
-  consumes: per-atom reference-conformer geometry/identity (one value site
-  is enough at this scope — the atom-level detail stays inside the opaque
-  child), `restype`, `profile`, `deletion_mean`.
-- A `concat` relation from those inputs (via the module) into the
-  **existing** `single_state_input` value site — no new value site needed
-  for the output, since `single_state_input` already exists as exactly the
-  right hand-off point; only its `boundary` field changes (below).
-- Every new fact cites `~/research/src/alphafold3.typ`'s own `[paper]`/`[code]`
-  locators for Algorithm 2 and the relevant Algorithm 5 sub-steps, at
-  `evidence.status: confirmed_from_paper` (the note's own citations are
-  paper-grounded; use `confirmed_from_code` only for facts checked directly
-  against `~/research-papers/codebases/alphafold3/`, matching the existing
-  Pairformer entries' own distinction between the two).
+  consumes: `atom_reference_features_input` (one value site is enough at this
+  scope — the atom-level detail stays inside the opaque child),
+  `restype_input`, `profile_input`, `deletion_mean_input` (each backed by a
+  new representation of the same name), plus the internal (non-boundary)
+  `s_inputs` value site holding the concatenated 449-channel per-token
+  embedding (`pooled_atom_encoding` (384) + `restype` (32) + `profile` (32) +
+  `deletion_mean` (1)).
+- Relations wiring the full path: reference-conformer features into the atom
+  encoder, the atom encoder's pooled per-atom output (`pooled_atom_encoding`,
+  distinct from the trunk's `single_state` despite sharing a 384-channel
+  count) plus `restype`/`profile`/`deletion_mean` into the concatenation
+  module, the concatenation into `s_inputs`, and `s_inputs` into each of the
+  two projection modules, which each produce one of the existing
+  `single_state_input`/`pair_state_input` value sites.
+- Every new fact cites `~/research/src/alphafold3.typ`'s own `[paper]`
+  locators for Algorithm 2 and Algorithm 5, at `evidence.status:
+  confirmed_from_paper` (matching the existing Pairformer entries' own
+  distinction between `confirmed_from_paper` and `confirmed_from_code`).
 
-**Corrections to existing facts** (`update_entity`, not a new addition):
+**Corrections to existing facts** (hand-edited in place, not a new addition):
 - `single_state_input` and `pair_state_input` lose `boundary: input` — they
   are no longer the architecture's task-native boundary once
   `input_feature_embedder` sits upstream of them. (`pair_state_input`'s own
@@ -159,19 +172,22 @@ needs them modeled — likely the Diffusion Module pass.
   representations") gets rewritten to describe the new, larger boundary
   (raw per-token/per-atom input features) instead.
 
-**View changes** (`explainer/views/alphafold3-semantic-zoom.view.yaml`): a
-new root-board node for `input_feature_embedder`, positioned before the
-existing Pairformer node, placed via the `semantic_flow_v1` layout
-compiler (`protocol/semantic-layout.md`) rather than hand-picked `col`/`row`
-values.
+**View changes** (`explainer/views/alphafold3-pairformer-semantic-zoom.view.yaml`):
+new root-board nodes for `input_feature_embedder`'s value sites and modules
+(the atom encoder, the concatenation, and the two projection modules),
+positioned before the existing Pairformer nodes, using hand-picked
+`col`/`row` values matching every other node in the file's own established
+convention — not the `semantic_flow_v1` layout compiler the original plan
+called for.
 
-**Verification**: `ruby scripts/architecture_edit.rb prepare/show/apply`
-against the plan, then the mandatory
-`ruby scripts/verify_architecture.rb --source-set alphafold3` gate, then
-an actual rendered check in a browser (per this project's standing
-"verify by rendering" rule) that the new node appears, drills in
-correctly, and that removing `boundary: input` from the two existing
-value sites didn't silently orphan a board or a pseudocode reference.
+**Verification**: hand-edit the architecture and view YAML directly (per
+`DECISIONS.md`'s 2026-09-19 entry), then the full verification pipeline —
+`ruby scripts/lint_sources.rb`, `ruby scripts/verify_architecture.rb
+--source-set alphafold3`, `ruby renderer/architecture/build-manifest.rb
+--check` — plus an actual rendered check in a browser (per this project's
+standing "verify by rendering" rule) that the new nodes appear, drill in
+correctly, and that removing `boundary: input` from the two existing value
+sites didn't silently orphan a board or a pseudocode reference.
 
 ## Core screens
 

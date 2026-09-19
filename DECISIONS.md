@@ -441,4 +441,8 @@ for architecture, hand-edit-plus-`layout_board` for the view), written
 before this gap was discovered. The 2026-09-18 pivot entry's general
 guidance (edit-plans for an already-registered source set) is not
 reversed -- it still applies whenever a change doesn't trigger this
-specific visibility constraint.
+specific visibility constraint. Also supersedes `SPEC.md`'s module-1
+section's own description of its authoring mechanism (file paths, the
+`architecture-edit-v0.2` plan claim, and the `semantic_flow_v1` layout
+claim), which was reconciled with what actually shipped in the
+2026-09-19 final-review fix wave.

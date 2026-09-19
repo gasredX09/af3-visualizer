@@ -1,13 +1,13 @@
 schema_version: visualization-v0.4
 id: alphafold3_pairformer_semantic_zoom
-title: AlphaFold 3 Pairformer
+title: AlphaFold 3
 entry:
   architecture: architectures/alphafold3-pairformer.yaml
 root_board: pairformer_overview
 boards:
   - id: pairformer_overview
-    title: AlphaFold 3 Pairformer
-    summary: The AF3 trunk hands the Pairformer a token-wise single representation and an ordered token-pair representation. Forty-eight independently parameterized blocks refine both tracks, then return them to downstream AF3 modules.
+    title: AlphaFold 3
+    summary: AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.
     subject_ref: architecture
     expansion_depth: 1
     grid:

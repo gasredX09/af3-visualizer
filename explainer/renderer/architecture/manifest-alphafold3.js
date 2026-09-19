@@ -4,15 +4,15 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "e283a7b3238919d0462fd082ca73d848d372bd6ea046c79b7ec7933d5618385d",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "a2474005ec4df7750e6c5604a6f1b01182591078ecd1511c968f895a197de654",
+      "architectures/alphafold3-pairformer.yaml": "fb4323a3a49e12c39fea3270c68d2f448544d8db023991e5e7043aeacf0b09ee",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "3d7e5f1df6c1889ec604c140de0cf2a4a857bc7054666a76e219f69bb983ae33",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
   "architecture": {
     "schemaVersion": "architecture-v0.5",
     "id": "alphafold3",
-    "name": "AlphaFold 3 Pairformer",
+    "name": "AlphaFold 3",
     "family": "transformer",
     "status": "review",
     "taskModes": [
@@ -914,6 +914,26 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 2 line 2 (f_i^deletion_mean); Supplementary Table 5 deletion_mean [N_token]"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pooled_atom_encoding",
+        "scale": "token",
+        "semantic_role": "AtomAttentionEncoder's mean-pooled per-atom output for each token (a_i), fed into the input feature concatenation; shares a channel count with single_state (both 384, c_token) but is a distinct tensor, produced before the trunk's single_state even exists",
+        "shape": "N_token x 384",
+        "glyph": "single",
+        "carries": [
+          "mean-pooled per-atom reference-conformer encoding"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 16 (a_i = mean(relu(LinearNoBias(q_l)))); Supplementary Algorithm 2 line 1 (c_token=384)"
             }
           ]
         }
@@ -3108,7 +3128,7 @@ export const manifest = {
         "to": "modules.input_feature_concatenation",
         "kind": "data_flow",
         "carries": [
-          "representations.single_state"
+          "representations.pooled_atom_encoding"
         ],
         "operation": "pool_atom_encoding_for_concatenation",
         "evidence": {
@@ -5703,8 +5723,8 @@ export const manifest = {
     "items": [
       {
         "id": "pairformer_overview",
-        "title": "AlphaFold 3 Pairformer",
-        "summary": "The AF3 trunk hands the Pairformer a token-wise single representation and an ordered token-pair representation. Forty-eight independently parameterized blocks refine both tracks, then return them to downstream AF3 modules.",
+        "title": "AlphaFold 3",
+        "summary": "AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {

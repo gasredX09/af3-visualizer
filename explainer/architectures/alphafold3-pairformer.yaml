@@ -1,6 +1,6 @@
 schema_version: architecture-v0.5
 id: alphafold3
-name: AlphaFold 3 Pairformer
+name: AlphaFold 3
 family: transformer
 status: review
 task_modes:
@@ -360,6 +360,19 @@ representations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2 (f_i^deletion_mean); Supplementary Table 5 deletion_mean [N_token]
+  - id: pooled_atom_encoding
+    scale: token
+    semantic_role: AtomAttentionEncoder's mean-pooled per-atom output for each token (a_i), fed into the input feature concatenation; shares a channel count with single_state (both 384, c_token) but is a distinct tensor, produced before the trunk's single_state even exists
+    shape: "N_token x 384"
+    glyph: single
+    carries:
+      - mean-pooled per-atom reference-conformer encoding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 16 (a_i = mean(relu(LinearNoBias(q_l)))); Supplementary Algorithm 2 line 1 (c_token=384)
   - id: s_inputs
     scale: token
     semantic_role: the concatenated per-token input embedding (s_inputs); AtomAttentionEncoder's pooled per-token vector concatenated with restype, profile, and deletion_mean, and the single independent source that single_state_input and pair_state_input are each separately linearly projected from
@@ -985,7 +998,7 @@ relations:
     from: modules.atom_attention_encoder_bare
     to: modules.input_feature_concatenation
     kind: data_flow
-    carries: [representations.single_state]
+    carries: [representations.pooled_atom_encoding]
     operation: pool_atom_encoding_for_concatenation
     evidence:
       status: confirmed_from_paper
