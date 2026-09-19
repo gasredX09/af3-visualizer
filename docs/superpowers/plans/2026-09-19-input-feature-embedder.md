@@ -111,7 +111,9 @@ This should return nothing beyond file *path* references (which correctly stay a
 
 ```bash
 cd /Users/aryansharanreddyguda/af3-visualizer
-git add explainer/architectures/index.yaml explainer/architectures/alphafold3-pairformer.yaml .github/workflows/deploy-pages.yml SPEC.md
+git add explainer/architectures/index.yaml explainer/architectures/alphafold3-pairformer.yaml .github/workflows/deploy-pages.yml SPEC.md explainer/renderer/architecture/manifest-alphafold3.js explainer/renderer/architecture/manifest-index.js
+# If Step 6 found and removed a stale manifest-af3_pairformer.js, stage that deletion too:
+git add explainer/renderer/architecture/manifest-af3_pairformer.js 2>/dev/null || true
 git commit -m "$(cat <<'EOF'
 Rename the af3_pairformer source set to alphafold3
 
@@ -188,7 +190,17 @@ $RUBY scripts/architecture_edit.rb show /tmp/add-input-feature-embedder.prepared
 $RUBY scripts/architecture_edit.rb apply /tmp/add-input-feature-embedder.prepared.yaml
 ```
 
-- [ ] **Step 5: Run the mandatory verifier**
+- [ ] **Step 5: Regenerate the manifest**
+
+`apply` updates the canonical architecture YAML only — it does not regenerate the compiled manifest. `verify_architecture.rb`'s CLI runs `include_manifest: true` by default (confirmed this session by reading `scripts/verify_architecture.rb:42`), which checks the in-tree `manifest-alphafold3.js` for freshness against the architecture source — so Step 6 will fail on a stale-manifest diagnostic unless this runs first:
+
+```bash
+RUBY=/opt/homebrew/opt/ruby@3.3/bin/ruby
+cd /Users/aryansharanreddyguda/af3-visualizer/explainer
+$RUBY renderer/architecture/build-manifest.rb
+```
+
+- [ ] **Step 6: Run the mandatory verifier**
 
 ```bash
 RUBY=/opt/homebrew/opt/ruby@3.3/bin/ruby
@@ -198,20 +210,20 @@ $RUBY scripts/verify_architecture.rb --source-set alphafold3
 
 Expected: all checks pass. If something fails, read the actual diagnostic — the verifier's whole job is to catch exactly the kind of scoping/reference mistakes this task is prone to (dangling refs, missing evidence, an orphaned `parent_ref`). Fix the underlying fact, not the symptom.
 
-- [ ] **Step 6: Confirm the pseudocode file still resolves**
+- [ ] **Step 7: Confirm the pseudocode file still resolves**
 
 ```bash
 cd /Users/aryansharanreddyguda/af3-visualizer/explainer
 grep -n "single_state_input\|pair_state_input" pseudocode/alphafold3-pairformer.yaml
 ```
 
-`explainer/pseudocode/alphafold3-pairformer.yaml` binds to `value_sites.single_state_input`/`value_sites.pair_state_input` by ID at lines 41/47/75/81 (confirmed this session) — these bindings don't depend on the `boundary` field, so removing `boundary: input` from those two value sites should not break them, only the earlier `verify_architecture.rb` run (Step 5) would have caught it if it did. This step is a direct sanity check on top of that, not a substitute for it — confirm the four `architecture_ref:` lines are still present and unchanged.
+`explainer/pseudocode/alphafold3-pairformer.yaml` binds to `value_sites.single_state_input`/`value_sites.pair_state_input` by ID at lines 41/47/75/81 (confirmed this session) — these bindings don't depend on the `boundary` field, so removing `boundary: input` from those two value sites should not break them, only the earlier `verify_architecture.rb` run (Step 6) would have caught it if it did. This step is a direct sanity check on top of that, not a substitute for it — confirm the four `architecture_ref:` lines are still present and unchanged.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 cd /Users/aryansharanreddyguda/af3-visualizer
-git add explainer/architectures/alphafold3-pairformer.yaml
+git add explainer/architectures/alphafold3-pairformer.yaml explainer/renderer/architecture/manifest-alphafold3.js explainer/renderer/architecture/manifest-index.js
 git commit -m "$(cat <<'EOF'
 Add the Input Feature Embedder module (AF3 Algorithm 2)
 
@@ -234,7 +246,7 @@ EOF
 )"
 ```
 
-**Deliverable check:** Step 5's verifier passes clean; Step 6's grep still shows all four pseudocode bindings intact.
+**Deliverable check:** Step 6's verifier passes clean; Step 7's grep still shows all four pseudocode bindings intact.
 
 ---
 
@@ -279,7 +291,17 @@ Read the `show` output — confirm it actually repositions `input_feature_embedd
 $RUBY scripts/architecture_edit.rb apply /tmp/layout-pairformer-overview.prepared.yaml
 ```
 
-- [ ] **Step 4: Verify**
+- [ ] **Step 4: Regenerate the manifest**
+
+Same reason as Task 2's Step 5: `apply` updates the canonical view YAML only, and the compiled manifest embeds board/layout content too, so it's now stale relative to the new node and its computed position.
+
+```bash
+RUBY=/opt/homebrew/opt/ruby@3.3/bin/ruby
+cd /Users/aryansharanreddyguda/af3-visualizer/explainer
+$RUBY renderer/architecture/build-manifest.rb
+```
+
+- [ ] **Step 5: Verify**
 
 ```bash
 RUBY=/opt/homebrew/opt/ruby@3.3/bin/ruby
@@ -291,11 +313,11 @@ $RUBY scripts/lint_sources.rb
 
 Expected: all three exit 0.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd /Users/aryansharanreddyguda/af3-visualizer
-git add explainer/views/alphafold3-pairformer-semantic-zoom.view.yaml
+git add explainer/views/alphafold3-pairformer-semantic-zoom.view.yaml explainer/renderer/architecture/manifest-alphafold3.js explainer/renderer/architecture/manifest-index.js
 git commit -m "$(cat <<'EOF'
 Add the Input Feature Embedder to the root board
 
@@ -312,7 +334,7 @@ EOF
 )"
 ```
 
-**Deliverable check:** Step 4's three commands all exit 0.
+**Deliverable check:** Step 5's three commands all exit 0.
 
 ---
 
