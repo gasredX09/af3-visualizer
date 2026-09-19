@@ -838,7 +838,7 @@ value_sites:
           locator: Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition)
   - id: msa_pair_after_outgoing_multiplication
     representation_ref: representations.pair_state
-    scope_ref: modules.msa_module
+    scope_ref: modules.msa_pair_update_stage
     role: msa_module_outgoing_triangle_updated_pair_state
     evidence:
       status: confirmed_from_paper
@@ -848,7 +848,7 @@ value_sites:
           locator: Supplementary Algorithm 8 line 9
   - id: msa_pair_after_incoming_multiplication
     representation_ref: representations.pair_state
-    scope_ref: modules.msa_module
+    scope_ref: modules.msa_pair_update_stage
     role: msa_module_incoming_triangle_updated_pair_state
     evidence:
       status: confirmed_from_paper
@@ -858,7 +858,7 @@ value_sites:
           locator: Supplementary Algorithm 8 line 10
   - id: msa_pair_after_starting_attention
     representation_ref: representations.pair_state
-    scope_ref: modules.msa_module
+    scope_ref: modules.msa_pair_update_stage
     role: msa_module_starting_node_attention_updated_pair_state
     evidence:
       status: confirmed_from_paper
@@ -868,7 +868,7 @@ value_sites:
           locator: Supplementary Algorithm 8 line 11
   - id: msa_pair_after_ending_attention
     representation_ref: representations.pair_state
-    scope_ref: modules.msa_module
+    scope_ref: modules.msa_pair_update_stage
     role: msa_module_ending_node_attention_updated_pair_state
     evidence:
       status: confirmed_from_paper
@@ -1167,7 +1167,8 @@ modules:
   - id: outer_product_mean
     parent_ref: modules.msa_module
     decomposition:
-      status: leaf
+      status: partial
+      reason: Real internal structure (the two independent a_si/b_si projections, the mean outer product, and the biased pair-channel compression) is modeled at value-site granularity rather than as further child modules; see the outer_product_mean_detail board.
     label: Outer Product Mean
     kind: operator
     mechanisms: [layer_normalization, linear_projection, outer_product, mean_pooling, biased_linear_projection]
@@ -1182,7 +1183,8 @@ modules:
   - id: msa_pair_weighted_averaging
     parent_ref: modules.msa_module
     decomposition:
-      status: leaf
+      status: partial
+      reason: Real internal structure (the pair-derived per-head weights, the per-row value and gate projections, and the output projection) is modeled at value-site granularity rather than as further child modules; see the msa_pair_weighted_averaging_detail board.
     label: MSA Pair Weighted Averaging
     kind: attention
     mechanisms: [layer_normalization, linear_projection, pair_derived_attention_weights, gated_projection, residual_update]
@@ -1209,8 +1211,23 @@ modules:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 8 ({m_si} += Transition({m_si})); Algorithm 11 (Transition, a shared SwiGLU utility also independently instantiated by single_transition and pair_transition elsewhere in this source set)
-  - id: msa_triangle_multiplication_outgoing
+  - id: msa_pair_update_stage
     parent_ref: modules.msa_module
+    decomposition:
+      status: complete
+    label: MSA Module Pair Stack
+    kind: refiner
+    mechanisms: [triangle_multiplication, axial_pair_attention, transition]
+    role: apply five ordered residual updates to the pair representation; architecturally identical to the Pairformer's own pair-stack (own parameters, not shared weights), run here 4 times instead of 48
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 8 lines 9-13 (TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, Transition)
+  - id: msa_triangle_multiplication_outgoing
+    parent_ref: modules.msa_pair_update_stage
     decomposition:
       status: leaf
     label: MSA Triangle Multiplication Outgoing
@@ -1225,7 +1242,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 9 ({z_ij} += DropoutRowwise_0.25(TriangleMultiplicationOutgoing({z_ij}))); Algorithm 12 (TriangleMultiplicationOutgoing) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 2, not modeled as its own fact here (dropout is not modeled anywhere else in this source set, including the Pairformer's own pair-stack)
   - id: msa_triangle_multiplication_incoming
-    parent_ref: modules.msa_module
+    parent_ref: modules.msa_pair_update_stage
     decomposition:
       status: leaf
     label: MSA Triangle Multiplication Incoming
@@ -1240,7 +1257,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 10 ({z_ij} += DropoutRowwise_0.25(TriangleMultiplicationIncoming({z_ij}))); Algorithm 13 (TriangleMultiplicationIncoming) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 3, not modeled as its own fact here
   - id: msa_pair_attention_starting_node
-    parent_ref: modules.msa_module
+    parent_ref: modules.msa_pair_update_stage
     decomposition:
       status: leaf
     label: MSA Triangle Attention Starting Node
@@ -1264,7 +1281,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 11 ({z_ij} += DropoutRowwise_0.25(TriangleAttentionStartingNode({z_ij}))); Algorithm 14 (TriangleAttentionStartingNode, N_head=4, c=32) -- same DropoutRowwise_0.25 scheme as the Pairformer's own Algorithm 17 line 4, not modeled as its own fact here
   - id: msa_pair_attention_ending_node
-    parent_ref: modules.msa_module
+    parent_ref: modules.msa_pair_update_stage
     decomposition:
       status: leaf
     label: MSA Triangle Attention Ending Node
@@ -1288,7 +1305,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 12 ({z_ij} += DropoutColumnwise_0.25(TriangleAttentionEndingNode({z_ij}))); Algorithm 15 (TriangleAttentionEndingNode, N_head=4, c=32) -- same DropoutColumnwise_0.25 scheme as the Pairformer's own Algorithm 17 line 5 (columnwise here, unlike the other three steps' rowwise dropout, since this step attends along the transposed axis), not modeled as its own fact here
   - id: msa_pair_transition
-    parent_ref: modules.msa_module
+    parent_ref: modules.msa_pair_update_stage
     decomposition:
       status: leaf
     label: MSA Pair Transition

@@ -7,7 +7,7 @@ root_board: pairformer_overview
 boards:
   - id: pairformer_overview
     title: AlphaFold 3
-    summary: AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.
+    summary: AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The MSA module then reads the raw per-row MSA and folds evolutionary coupling, correlated variation across aligned sequences, into the pair representation, the only place in the model where that happens. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.
     subject_ref: architecture
     expansion_depth: 1
     grid:
@@ -716,7 +716,7 @@ boards:
     expansion_depth: 1
     parent: pairformer_overview
     grid:
-      columns: 13
+      columns: 5
       rows: 5
       column_sizing: content
       col_gap: 24
@@ -776,6 +776,7 @@ boards:
       treatment: block
       col: 3
       row: 2
+      board_ref: outer_product_mean_detail
     - id: value_msa_module_pair_state_read
       ref: value_sites.msa_module_pair_state_read
       label: pairs after communication
@@ -791,78 +792,20 @@ boards:
       treatment: block
       col: 4
       row: 2
-    - id: module_msa_triangle_multiplication_outgoing
-      ref: modules.msa_triangle_multiplication_outgoing
+      board_ref: msa_pair_weighted_averaging_detail
+    - id: module_msa_pair_update_stage
+      ref: modules.msa_pair_update_stage
       prominence: primary
       treatment: block
       col: 4
       row: 5
-    - id: value_msa_pair_after_outgoing_multiplication
-      ref: value_sites.msa_pair_after_outgoing_multiplication
-      label: outgoing-updated pairs
-      notation: z^{out}
-      prominence: context
-      treatment: compact
-      density: micro
-      col: 5
-      row: 5
-    - id: module_msa_triangle_multiplication_incoming
-      ref: modules.msa_triangle_multiplication_incoming
-      prominence: primary
-      treatment: block
-      col: 6
-      row: 5
-    - id: value_msa_pair_after_incoming_multiplication
-      ref: value_sites.msa_pair_after_incoming_multiplication
-      label: incoming-updated pairs
-      notation: z^{in}
-      prominence: context
-      treatment: compact
-      density: micro
-      col: 7
-      row: 5
+      board_ref: msa_pair_track
     - id: module_msa_transition
       ref: modules.msa_transition
       prominence: primary
       treatment: block
-      col: 6
+      col: 5
       row: 2
-    - id: module_msa_pair_attention_starting_node
-      ref: modules.msa_pair_attention_starting_node
-      prominence: primary
-      treatment: block
-      col: 8
-      row: 5
-    - id: value_msa_pair_after_starting_attention
-      ref: value_sites.msa_pair_after_starting_attention
-      label: start-attended pairs
-      notation: z^{start}
-      prominence: context
-      treatment: compact
-      density: micro
-      col: 9
-      row: 5
-    - id: module_msa_pair_attention_ending_node
-      ref: modules.msa_pair_attention_ending_node
-      prominence: primary
-      treatment: block
-      col: 10
-      row: 5
-    - id: value_msa_pair_after_ending_attention
-      ref: value_sites.msa_pair_after_ending_attention
-      label: end-attended pairs
-      notation: z^{end}
-      prominence: context
-      treatment: compact
-      density: micro
-      col: 11
-      row: 5
-    - id: module_msa_pair_transition
-      ref: modules.msa_pair_transition
-      prominence: primary
-      treatment: block
-      col: 12
-      row: 5
     - id: value_pair_state_input
       ref: value_sites.pair_state_input
       label: module output
@@ -870,7 +813,7 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 13
+      col: 5
       row: 5
     elide:
     - ref: value_sites.msa_pair_after_transition
@@ -888,7 +831,7 @@ boards:
       connection:
         title: Pair state enters the block
         role: block-input pair state
-        inside: The module reads the same z_init that also seeds the Pairformer, before either has processed it.
+        inside: The pair representation arrives here straight from the input projection, before anything else has touched it; the Pairformer only ever sees what this module returns.
     - match:
         relation_ref: relations.outer_product_mean_contribution_updates_msa_module_pair_state
       label: '+ Δz_comm'
@@ -912,3 +855,388 @@ boards:
         title: Only z_ij is returned
         role: module output
         inside: The MSA representation is discarded every call; only the pair-stack's final state becomes the architecture's pair_state_input.
+
+  - id: msa_pair_track
+    title: "MSA Module Pair Stack: Five Ordered Residual Updates"
+    summary: The same five-step pair-stack mechanism as the Pairformer's own pair track (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a 4x SwiGLU transition), with its own parameters, run here 4 times instead of 48. It reads the pair state right after OuterProductMean has written evolutionary coupling into it.
+    parent: msa_module_detail
+    subject_ref: modules.msa_pair_update_stage
+    expansion_depth: 1
+    grid:
+      columns: 11
+      rows: 3
+      column_sizing: content
+      col_gap: 24
+      row_gap: 28
+    nodes:
+      - id: msa_module_pair_state_read
+        ref: value_sites.msa_module_pair_state_read
+        label: pairs after communication
+        notation: z
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 1
+        row: 2
+      - id: msa_triangle_multiplication_outgoing
+        ref: modules.msa_triangle_multiplication_outgoing
+        label: outgoing triangle multiplication + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 2
+        row: 2
+      - id: msa_pair_after_outgoing_multiplication
+        ref: value_sites.msa_pair_after_outgoing_multiplication
+        label: outgoing-updated pairs
+        notation: z^{out}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 3
+        row: 2
+      - id: msa_triangle_multiplication_incoming
+        ref: modules.msa_triangle_multiplication_incoming
+        label: incoming triangle multiplication + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 4
+        row: 2
+      - id: msa_pair_after_incoming_multiplication
+        ref: value_sites.msa_pair_after_incoming_multiplication
+        label: incoming-updated pairs
+        notation: z^{in}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 5
+        row: 2
+      - id: msa_pair_attention_starting_node
+        ref: modules.msa_pair_attention_starting_node
+        label: starting-node attention + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 6
+        row: 2
+      - id: msa_pair_after_starting_attention
+        ref: value_sites.msa_pair_after_starting_attention
+        label: start-attended pairs
+        notation: z^{start}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 7
+        row: 2
+      - id: msa_pair_attention_ending_node
+        ref: modules.msa_pair_attention_ending_node
+        label: ending-node attention + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 8
+        row: 2
+      - id: msa_pair_after_ending_attention
+        ref: value_sites.msa_pair_after_ending_attention
+        label: end-attended pairs
+        notation: z^{end}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 9
+        row: 2
+      - id: msa_pair_transition
+        ref: modules.msa_pair_transition
+        label: pair transition + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 10
+        row: 2
+      - id: msa_pair_after_transition
+        ref: value_sites.msa_pair_after_transition
+        label: pair-stack output
+        notation: z_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 11
+        row: 2
+    edge_overrides:
+      - match: { relation_ref: relations.msa_pair_state_enters_outgoing_multiplication }
+        label: z
+        connection:
+          title: Pair state enters outgoing update
+          role: ordered-pair input
+          inside: The outgoing triangle operation mixes pairs that share their outgoing endpoint pattern, reading the same z that communication just wrote into.
+      - match: { relation_ref: relations.msa_outgoing_multiplication_updates_pair_state }
+        label: '+ Δz_out'
+        connection:
+          title: Outgoing residual update
+          role: pair-state mutation
+          inside: The gated outgoing triangle result is projected back to 128 channels and added to the incoming pair state.
+      - match: { relation_ref: relations.msa_incoming_multiplication_updates_pair_state }
+        label: '+ Δz_in'
+        connection:
+          title: Incoming residual update
+          role: pair-state mutation
+          inside: The incoming triangle result is added to the already outgoing-updated pair state.
+      - match: { relation_ref: relations.msa_starting_attention_updates_pair_state }
+        label: '+ Δz_start'
+        connection:
+          title: Starting-node attention update
+          role: axial pair attention
+          inside: Four-head gated attention follows one axis of the pair grid and adds its projected result.
+      - match: { relation_ref: relations.msa_ending_attention_updates_pair_state }
+        label: '+ Δz_end'
+        connection:
+          title: Ending-node attention update
+          role: complementary axial pair attention
+          inside: The implementation transposes the pair grid, applies the same attention anatomy along the other axis, then transposes back.
+      - match: { relation_ref: relations.msa_pair_transition_updates_pair_state }
+        label: '+ Δz_ffn'
+        connection:
+          title: Pair transition update
+          role: pointwise pair feed-forward
+          inside: LayerNorm and a 4x SwiGLU hidden projection produce a 128-channel delta that is added to each pair entry; the result is this module's own returned z_ij.
+
+  - id: outer_product_mean_detail
+    title: "Outer Product Mean: Evolutionary Coupling, Made Architectural"
+    summary: For every token pair, OuterProductMean projects each MSA row's activations into two independent 32-channel factors, forms their outer product, and averages that product over every row in the alignment -- an empirical cross-covariance between two learned features, observed across the MSA's sequences, the same statistic classical coevolution-based contact prediction computes by hand. A final biased Linear layer compresses the flattened 1024-channel result into the pair representation's 128 channels.
+    parent: msa_module_detail
+    subject_ref: modules.outer_product_mean
+    expansion_depth: 1
+    grid:
+      columns: 6
+      rows: 3
+      column_sizing: content
+      col_gap: 26
+      row_gap: 24
+    nodes:
+      - id: value_msa_activations
+        ref: value_sites.msa_activations
+        label: MSA activations
+        notation: m_{si}
+        prominence: context
+        treatment: compact
+        density: compact
+        col: 1
+        row: 2
+      - id: outer_product_mean
+        ref: modules.outer_product_mean
+        prominence: primary
+        treatment: block
+        col: 2
+        row: 2
+      - id: value_outer_product_mean_projection_a
+        ref: value_sites.outer_product_mean_projection_a
+        label: left factor
+        notation: a_{si}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 3
+        row: 1
+      - id: value_outer_product_mean_projection_b
+        ref: value_sites.outer_product_mean_projection_b
+        label: right factor
+        notation: b_{sj}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 3
+        row: 3
+      - id: value_outer_product_mean_flattened
+        ref: value_sites.outer_product_mean_flattened
+        label: mean outer product, flattened
+        notation: o_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 4
+        row: 2
+      - id: value_outer_product_mean_pair_contribution
+        ref: value_sites.outer_product_mean_pair_contribution
+        label: pair contribution
+        notation: z^{comm}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 5
+        row: 2
+      - id: value_msa_module_pair_state_read
+        ref: value_sites.msa_module_pair_state_read
+        label: pairs after communication
+        notation: z
+        prominence: context
+        treatment: compact
+        density: compact
+        col: 6
+        row: 2
+    edge_overrides:
+      - match: { relation_ref: relations.msa_activations_enters_outer_product_mean }
+        label: m_{si}
+        connection:
+          title: MSA activations enter communication
+          role: shared per-block read
+          inside: OuterProductMean reads the same LayerNorm'd MSA activations that MSAPairWeightedAveraging separately reads later in this block.
+      - match: { relation_ref: relations.outer_product_mean_produces_projection_a }
+        label: a_{si}
+        connection:
+          title: Left factor
+          role: outer-product left factor
+          inside: One of two independent LinearNoBias projections down to 32 channels, evaluated at token i.
+      - match: { relation_ref: relations.outer_product_mean_produces_projection_b }
+        label: b_{sj}
+        connection:
+          title: Right factor
+          role: outer-product right factor
+          inside: A second, independently learned LinearNoBias projection down to 32 channels, evaluated at token j -- the asymmetry (a at i, b at j, same row) is what makes the outer product a genuine cross-position statistic rather than a self-statistic.
+      - match: { relation_ref: relations.outer_product_mean_produces_flattened_outer_product }
+        label: o_{ij}
+        connection:
+          title: Cross-covariance across the alignment
+          role: empirical cross-covariance
+          inside: For every token pair, the 32x32 outer product of a_si and b_sj is averaged over every MSA row and flattened to 1024 channels -- structurally an empirical covariance between two learned features, observed across the alignment's sequences.
+      - match: { relation_ref: relations.outer_product_mean_produces_pair_contribution }
+        label: z^{comm}
+        connection:
+          title: Compress to pair width
+          role: biased pair-channel compression
+          inside: One Linear layer with a bias term (the sole exception to LinearNoBias in this mechanism) compresses the 1024-channel summary down to the pair representation's 128 channels.
+      - match: { relation_ref: relations.outer_product_mean_contribution_updates_msa_module_pair_state }
+        label: '+ Δz_comm'
+        connection:
+          title: Communication writes into the pair state
+          role: evolutionary-coupling contribution
+          inside: This contribution is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation anywhere in the model.
+
+  - id: msa_pair_weighted_averaging_detail
+    title: "MSA Pair Weighted Averaging: Attention With the Query Removed"
+    summary: MSAPairWeightedAveraging is standard multi-head attention with the query deleted -- its weights come entirely from the pair representation z_ij, never from MSA row content, so every one of the alignment's rows is pulled through the exact same shared routing table. Each row only supplies what value to fetch and, after the fact via a per-row sigmoid gate, how much of the shared result to trust.
+    parent: msa_module_detail
+    subject_ref: modules.msa_pair_weighted_averaging
+    expansion_depth: 1
+    grid:
+      columns: 5
+      rows: 5
+      column_sizing: content
+      col_gap: 26
+      row_gap: 22
+    nodes:
+      - id: value_msa_module_pair_state_read_pwa
+        ref: value_sites.msa_module_pair_state_read
+        label: pairs after communication
+        notation: z
+        prominence: context
+        treatment: compact
+        density: compact
+        col: 1
+        row: 2
+      - id: value_msa_activations_pwa
+        ref: value_sites.msa_activations
+        label: MSA activations
+        notation: m_{si}
+        prominence: context
+        treatment: compact
+        density: compact
+        col: 1
+        row: 4
+      - id: msa_pair_weighted_averaging
+        ref: modules.msa_pair_weighted_averaging
+        prominence: primary
+        treatment: block
+        col: 2
+        row: 3
+      - id: value_msa_pair_weighted_averaging_pair_bias
+        ref: value_sites.msa_pair_weighted_averaging_pair_bias
+        label: pair-derived logit
+        notation: b_{ij}^{h}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 3
+        row: 1
+      - id: value_msa_pair_weighted_averaging_weights
+        ref: value_sites.msa_pair_weighted_averaging_weights
+        label: shared attention weights
+        notation: w_{ij}^{h}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 4
+        row: 1
+      - id: value_msa_pair_weighted_averaging_value
+        ref: value_sites.msa_pair_weighted_averaging_value
+        label: per-row value
+        notation: v_{si}^{h}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 3
+        row: 5
+      - id: value_msa_pair_weighted_averaging_gate
+        ref: value_sites.msa_pair_weighted_averaging_gate
+        label: per-row gate
+        notation: g_{si}^{h}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 4
+        row: 5
+      - id: value_msa_activations_after_pair_weighted_averaging
+        ref: value_sites.msa_activations_after_pair_weighted_averaging
+        label: updated MSA rows
+        notation: m_{si}^{updated}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 5
+        row: 3
+    exclude:
+      - ref: modules.msa_transition
+        reason: MSA Transition is a separate step of the MSA stack, already shown on the parent MSA Module board; not part of MSAPairWeightedAveraging's own internals.
+    edge_overrides:
+      - match: { relation_ref: relations.pair_state_conditions_msa_pair_weighted_averaging }
+        label: z
+        connection:
+          title: Pair state conditions attention
+          role: pair-derived routing input
+          inside: The only route into this module that never touches MSA row content -- attention weights are derived from z_ij alone.
+      - match: { relation_ref: relations.msa_pair_weighted_averaging_produces_pair_bias }
+        label: b_{ij}^{h}
+        connection:
+          title: Pair-derived logit, no row axis
+          role: per-head attention logit
+          inside: One LinearNoBias projection of the LayerNorm'd pair representation, computed once per token pair per block -- there is no MSA-row index anywhere in this computation.
+      - match: { relation_ref: relations.msa_pair_weighted_averaging_produces_attention_weights }
+        label: w_{ij}^{h}
+        connection:
+          title: Softmax over the key axis, still row-free
+          role: shared attention weights
+          inside: b_ij^h softmax-normalized over token j. Still derived purely from z_ij, so this exact same weight table is applied to every one of the N_msa rows -- the crux fact this mechanism exists to teach.
+      - match: { relation_ref: relations.msa_activations_enters_msa_pair_weighted_averaging }
+        label: m_{si}
+        connection:
+          title: MSA activations enter the value and gate paths
+          role: row-content input
+          inside: The only two projections in this module that ever read row content -- the value projection and the gate below.
+      - match: { relation_ref: relations.msa_pair_weighted_averaging_produces_value }
+        label: v_{si}^{h}
+        connection:
+          title: Row-specific value
+          role: per-row attended content
+          inside: The row content the shared, pair-derived weights get applied to -- every row supplies its own values, but none of them influence which weights are used.
+      - match: { relation_ref: relations.msa_pair_weighted_averaging_produces_gate }
+        label: g_{si}^{h}
+        connection:
+          title: The one per-row control point
+          role: per-row sigmoid gate
+          inside: Computed from the row's own activation and applied after the weighted average, not before -- the only place in this mechanism where a row can influence its own output, since the routing table itself is identical for every row.
+      - match: { relation_ref: relations.msa_pair_weighted_averaging_produces_updated_activations }
+        label: gated, projected, + residual
+        connection:
+          title: Combine, project, and write back
+          role: module output
+          inside: Row s's gate multiplies that row's own weighted average of values (using the shared weights above), a LinearNoBias layer concatenates and projects across heads, and the result is added back into that row's MSA activations.

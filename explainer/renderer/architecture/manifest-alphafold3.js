@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "3e34832c589d868ded66a9c3a13c66c02751559085120957d92163f39a69838a",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "e873b8faa923bc775790ce15449237e75eff1a1c2fd31cc7ee563bdcf2cbfe44",
+      "architectures/alphafold3-pairformer.yaml": "b26bc51f2036bdc5f25fb316c124b72b82f6b5fa5be3aa1a210401979f462766",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "f7b173b63de9150cabf4071c854c5f70899e941c46973b012d34d37aad33bbec",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -217,17 +217,13 @@ export const manifest = {
         "modules.msa_module": {
           "status": "complete",
           "depth": 1,
-          "immediateModuleCount": 9,
+          "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.msa_row_embedding",
             "modules.outer_product_mean",
             "modules.msa_pair_weighted_averaging",
             "modules.msa_transition",
-            "modules.msa_triangle_multiplication_outgoing",
-            "modules.msa_triangle_multiplication_incoming",
-            "modules.msa_pair_attention_starting_node",
-            "modules.msa_pair_attention_ending_node",
-            "modules.msa_pair_transition"
+            "modules.msa_pair_update_stage"
           ]
         },
         "modules.msa_row_embedding": {
@@ -239,7 +235,8 @@ export const manifest = {
           ]
         },
         "modules.outer_product_mean": {
-          "status": "leaf",
+          "status": "partial",
+          "reason": "Real internal structure (the two independent a_si/b_si projections, the mean outer product, and the biased pair-channel compression) is modeled at value-site granularity rather than as further child modules; see the outer_product_mean_detail board.",
           "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
@@ -247,7 +244,8 @@ export const manifest = {
           ]
         },
         "modules.msa_pair_weighted_averaging": {
-          "status": "leaf",
+          "status": "partial",
+          "reason": "Real internal structure (the pair-derived per-head weights, the per-row value and gate projections, and the output projection) is modeled at value-site granularity rather than as further child modules; see the msa_pair_weighted_averaging_detail board.",
           "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
@@ -262,9 +260,21 @@ export const manifest = {
 
           ]
         },
+        "modules.msa_pair_update_stage": {
+          "status": "complete",
+          "depth": 2,
+          "immediateModuleCount": 5,
+          "immediateModuleRefs": [
+            "modules.msa_triangle_multiplication_outgoing",
+            "modules.msa_triangle_multiplication_incoming",
+            "modules.msa_pair_attention_starting_node",
+            "modules.msa_pair_attention_ending_node",
+            "modules.msa_pair_transition"
+          ]
+        },
         "modules.msa_triangle_multiplication_outgoing": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -272,7 +282,7 @@ export const manifest = {
         },
         "modules.msa_triangle_multiplication_incoming": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -280,7 +290,7 @@ export const manifest = {
         },
         "modules.msa_pair_attention_starting_node": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -288,7 +298,7 @@ export const manifest = {
         },
         "modules.msa_pair_attention_ending_node": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -296,7 +306,7 @@ export const manifest = {
         },
         "modules.msa_pair_transition": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -304,20 +314,21 @@ export const manifest = {
         }
       },
       "summary": {
-        "scopeCount": 27,
-        "expandedScopeCount": 6,
-        "completeExpandedScopeCount": 6,
-        "partialScopeCount": 0,
-        "leafFrontierCount": 20,
+        "scopeCount": 28,
+        "expandedScopeCount": 7,
+        "completeExpandedScopeCount": 7,
+        "partialScopeCount": 2,
+        "leafFrontierCount": 18,
         "opaqueFrontierCount": 1,
-        "partialFrontierCount": 0,
+        "partialFrontierCount": 2,
         "maximumAuthoredDepth": 3
       },
       "opaqueFrontierRefs": [
         "modules.atom_attention_encoder_bare"
       ],
       "partialScopeRefs": [
-
+        "modules.outer_product_mean",
+        "modules.msa_pair_weighted_averaging"
       ]
     },
     "modules": [
@@ -835,7 +846,8 @@ export const manifest = {
         "id": "outer_product_mean",
         "parent_ref": "modules.msa_module",
         "decomposition": {
-          "status": "leaf"
+          "status": "partial",
+          "reason": "Real internal structure (the two independent a_si/b_si projections, the mean outer product, and the biased pair-channel compression) is modeled at value-site granularity rather than as further child modules; see the outer_product_mean_detail board."
         },
         "label": "Outer Product Mean",
         "kind": "operator",
@@ -863,7 +875,8 @@ export const manifest = {
         "id": "msa_pair_weighted_averaging",
         "parent_ref": "modules.msa_module",
         "decomposition": {
-          "status": "leaf"
+          "status": "partial",
+          "reason": "Real internal structure (the pair-derived per-head weights, the per-row value and gate projections, and the output projection) is modeled at value-site granularity rather than as further child modules; see the msa_pair_weighted_averaging_detail board."
         },
         "label": "MSA Pair Weighted Averaging",
         "kind": "attention",
@@ -914,8 +927,34 @@ export const manifest = {
         }
       },
       {
-        "id": "msa_triangle_multiplication_outgoing",
+        "id": "msa_pair_update_stage",
         "parent_ref": "modules.msa_module",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "MSA Module Pair Stack",
+        "kind": "refiner",
+        "mechanisms": [
+          "triangle_multiplication",
+          "axial_pair_attention",
+          "transition"
+        ],
+        "role": "apply five ordered residual updates to the pair representation; architecturally identical to the Pairformer's own pair-stack (own parameters, not shared weights), run here 4 times instead of 48",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 8 lines 9-13 (TriangleMultiplicationOutgoing, TriangleMultiplicationIncoming, TriangleAttentionStartingNode, TriangleAttentionEndingNode, Transition)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "msa_triangle_multiplication_outgoing",
+        "parent_ref": "modules.msa_pair_update_stage",
         "decomposition": {
           "status": "leaf"
         },
@@ -941,7 +980,7 @@ export const manifest = {
       },
       {
         "id": "msa_triangle_multiplication_incoming",
-        "parent_ref": "modules.msa_module",
+        "parent_ref": "modules.msa_pair_update_stage",
         "decomposition": {
           "status": "leaf"
         },
@@ -967,7 +1006,7 @@ export const manifest = {
       },
       {
         "id": "msa_pair_attention_starting_node",
-        "parent_ref": "modules.msa_module",
+        "parent_ref": "modules.msa_pair_update_stage",
         "decomposition": {
           "status": "leaf"
         },
@@ -1005,7 +1044,7 @@ export const manifest = {
       },
       {
         "id": "msa_pair_attention_ending_node",
-        "parent_ref": "modules.msa_module",
+        "parent_ref": "modules.msa_pair_update_stage",
         "decomposition": {
           "status": "leaf"
         },
@@ -1043,7 +1082,7 @@ export const manifest = {
       },
       {
         "id": "msa_pair_transition",
-        "parent_ref": "modules.msa_module",
+        "parent_ref": "modules.msa_pair_update_stage",
         "decomposition": {
           "status": "leaf"
         },
@@ -2216,7 +2255,7 @@ export const manifest = {
       {
         "id": "msa_pair_after_outgoing_multiplication",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "modules.msa_module",
+        "scope_ref": "modules.msa_pair_update_stage",
         "role": "msa_module_outgoing_triangle_updated_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -2232,7 +2271,7 @@ export const manifest = {
       {
         "id": "msa_pair_after_incoming_multiplication",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "modules.msa_module",
+        "scope_ref": "modules.msa_pair_update_stage",
         "role": "msa_module_incoming_triangle_updated_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -2248,7 +2287,7 @@ export const manifest = {
       {
         "id": "msa_pair_after_starting_attention",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "modules.msa_module",
+        "scope_ref": "modules.msa_pair_update_stage",
         "role": "msa_module_starting_node_attention_updated_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -2264,7 +2303,7 @@ export const manifest = {
       {
         "id": "msa_pair_after_ending_attention",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "modules.msa_module",
+        "scope_ref": "modules.msa_pair_update_stage",
         "role": "msa_module_ending_node_attention_updated_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7627,7 +7666,7 @@ export const manifest = {
       {
         "id": "pairformer_overview",
         "title": "AlphaFold 3",
-        "summary": "AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.",
+        "summary": "AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The MSA module then reads the raw per-row MSA and folds evolutionary coupling, correlated variation across aligned sequences, into the pair representation, the only place in the model where that happens. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
@@ -10455,7 +10494,7 @@ export const manifest = {
         "expansion_depth": 1,
         "parent": "pairformer_overview",
         "grid": {
-          "columns": 13,
+          "columns": 5,
           "rows": 5,
           "column_sizing": "content",
           "col_gap": 24,
@@ -10528,7 +10567,8 @@ export const manifest = {
             "prominence": "primary",
             "treatment": "block",
             "col": 3,
-            "row": 2
+            "row": 2,
+            "board_ref": "outer_product_mean_detail"
           },
           {
             "id": "value_msa_module_pair_state_read",
@@ -10547,99 +10587,25 @@ export const manifest = {
             "prominence": "primary",
             "treatment": "block",
             "col": 4,
-            "row": 2
+            "row": 2,
+            "board_ref": "msa_pair_weighted_averaging_detail"
           },
           {
-            "id": "module_msa_triangle_multiplication_outgoing",
-            "ref": "modules.msa_triangle_multiplication_outgoing",
+            "id": "module_msa_pair_update_stage",
+            "ref": "modules.msa_pair_update_stage",
             "prominence": "primary",
             "treatment": "block",
             "col": 4,
-            "row": 5
-          },
-          {
-            "id": "value_msa_pair_after_outgoing_multiplication",
-            "ref": "value_sites.msa_pair_after_outgoing_multiplication",
-            "label": "outgoing-updated pairs",
-            "notation": "z^{out}",
-            "prominence": "context",
-            "treatment": "compact",
-            "density": "micro",
-            "col": 5,
-            "row": 5
-          },
-          {
-            "id": "module_msa_triangle_multiplication_incoming",
-            "ref": "modules.msa_triangle_multiplication_incoming",
-            "prominence": "primary",
-            "treatment": "block",
-            "col": 6,
-            "row": 5
-          },
-          {
-            "id": "value_msa_pair_after_incoming_multiplication",
-            "ref": "value_sites.msa_pair_after_incoming_multiplication",
-            "label": "incoming-updated pairs",
-            "notation": "z^{in}",
-            "prominence": "context",
-            "treatment": "compact",
-            "density": "micro",
-            "col": 7,
-            "row": 5
+            "row": 5,
+            "board_ref": "msa_pair_track"
           },
           {
             "id": "module_msa_transition",
             "ref": "modules.msa_transition",
             "prominence": "primary",
             "treatment": "block",
-            "col": 6,
+            "col": 5,
             "row": 2
-          },
-          {
-            "id": "module_msa_pair_attention_starting_node",
-            "ref": "modules.msa_pair_attention_starting_node",
-            "prominence": "primary",
-            "treatment": "block",
-            "col": 8,
-            "row": 5
-          },
-          {
-            "id": "value_msa_pair_after_starting_attention",
-            "ref": "value_sites.msa_pair_after_starting_attention",
-            "label": "start-attended pairs",
-            "notation": "z^{start}",
-            "prominence": "context",
-            "treatment": "compact",
-            "density": "micro",
-            "col": 9,
-            "row": 5
-          },
-          {
-            "id": "module_msa_pair_attention_ending_node",
-            "ref": "modules.msa_pair_attention_ending_node",
-            "prominence": "primary",
-            "treatment": "block",
-            "col": 10,
-            "row": 5
-          },
-          {
-            "id": "value_msa_pair_after_ending_attention",
-            "ref": "value_sites.msa_pair_after_ending_attention",
-            "label": "end-attended pairs",
-            "notation": "z^{end}",
-            "prominence": "context",
-            "treatment": "compact",
-            "density": "micro",
-            "col": 11,
-            "row": 5
-          },
-          {
-            "id": "module_msa_pair_transition",
-            "ref": "modules.msa_pair_transition",
-            "prominence": "primary",
-            "treatment": "block",
-            "col": 12,
-            "row": 5
           },
           {
             "id": "value_pair_state_input",
@@ -10649,7 +10615,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 13,
+            "col": 5,
             "row": 5
           }
         ],
@@ -10678,7 +10644,7 @@ export const manifest = {
             "connection": {
               "title": "Pair state enters the block",
               "role": "block-input pair state",
-              "inside": "The module reads the same z_init that also seeds the Pairformer, before either has processed it."
+              "inside": "The pair representation arrives here straight from the input projection, before anything else has touched it; the Pairformer only ever sees what this module returns."
             }
           },
           {
@@ -10721,56 +10687,8 @@ export const manifest = {
         "projection_mode": "derived",
         "edges": [
           {
-            "id": "projection_b076db6527ef",
-            "from": "module_msa_pair_attention_ending_node",
-            "to": "value_msa_pair_after_ending_attention",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.msa_ending_attention_updates_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_ending_attention_updates_pair_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_8a124356becb",
-            "from": "module_msa_pair_attention_starting_node",
-            "to": "value_msa_pair_after_starting_attention",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.msa_starting_attention_updates_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_starting_attention_updates_pair_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_5a698eeaf46e",
-            "from": "module_msa_pair_transition",
+            "id": "projection_3e315d119014",
+            "from": "module_msa_pair_update_stage",
             "to": "value_pair_state_input",
             "projection": "contracted",
             "origin": "canonical",
@@ -10870,54 +10788,6 @@ export const manifest = {
             ],
             "carries": [
               "representations.msa_activations"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_084fd7882134",
-            "from": "module_msa_triangle_multiplication_incoming",
-            "to": "value_msa_pair_after_incoming_multiplication",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.msa_incoming_multiplication_updates_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_incoming_multiplication_updates_pair_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_82547df153c1",
-            "from": "module_msa_triangle_multiplication_outgoing",
-            "to": "value_msa_pair_after_outgoing_multiplication",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.msa_outgoing_multiplication_updates_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_outgoing_multiplication_updates_pair_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
             ],
             "presentation": {
             }
@@ -11025,6 +10895,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_9d4276033fe2",
+            "from": "value_msa_module_pair_state_read",
+            "to": "module_msa_pair_update_stage",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_state_enters_outgoing_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_state_enters_outgoing_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_6a372305a8cd",
             "from": "value_msa_module_pair_state_read",
             "to": "module_msa_pair_weighted_averaging",
@@ -11052,126 +10946,6 @@ export const manifest = {
                 "role": "pair-derived routing table",
                 "inside": "Attention weights come entirely from the pair representation, never from MSA row content, so every row is pulled through the same shared routing table."
               }
-            }
-          },
-          {
-            "id": "projection_9b50414c4ca3",
-            "from": "value_msa_module_pair_state_read",
-            "to": "module_msa_triangle_multiplication_outgoing",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.msa_pair_state_enters_outgoing_multiplication"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_pair_state_enters_outgoing_multiplication"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_617cbf4c6f14",
-            "from": "value_msa_pair_after_ending_attention",
-            "to": "module_msa_pair_transition",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.msa_ending_pair_state_enters_pair_transition"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_ending_pair_state_enters_pair_transition"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_8b266e42aebc",
-            "from": "value_msa_pair_after_incoming_multiplication",
-            "to": "module_msa_pair_attention_starting_node",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.msa_incoming_pair_state_enters_starting_attention"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_incoming_pair_state_enters_starting_attention"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_19d128554a79",
-            "from": "value_msa_pair_after_outgoing_multiplication",
-            "to": "module_msa_triangle_multiplication_incoming",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_445e976ed882",
-            "from": "value_msa_pair_after_starting_attention",
-            "to": "module_msa_pair_attention_ending_node",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.msa_starting_pair_state_enters_ending_attention"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_starting_pair_state_enters_ending_attention"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
             }
           },
           {
@@ -11230,20 +11004,21 @@ export const manifest = {
               "connection": {
                 "title": "Pair state enters the block",
                 "role": "block-input pair state",
-                "inside": "The module reads the same z_init that also seeds the Pairformer, before either has processed it."
+                "inside": "The pair representation arrives here straight from the input projection, before anything else has touched it; the Pairformer only ever sees what this module returns."
               }
             }
           }
         ],
         "classifications": {
-          "modules.msa_pair_attention_ending_node": "visible",
-          "modules.msa_pair_attention_starting_node": "visible",
-          "modules.msa_pair_transition": "visible",
+          "modules.msa_pair_attention_ending_node": "collapsed:modules.msa_pair_update_stage",
+          "modules.msa_pair_attention_starting_node": "collapsed:modules.msa_pair_update_stage",
+          "modules.msa_pair_transition": "collapsed:modules.msa_pair_update_stage",
+          "modules.msa_pair_update_stage": "visible",
           "modules.msa_pair_weighted_averaging": "visible",
           "modules.msa_row_embedding": "visible",
           "modules.msa_transition": "visible",
-          "modules.msa_triangle_multiplication_incoming": "visible",
-          "modules.msa_triangle_multiplication_outgoing": "visible",
+          "modules.msa_triangle_multiplication_incoming": "collapsed:modules.msa_pair_update_stage",
+          "modules.msa_triangle_multiplication_outgoing": "collapsed:modules.msa_pair_update_stage",
           "modules.outer_product_mean": "visible",
           "value_sites.deletion_value_input": "visible",
           "value_sites.has_deletion_input": "visible",
@@ -11252,10 +11027,10 @@ export const manifest = {
           "value_sites.msa_activations_after_transition": "collapsed:modules.msa_transition",
           "value_sites.msa_input": "visible",
           "value_sites.msa_module_pair_state_read": "visible",
-          "value_sites.msa_pair_after_ending_attention": "visible",
-          "value_sites.msa_pair_after_incoming_multiplication": "visible",
-          "value_sites.msa_pair_after_outgoing_multiplication": "visible",
-          "value_sites.msa_pair_after_starting_attention": "visible",
+          "value_sites.msa_pair_after_ending_attention": "collapsed:modules.msa_pair_update_stage",
+          "value_sites.msa_pair_after_incoming_multiplication": "collapsed:modules.msa_pair_update_stage",
+          "value_sites.msa_pair_after_outgoing_multiplication": "collapsed:modules.msa_pair_update_stage",
+          "value_sites.msa_pair_after_starting_attention": "collapsed:modules.msa_pair_update_stage",
           "value_sites.msa_pair_after_transition": "elided",
           "value_sites.msa_pair_weighted_averaging_gate": "collapsed:modules.msa_pair_weighted_averaging",
           "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.msa_pair_weighted_averaging",
@@ -11268,6 +11043,1265 @@ export const manifest = {
           "value_sites.pair_state_input": "visible",
           "value_sites.s_inputs": "visible",
           "value_sites.z_init": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "msa_pair_track",
+        "title": "MSA Module Pair Stack: Five Ordered Residual Updates",
+        "summary": "The same five-step pair-stack mechanism as the Pairformer's own pair track (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a 4x SwiGLU transition), with its own parameters, run here 4 times instead of 48. It reads the pair state right after OuterProductMean has written evolutionary coupling into it.",
+        "parent": "msa_module_detail",
+        "subject_ref": "modules.msa_pair_update_stage",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 11,
+          "rows": 3,
+          "column_sizing": "content",
+          "col_gap": 24,
+          "row_gap": 28
+        },
+        "nodes": [
+          {
+            "id": "msa_module_pair_state_read",
+            "ref": "value_sites.msa_module_pair_state_read",
+            "label": "pairs after communication",
+            "notation": "z",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "msa_triangle_multiplication_outgoing",
+            "ref": "modules.msa_triangle_multiplication_outgoing",
+            "label": "outgoing triangle multiplication + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_after_outgoing_multiplication",
+            "ref": "value_sites.msa_pair_after_outgoing_multiplication",
+            "label": "outgoing-updated pairs",
+            "notation": "z^{out}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "msa_triangle_multiplication_incoming",
+            "ref": "modules.msa_triangle_multiplication_incoming",
+            "label": "incoming triangle multiplication + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_after_incoming_multiplication",
+            "ref": "value_sites.msa_pair_after_incoming_multiplication",
+            "label": "incoming-updated pairs",
+            "notation": "z^{in}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_attention_starting_node",
+            "ref": "modules.msa_pair_attention_starting_node",
+            "label": "starting-node attention + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_after_starting_attention",
+            "ref": "value_sites.msa_pair_after_starting_attention",
+            "label": "start-attended pairs",
+            "notation": "z^{start}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 7,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_attention_ending_node",
+            "ref": "modules.msa_pair_attention_ending_node",
+            "label": "ending-node attention + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 8,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_after_ending_attention",
+            "ref": "value_sites.msa_pair_after_ending_attention",
+            "label": "end-attended pairs",
+            "notation": "z^{end}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 9,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_transition",
+            "ref": "modules.msa_pair_transition",
+            "label": "pair transition + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 10,
+            "row": 2
+          },
+          {
+            "id": "msa_pair_after_transition",
+            "ref": "value_sites.msa_pair_after_transition",
+            "label": "pair-stack output",
+            "notation": "z_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 11,
+            "row": 2
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_state_enters_outgoing_multiplication"
+            },
+            "label": "z",
+            "connection": {
+              "title": "Pair state enters outgoing update",
+              "role": "ordered-pair input",
+              "inside": "The outgoing triangle operation mixes pairs that share their outgoing endpoint pattern, reading the same z that communication just wrote into."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_outgoing_multiplication_updates_pair_state"
+            },
+            "label": "+ Δz_out",
+            "connection": {
+              "title": "Outgoing residual update",
+              "role": "pair-state mutation",
+              "inside": "The gated outgoing triangle result is projected back to 128 channels and added to the incoming pair state."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_incoming_multiplication_updates_pair_state"
+            },
+            "label": "+ Δz_in",
+            "connection": {
+              "title": "Incoming residual update",
+              "role": "pair-state mutation",
+              "inside": "The incoming triangle result is added to the already outgoing-updated pair state."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_starting_attention_updates_pair_state"
+            },
+            "label": "+ Δz_start",
+            "connection": {
+              "title": "Starting-node attention update",
+              "role": "axial pair attention",
+              "inside": "Four-head gated attention follows one axis of the pair grid and adds its projected result."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_ending_attention_updates_pair_state"
+            },
+            "label": "+ Δz_end",
+            "connection": {
+              "title": "Ending-node attention update",
+              "role": "complementary axial pair attention",
+              "inside": "The implementation transposes the pair grid, applies the same attention anatomy along the other axis, then transposes back."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_transition_updates_pair_state"
+            },
+            "label": "+ Δz_ffn",
+            "connection": {
+              "title": "Pair transition update",
+              "role": "pointwise pair feed-forward",
+              "inside": "LayerNorm and a 4x SwiGLU hidden projection produce a 128-channel delta that is added to each pair entry; the result is this module's own returned z_ij."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_b1349e8418c0",
+            "from": "msa_module_pair_state_read",
+            "to": "msa_triangle_multiplication_outgoing",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_state_enters_outgoing_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_state_enters_outgoing_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z",
+              "connection": {
+                "title": "Pair state enters outgoing update",
+                "role": "ordered-pair input",
+                "inside": "The outgoing triangle operation mixes pairs that share their outgoing endpoint pattern, reading the same z that communication just wrote into."
+              }
+            }
+          },
+          {
+            "id": "projection_383f6f10204d",
+            "from": "msa_pair_after_ending_attention",
+            "to": "msa_pair_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_ending_pair_state_enters_pair_transition"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_ending_pair_state_enters_pair_transition"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_75930e2b182c",
+            "from": "msa_pair_after_incoming_multiplication",
+            "to": "msa_pair_attention_starting_node",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_incoming_pair_state_enters_starting_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_incoming_pair_state_enters_starting_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_52f5c2ef63c8",
+            "from": "msa_pair_after_outgoing_multiplication",
+            "to": "msa_triangle_multiplication_incoming",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_outgoing_pair_state_enters_incoming_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c08eae30239d",
+            "from": "msa_pair_after_starting_attention",
+            "to": "msa_pair_attention_ending_node",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_starting_pair_state_enters_ending_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_starting_pair_state_enters_ending_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4c06272b2bee",
+            "from": "msa_pair_attention_ending_node",
+            "to": "msa_pair_after_ending_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_ending_attention_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_ending_attention_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_end",
+              "connection": {
+                "title": "Ending-node attention update",
+                "role": "complementary axial pair attention",
+                "inside": "The implementation transposes the pair grid, applies the same attention anatomy along the other axis, then transposes back."
+              }
+            }
+          },
+          {
+            "id": "projection_a7b10a7b4004",
+            "from": "msa_pair_attention_starting_node",
+            "to": "msa_pair_after_starting_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_starting_attention_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_starting_attention_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_start",
+              "connection": {
+                "title": "Starting-node attention update",
+                "role": "axial pair attention",
+                "inside": "Four-head gated attention follows one axis of the pair grid and adds its projected result."
+              }
+            }
+          },
+          {
+            "id": "projection_b6654d566d61",
+            "from": "msa_pair_transition",
+            "to": "msa_pair_after_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_pair_transition_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_transition_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_ffn",
+              "connection": {
+                "title": "Pair transition update",
+                "role": "pointwise pair feed-forward",
+                "inside": "LayerNorm and a 4x SwiGLU hidden projection produce a 128-channel delta that is added to each pair entry; the result is this module's own returned z_ij."
+              }
+            }
+          },
+          {
+            "id": "projection_8b7d55ba772d",
+            "from": "msa_triangle_multiplication_incoming",
+            "to": "msa_pair_after_incoming_multiplication",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_incoming_multiplication_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_incoming_multiplication_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_in",
+              "connection": {
+                "title": "Incoming residual update",
+                "role": "pair-state mutation",
+                "inside": "The incoming triangle result is added to the already outgoing-updated pair state."
+              }
+            }
+          },
+          {
+            "id": "projection_6aa5d8a1837b",
+            "from": "msa_triangle_multiplication_outgoing",
+            "to": "msa_pair_after_outgoing_multiplication",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_outgoing_multiplication_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_outgoing_multiplication_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_out",
+              "connection": {
+                "title": "Outgoing residual update",
+                "role": "pair-state mutation",
+                "inside": "The gated outgoing triangle result is projected back to 128 channels and added to the incoming pair state."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.msa_pair_attention_ending_node": "visible",
+          "modules.msa_pair_attention_starting_node": "visible",
+          "modules.msa_pair_transition": "visible",
+          "modules.msa_triangle_multiplication_incoming": "visible",
+          "modules.msa_triangle_multiplication_outgoing": "visible",
+          "value_sites.msa_module_pair_state_read": "visible",
+          "value_sites.msa_pair_after_ending_attention": "visible",
+          "value_sites.msa_pair_after_incoming_multiplication": "visible",
+          "value_sites.msa_pair_after_outgoing_multiplication": "visible",
+          "value_sites.msa_pair_after_starting_attention": "visible",
+          "value_sites.msa_pair_after_transition": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "outer_product_mean_detail",
+        "title": "Outer Product Mean: Evolutionary Coupling, Made Architectural",
+        "summary": "For every token pair, OuterProductMean projects each MSA row's activations into two independent 32-channel factors, forms their outer product, and averages that product over every row in the alignment -- an empirical cross-covariance between two learned features, observed across the MSA's sequences, the same statistic classical coevolution-based contact prediction computes by hand. A final biased Linear layer compresses the flattened 1024-channel result into the pair representation's 128 channels.",
+        "parent": "msa_module_detail",
+        "subject_ref": "modules.outer_product_mean",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 6,
+          "rows": 3,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "value_msa_activations",
+            "ref": "value_sites.msa_activations",
+            "label": "MSA activations",
+            "notation": "m_{si}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "outer_product_mean",
+            "ref": "modules.outer_product_mean",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "value_outer_product_mean_projection_a",
+            "ref": "value_sites.outer_product_mean_projection_a",
+            "label": "left factor",
+            "notation": "a_{si}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "value_outer_product_mean_projection_b",
+            "ref": "value_sites.outer_product_mean_projection_b",
+            "label": "right factor",
+            "notation": "b_{sj}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 3
+          },
+          {
+            "id": "value_outer_product_mean_flattened",
+            "ref": "value_sites.outer_product_mean_flattened",
+            "label": "mean outer product, flattened",
+            "notation": "o_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "value_outer_product_mean_pair_contribution",
+            "ref": "value_sites.outer_product_mean_pair_contribution",
+            "label": "pair contribution",
+            "notation": "z^{comm}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "value_msa_module_pair_state_read",
+            "ref": "value_sites.msa_module_pair_state_read",
+            "label": "pairs after communication",
+            "notation": "z",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 2
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.msa_activations_enters_outer_product_mean"
+            },
+            "label": "m_{si}",
+            "connection": {
+              "title": "MSA activations enter communication",
+              "role": "shared per-block read",
+              "inside": "OuterProductMean reads the same LayerNorm'd MSA activations that MSAPairWeightedAveraging separately reads later in this block."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.outer_product_mean_produces_projection_a"
+            },
+            "label": "a_{si}",
+            "connection": {
+              "title": "Left factor",
+              "role": "outer-product left factor",
+              "inside": "One of two independent LinearNoBias projections down to 32 channels, evaluated at token i."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.outer_product_mean_produces_projection_b"
+            },
+            "label": "b_{sj}",
+            "connection": {
+              "title": "Right factor",
+              "role": "outer-product right factor",
+              "inside": "A second, independently learned LinearNoBias projection down to 32 channels, evaluated at token j -- the asymmetry (a at i, b at j, same row) is what makes the outer product a genuine cross-position statistic rather than a self-statistic."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.outer_product_mean_produces_flattened_outer_product"
+            },
+            "label": "o_{ij}",
+            "connection": {
+              "title": "Cross-covariance across the alignment",
+              "role": "empirical cross-covariance",
+              "inside": "For every token pair, the 32x32 outer product of a_si and b_sj is averaged over every MSA row and flattened to 1024 channels -- structurally an empirical covariance between two learned features, observed across the alignment's sequences."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.outer_product_mean_produces_pair_contribution"
+            },
+            "label": "z^{comm}",
+            "connection": {
+              "title": "Compress to pair width",
+              "role": "biased pair-channel compression",
+              "inside": "One Linear layer with a bias term (the sole exception to LinearNoBias in this mechanism) compresses the 1024-channel summary down to the pair representation's 128 channels."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+            },
+            "label": "+ Δz_comm",
+            "connection": {
+              "title": "Communication writes into the pair state",
+              "role": "evolutionary-coupling contribution",
+              "inside": "This contribution is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation anywhere in the model."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_eb8dbc3a06a7",
+            "from": "outer_product_mean",
+            "to": "value_outer_product_mean_flattened",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.outer_product_mean_produces_flattened_outer_product"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.outer_product_mean_produces_flattened_outer_product"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.outer_product_mean_flattened"
+            ],
+            "presentation": {
+              "label": "o_{ij}",
+              "connection": {
+                "title": "Cross-covariance across the alignment",
+                "role": "empirical cross-covariance",
+                "inside": "For every token pair, the 32x32 outer product of a_si and b_sj is averaged over every MSA row and flattened to 1024 channels -- structurally an empirical covariance between two learned features, observed across the alignment's sequences."
+              }
+            }
+          },
+          {
+            "id": "projection_7710fd8e66d4",
+            "from": "outer_product_mean",
+            "to": "value_outer_product_mean_pair_contribution",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.outer_product_mean_produces_pair_contribution"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.outer_product_mean_produces_pair_contribution"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z^{comm}",
+              "connection": {
+                "title": "Compress to pair width",
+                "role": "biased pair-channel compression",
+                "inside": "One Linear layer with a bias term (the sole exception to LinearNoBias in this mechanism) compresses the 1024-channel summary down to the pair representation's 128 channels."
+              }
+            }
+          },
+          {
+            "id": "projection_6393fa08a216",
+            "from": "outer_product_mean",
+            "to": "value_outer_product_mean_projection_a",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.outer_product_mean_produces_projection_a"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.outer_product_mean_produces_projection_a"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.outer_product_mean_projection_a"
+            ],
+            "presentation": {
+              "label": "a_{si}",
+              "connection": {
+                "title": "Left factor",
+                "role": "outer-product left factor",
+                "inside": "One of two independent LinearNoBias projections down to 32 channels, evaluated at token i."
+              }
+            }
+          },
+          {
+            "id": "projection_4f122139429f",
+            "from": "outer_product_mean",
+            "to": "value_outer_product_mean_projection_b",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.outer_product_mean_produces_projection_b"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.outer_product_mean_produces_projection_b"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.outer_product_mean_projection_b"
+            ],
+            "presentation": {
+              "label": "b_{sj}",
+              "connection": {
+                "title": "Right factor",
+                "role": "outer-product right factor",
+                "inside": "A second, independently learned LinearNoBias projection down to 32 channels, evaluated at token j -- the asymmetry (a at i, b at j, same row) is what makes the outer product a genuine cross-position statistic rather than a self-statistic."
+              }
+            }
+          },
+          {
+            "id": "projection_2d097c2a8274",
+            "from": "value_msa_activations",
+            "to": "outer_product_mean",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_activations_enters_outer_product_mean"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_activations_enters_outer_product_mean"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_activations"
+            ],
+            "presentation": {
+              "label": "m_{si}",
+              "connection": {
+                "title": "MSA activations enter communication",
+                "role": "shared per-block read",
+                "inside": "OuterProductMean reads the same LayerNorm'd MSA activations that MSAPairWeightedAveraging separately reads later in this block."
+              }
+            }
+          },
+          {
+            "id": "projection_89c932f1a9c9",
+            "from": "value_outer_product_mean_pair_contribution",
+            "to": "value_msa_module_pair_state_read",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δz_comm",
+              "connection": {
+                "title": "Communication writes into the pair state",
+                "role": "evolutionary-coupling contribution",
+                "inside": "This contribution is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation anywhere in the model."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.outer_product_mean": "visible",
+          "value_sites.msa_activations": "visible",
+          "value_sites.msa_module_pair_state_read": "visible",
+          "value_sites.outer_product_mean_flattened": "visible",
+          "value_sites.outer_product_mean_pair_contribution": "visible",
+          "value_sites.outer_product_mean_projection_a": "visible",
+          "value_sites.outer_product_mean_projection_b": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "msa_pair_weighted_averaging_detail",
+        "title": "MSA Pair Weighted Averaging: Attention With the Query Removed",
+        "summary": "MSAPairWeightedAveraging is standard multi-head attention with the query deleted -- its weights come entirely from the pair representation z_ij, never from MSA row content, so every one of the alignment's rows is pulled through the exact same shared routing table. Each row only supplies what value to fetch and, after the fact via a per-row sigmoid gate, how much of the shared result to trust.",
+        "parent": "msa_module_detail",
+        "subject_ref": "modules.msa_pair_weighted_averaging",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 5,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 22
+        },
+        "nodes": [
+          {
+            "id": "value_msa_module_pair_state_read_pwa",
+            "ref": "value_sites.msa_module_pair_state_read",
+            "label": "pairs after communication",
+            "notation": "z",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "value_msa_activations_pwa",
+            "ref": "value_sites.msa_activations",
+            "label": "MSA activations",
+            "notation": "m_{si}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "msa_pair_weighted_averaging",
+            "ref": "modules.msa_pair_weighted_averaging",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "value_msa_pair_weighted_averaging_pair_bias",
+            "ref": "value_sites.msa_pair_weighted_averaging_pair_bias",
+            "label": "pair-derived logit",
+            "notation": "b_{ij}^{h}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "value_msa_pair_weighted_averaging_weights",
+            "ref": "value_sites.msa_pair_weighted_averaging_weights",
+            "label": "shared attention weights",
+            "notation": "w_{ij}^{h}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "value_msa_pair_weighted_averaging_value",
+            "ref": "value_sites.msa_pair_weighted_averaging_value",
+            "label": "per-row value",
+            "notation": "v_{si}^{h}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "value_msa_pair_weighted_averaging_gate",
+            "ref": "value_sites.msa_pair_weighted_averaging_gate",
+            "label": "per-row gate",
+            "notation": "g_{si}^{h}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 5
+          },
+          {
+            "id": "value_msa_activations_after_pair_weighted_averaging",
+            "ref": "value_sites.msa_activations_after_pair_weighted_averaging",
+            "label": "updated MSA rows",
+            "notation": "m_{si}^{updated}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 3
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "modules.msa_transition",
+            "reason": "MSA Transition is a separate step of the MSA stack, already shown on the parent MSA Module board; not part of MSAPairWeightedAveraging's own internals."
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.pair_state_conditions_msa_pair_weighted_averaging"
+            },
+            "label": "z",
+            "connection": {
+              "title": "Pair state conditions attention",
+              "role": "pair-derived routing input",
+              "inside": "The only route into this module that never touches MSA row content -- attention weights are derived from z_ij alone."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_weighted_averaging_produces_pair_bias"
+            },
+            "label": "b_{ij}^{h}",
+            "connection": {
+              "title": "Pair-derived logit, no row axis",
+              "role": "per-head attention logit",
+              "inside": "One LinearNoBias projection of the LayerNorm'd pair representation, computed once per token pair per block -- there is no MSA-row index anywhere in this computation."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_weighted_averaging_produces_attention_weights"
+            },
+            "label": "w_{ij}^{h}",
+            "connection": {
+              "title": "Softmax over the key axis, still row-free",
+              "role": "shared attention weights",
+              "inside": "b_ij^h softmax-normalized over token j. Still derived purely from z_ij, so this exact same weight table is applied to every one of the N_msa rows -- the crux fact this mechanism exists to teach."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_activations_enters_msa_pair_weighted_averaging"
+            },
+            "label": "m_{si}",
+            "connection": {
+              "title": "MSA activations enter the value and gate paths",
+              "role": "row-content input",
+              "inside": "The only two projections in this module that ever read row content -- the value projection and the gate below."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_weighted_averaging_produces_value"
+            },
+            "label": "v_{si}^{h}",
+            "connection": {
+              "title": "Row-specific value",
+              "role": "per-row attended content",
+              "inside": "The row content the shared, pair-derived weights get applied to -- every row supplies its own values, but none of them influence which weights are used."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_weighted_averaging_produces_gate"
+            },
+            "label": "g_{si}^{h}",
+            "connection": {
+              "title": "The one per-row control point",
+              "role": "per-row sigmoid gate",
+              "inside": "Computed from the row's own activation and applied after the weighted average, not before -- the only place in this mechanism where a row can influence its own output, since the routing table itself is identical for every row."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.msa_pair_weighted_averaging_produces_updated_activations"
+            },
+            "label": "gated, projected, + residual",
+            "connection": {
+              "title": "Combine, project, and write back",
+              "role": "module output",
+              "inside": "Row s's gate multiplies that row's own weighted average of values (using the shared weights above), a LinearNoBias layer concatenates and projects across heads, and the result is added back into that row's MSA activations."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_8902558c94d8",
+            "from": "msa_pair_weighted_averaging",
+            "to": "value_msa_activations_after_pair_weighted_averaging",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_pair_weighted_averaging_produces_updated_activations"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_weighted_averaging_produces_updated_activations"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_activations"
+            ],
+            "presentation": {
+              "label": "gated, projected, + residual",
+              "connection": {
+                "title": "Combine, project, and write back",
+                "role": "module output",
+                "inside": "Row s's gate multiplies that row's own weighted average of values (using the shared weights above), a LinearNoBias layer concatenates and projects across heads, and the result is added back into that row's MSA activations."
+              }
+            }
+          },
+          {
+            "id": "projection_6cde61840ce8",
+            "from": "msa_pair_weighted_averaging",
+            "to": "value_msa_pair_weighted_averaging_gate",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_weighted_averaging_produces_gate"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_weighted_averaging_produces_gate"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_pair_weighted_averaging_gate"
+            ],
+            "presentation": {
+              "label": "g_{si}^{h}",
+              "connection": {
+                "title": "The one per-row control point",
+                "role": "per-row sigmoid gate",
+                "inside": "Computed from the row's own activation and applied after the weighted average, not before -- the only place in this mechanism where a row can influence its own output, since the routing table itself is identical for every row."
+              }
+            }
+          },
+          {
+            "id": "projection_d7ca2ad57728",
+            "from": "msa_pair_weighted_averaging",
+            "to": "value_msa_pair_weighted_averaging_pair_bias",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_weighted_averaging_produces_pair_bias"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_weighted_averaging_produces_pair_bias"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_pair_weighted_averaging_pair_bias"
+            ],
+            "presentation": {
+              "label": "b_{ij}^{h}",
+              "connection": {
+                "title": "Pair-derived logit, no row axis",
+                "role": "per-head attention logit",
+                "inside": "One LinearNoBias projection of the LayerNorm'd pair representation, computed once per token pair per block -- there is no MSA-row index anywhere in this computation."
+              }
+            }
+          },
+          {
+            "id": "projection_5f365c35bdd2",
+            "from": "msa_pair_weighted_averaging",
+            "to": "value_msa_pair_weighted_averaging_value",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_weighted_averaging_produces_value"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_weighted_averaging_produces_value"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_pair_weighted_averaging_value"
+            ],
+            "presentation": {
+              "label": "v_{si}^{h}",
+              "connection": {
+                "title": "Row-specific value",
+                "role": "per-row attended content",
+                "inside": "The row content the shared, pair-derived weights get applied to -- every row supplies its own values, but none of them influence which weights are used."
+              }
+            }
+          },
+          {
+            "id": "projection_3031baa3c29a",
+            "from": "msa_pair_weighted_averaging",
+            "to": "value_msa_pair_weighted_averaging_weights",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_pair_weighted_averaging_produces_attention_weights"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_pair_weighted_averaging_produces_attention_weights"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_pair_weighted_averaging_weights"
+            ],
+            "presentation": {
+              "label": "w_{ij}^{h}",
+              "connection": {
+                "title": "Softmax over the key axis, still row-free",
+                "role": "shared attention weights",
+                "inside": "b_ij^h softmax-normalized over token j. Still derived purely from z_ij, so this exact same weight table is applied to every one of the N_msa rows -- the crux fact this mechanism exists to teach."
+              }
+            }
+          },
+          {
+            "id": "projection_79af10638584",
+            "from": "value_msa_activations_pwa",
+            "to": "msa_pair_weighted_averaging",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_activations_enters_msa_pair_weighted_averaging"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_activations_enters_msa_pair_weighted_averaging"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_activations"
+            ],
+            "presentation": {
+              "label": "m_{si}",
+              "connection": {
+                "title": "MSA activations enter the value and gate paths",
+                "role": "row-content input",
+                "inside": "The only two projections in this module that ever read row content -- the value projection and the gate below."
+              }
+            }
+          },
+          {
+            "id": "projection_7ef38fc6633e",
+            "from": "value_msa_module_pair_state_read_pwa",
+            "to": "msa_pair_weighted_averaging",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_state_conditions_msa_pair_weighted_averaging"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_conditions_msa_pair_weighted_averaging"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z",
+              "connection": {
+                "title": "Pair state conditions attention",
+                "role": "pair-derived routing input",
+                "inside": "The only route into this module that never touches MSA row content -- attention weights are derived from z_ij alone."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.msa_pair_weighted_averaging": "visible",
+          "modules.msa_transition": "excluded",
+          "value_sites.msa_activations": "visible",
+          "value_sites.msa_activations_after_pair_weighted_averaging": "visible",
+          "value_sites.msa_activations_after_transition": "excluded",
+          "value_sites.msa_module_pair_state_read": "visible",
+          "value_sites.msa_pair_weighted_averaging_gate": "visible",
+          "value_sites.msa_pair_weighted_averaging_pair_bias": "visible",
+          "value_sites.msa_pair_weighted_averaging_value": "visible",
+          "value_sites.msa_pair_weighted_averaging_weights": "visible"
         },
         "projectionMode": "derived"
       }
