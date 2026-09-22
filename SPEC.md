@@ -404,6 +404,142 @@ The child board itself will likely need a `msa_pair_track`-style split
 `z_init -> template_module -> msa_module -> pair_state_input` chain renders
 correctly and the existing Pairformer and MSA module boards are unaffected.
 
+### Sub-project 1, module 4: the Diffusion Module (one denoising step)
+
+**Mechanism** (`~/research/src/alphafold3.typ:421-628`, `[paper] Section 3.7,
+Algorithms 3, 5-7, 18, 20-26`): `DiffusionModule` (Algorithm 20) is one call
+of AF3's denoiser — the function `SampleDiffusion` (Algorithm 18, out of
+scope for this pass, see below) invokes repeatedly with decreasing noise.
+Noisy atom coordinates are rescaled to unit-variance dimensionless vectors;
+`AtomAttentionEncoder` (Algorithm 5, now in its *conditioned* mode — its
+internals were deliberately left opaque in module 1, deferred to "the first
+module that actually needs them modeled," which is this one) encodes atoms
+with sequence-local attention, broadcasts trunk single/pair context onto
+them, injects the noisy positions, and aggregates to per-token activations,
+saving three per-atom tensors as skip connections; the trunk's fully
+conditioned single representation is injected once as a plain residual; a
+24-block `DiffusionTransformer` (Algorithm 23) runs full self-attention at
+token resolution; `AtomAttentionDecoder` (Algorithm 6) broadcasts the
+updated token activations back to atoms, adds them to the saved skip
+connections, runs local atom-resolution attention again to reconcile, and
+projects to a position update; the update is blended with the noisy input
+by a noise-level-weighted posterior-mean formula (high noise: trust the
+network; low noise: trust the input, which is already nearly correct).
+
+Two upstream mechanisms feed this. `DiffusionConditioning` (Algorithm 21)
+builds the `s`/`z` conditioning tensors everything else reads: pair
+conditioning concatenates the trunk's pair output with a fresh
+`RelativePositionEncoding` and refines it through two `Transition` rounds;
+single conditioning concatenates the trunk's single output with the raw,
+unprocessed `s_inputs`, additively injects a Fourier embedding (Algorithm
+22 — a bank of frozen random cosine features, sampled once before training
+and never updated, expanding the log-compressed noise level into a rich
+vector) via its own projection, and likewise refines through two
+`Transition` rounds. `RelativePositionEncoding` (Algorithm 3) builds four
+bucketed/boolean relative-position signals (residue offset, finer
+token-index offset for same-residue multi-token groups, a same-entity
+boolean, and a chain-copy-number offset), each conditionally defined on the
+others, concatenated and projected once into the pair channel width.
+
+**The one real unifying fact, and how this pass authors it**: there is
+exactly one transformer block type in the entire Diffusion Module —
+`AttentionPairBias` (Algorithm 24) run in parallel (not sequentially, per
+the GPT-J/PaLM-style parallel block form) with `ConditionedTransitionBlock`
+(Algorithm 25), both wrapped in Adaptive LayerNorm (Algorithm 26, computing
+scale/shift from the conditioning vector rather than using fixed learned
+parameters) and a second, separate AdaLN-Zero output gate. This one block
+is reused, unmodified in mechanism, at three call sites: token-level (24
+blocks, `N_head=16`, no masking — called directly from `DiffusionModule`),
+and twice at atom-level (3 blocks each, `N_head=4`, sequence-local masking
+via `AtomTransformer`'s thin wrapper — once inside the encoder, once inside
+the decoder, differing only in which saved skip tensors condition them).
+This pass models it as two new `standard-block` instances (`attention` for
+`AttentionPairBias`, `feed_forward` for `ConditionedTransitionBlock`), each
+with three bindings (token: `exact`; atom-encoder and atom-decoder: each
+`wrapped`, disclosing the masking difference) — the first real use of this
+project's standard-block authoring mechanism, chosen because the paper's
+own point is that this is genuinely one mechanism at three sites, and
+authoring it three separate times (the way the pair-stack mechanism was
+authored three times across the Pairformer/MSA/Template modules) would
+misrepresent that as three different things.
+
+**Scope decisions (decided in brainstorming, 2026-09-22):**
+- This pass models one denoising step only. The outer sampling loop
+  (`SampleDiffusion`, Algorithm 18: the noise schedule, step count, why the
+  partially-denoised structure is re-randomized in pose before every step)
+  and `CentreRandomAugmentation` (Algorithm 19, the shared pose-augmentation
+  utility that loop calls) are a separate, later pass — closer to when
+  SPEC.md's "Diffusion sampler scrubber" screen (a separate, not-yet-built
+  interactive visualization with real tensors, outside the explainer tool
+  entirely) is built, since the two share the most context and are easiest
+  to keep non-duplicative if designed together.
+- Chain-permutation/symmetry resolution and weighted rigid alignment/smooth
+  LDDT are training-loss mechanics, not inference architecture — excluded,
+  consistent with every module shipped so far modeling inference only.
+- The Pairformer's existing `single_attention_with_pair_bias` fact — the
+  *same* algorithm (Algorithm 24), called with no conditioning signal, so
+  AdaLN/AdaLN-Zero are inert — is left untouched rather than retrofitted as
+  a fourth binding of the new standard_block. Matches this project's
+  established precedent (modules 2 and 3 both declined to retrofit
+  already-shipped pair-stack facts into a shared block, deferring that as
+  its own future cleanup): avoid re-touching and re-verifying content this
+  pass didn't author, even though the mechanism really is identical.
+- `RelativePositionEncoding` is modeled now (its own module, its own 4
+  signals, 3 new raw inputs), closing half of the existing
+  `open_questions.relative_position_encoding_and_token_bonds_unmodeled`
+  entry — needed a second, independent time by `DiffusionConditioning`,
+  after being deferred twice already (modules 2 and 3's own brainstorming).
+  The `token_bonds` embedding (a separate, small contributor to `z_init`'s
+  own construction, not read by `DiffusionConditioning`) is not needed by
+  this module and stays open under a narrower open-questions entry.
+
+**New facts to add** (`explainer/architectures/alphafold3-pairformer.yaml`,
+hand-edited per the standing precedent, plus two new files under
+`explainer/standard_blocks/`): a top-level `diffusion_module`
+(`parent_ref: architecture`) with children for `diffusion_conditioning`
+(real internals — the two parallel concat/project/refine branches),
+`relative_position_encoding` (real internals — the four bucketed/boolean
+signals), a new `atom_attention_encoder` (the *conditioned*-mode call, modeled with
+real internals — module 1's existing `atom_attention_encoder_bare` fact
+stays untouched as its own, separate opaque fact; bare and conditioned mode
+are the same routine, but this pass only grounds the conditioned-mode call
+site, the one it actually needs), `atom_attention_decoder` (new), and the token-level
+`diffusion_transformer` occurrence (binding both new standard_blocks 24
+times, `exact`). New `boundary: input` value sites: noisy atom positions,
+the scalar noise level, `entity_id`, `residue_index`, `sym_id`. Retarget
+`single_state_output`/`pair_state_output` from terminal outputs to feed
+`diffusion_module` (the same "boundary output turns out not to be
+terminal" pattern already used for `z_init` in modules 2 and 3); a new
+terminal `boundary: output` value site (the denoised atom positions) takes
+over as the architecture's actual output. Every new fact cites Algorithms
+3, 5-7, 20-26's locators, matching modules 1-3's evidence discipline.
+
+**View**: given the size, this needs several child boards from the start,
+not one — a top `diffusion_module_detail` (mirroring the existing
+child-board precedent), plus detail boards for `atom_attention_encoder`,
+`atom_attention_decoder`, `diffusion_conditioning`, and
+`relative_position_encoding`. The two new standard_blocks carry their own
+`visual_template` inside their own YAML files (confirmed from the existing,
+already-in-use `pair-biased-attention.yaml`/`invariant-point-attention.yaml`
+instances referenced by the `genie2`/`genie3` example architectures) — this
+pass wires `board_ref`/occurrence content pointing at them from the module
+boards that use them, rather than authoring separate view YAML for the
+blocks themselves. Root board grows again: one new `diffusion_module` node
+plus up to 5 new raw inputs (noisy positions, noise level, `entity_id`,
+`residue_index`, `sym_id`) — expected, consistent with the standing
+board-curation finding that boundary inputs can't be elided.
+
+**Verification**: same pipeline as modules 1-3 — `lint_sources.rb`,
+`verify_architecture.rb --source-set alphafold3`, `build-manifest.rb
+--check`, plus the standard-block-specific regression suites
+(`test/standard_block_contract_test.rb`,
+`test/standard_block_compiler_test.rb`,
+`test/renderer_standard_block_test.rb`, per `explainer/CLAUDE.md`'s "run
+the infrastructure-specific regression suites... when changing... standard
+blocks"), plus an actual rendered check confirming the retargeted
+`single_state_output/pair_state_output -> diffusion_module -> [new output]`
+chain renders correctly and the existing trunk boards are unaffected.
+
 ## Core screens
 
 These four carry the main narrative: what AF3 takes in, how it transforms it,
