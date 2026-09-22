@@ -950,6 +950,19 @@ representations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))); Algorithm 20 line 8, where it is rescaled by sigma_data * t_hat / sqrt(sigma_data^2 + t_hat^2) and blended with the noisy input
+  - id: denoised_atom_positions
+    scale: atom
+    semantic_role: the diffusion module's own returned per-atom coordinates for this denoising step, back in the same real-valued angstrom space as the raw noisy input rather than the dimensionless space the network operates in internally; a noise-level-weighted posterior-mean blend of the raw noisy input and the rescaled position update, not a clean structure prediction on its own
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries:
+      - per-atom 3D denoised position estimate for the current noise level
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 8 (x_l^out = sigma_data^2/(sigma_data^2+t_hat^2) * x_l^noisy + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update) and line 9 (return {x_l^out}); consumed as {x_l^denoised} by Algorithm 18 line 8, the sampler's call site
 
 value_sites:
   - id: single_state_input
@@ -1091,13 +1104,11 @@ value_sites:
   - id: single_state_output
     representation_ref: representations.single_state
     scope_ref: architecture
-    boundary: output
     role: component_output
     evidence: *single_shape_evidence
   - id: pair_state_output
     representation_ref: representations.pair_state
     scope_ref: architecture
-    boundary: output
     role: component_output
     evidence: *pair_shape_evidence
   - id: msa_input
@@ -1868,6 +1879,17 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), the decoder's returned per-atom update, consumed by Algorithm 20 line 8's blending step, fixed by this plan as this exact id
+  - id: denoised_atom_positions
+    representation_ref: representations.denoised_atom_positions
+    scope_ref: architecture
+    boundary: output
+    role: diffusion_module_denoised_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 9 (return {x_l^out}), the module's own returned coordinates for this denoising step; this architecture's new terminal output, fixed by this task as this exact id
 
 modules:
   - id: pairformer_stack
@@ -2490,8 +2512,27 @@ modules:
         - source_ref: af3_template_code
           role: implementation_evidence
           locator: "template_modules.py TemplateEmbedding.Config (template_stack = PairFormerIteration.Config(num_layer=2, pair_transition=TransitionBlock.Config(num_intermediate_factor=2))) -- overrides TransitionBlock.Config's num_intermediate_factor default of 4 (modules.py) to 2 for this stack's transition only, the one place in the architecture this factor is not 4"
-  - id: diffusion_conditioning
+  - id: diffusion_module
     parent_ref: architecture
+    decomposition:
+      status: complete
+      reason: Every real sub-step is either a named child module or, for the two single-line housekeeping steps with no internal structure of their own (line 2's position rescale and line 8's output blend), an architecture-scope value-site relation rather than a further child -- the same treatment already given to modules.pairformer_stack's own scale-transition relations. Nothing is left unmodeled at this level.
+    label: Diffusion Module
+    kind: denoiser
+    mechanisms: [noise_level_conditioning, position_rescaling, atom_token_atom_bottleneck, token_bottleneck_residual_injection, posterior_mean_output_blending]
+    role: Algorithm 20's own top-level orchestration for one denoising step, the single routine SampleDiffusion (Algorithm 18 line 8) calls at every step of the ~200-step sampling trajectory (only one representative call is modeled here, matching the treatment already given to the Pairformer's 48 blocks and the token-level transformer's 24). It conditions the trunk's single and pair state on the current noise level (child modules.diffusion_conditioning); rescales the raw noisy input positions to a dimensionless, roughly unit-variance space before the atom encoder ever sees them (line 2 -- relations.noisy_positions_scaled_to_unit_variance, from value_sites.noisy_atom_positions to value_sites.scaled_noisy_atom_positions, modeled as this module's own value-site relation rather than the encoder's, since Algorithm 20 performs it before the encoder is called); encodes atoms and mean-pools them to a per-token activation (child modules.atom_attention_encoder_conditioned, sharing child modules.sequence_local_attention_mask's locality mask with the decoder); injects the fully-conditioned single vector once, additively, at the token bottleneck's entrance, a one-time residual injection distinct from the Adaptive LayerNorm modulation happening inside every one of the 24 blocks that follow (line 4 -- relations.encoder_token_output_enters_token_bottleneck and relations.conditioned_single_injected_into_token_activation, both already wired into value_sites.diffusion_token_activation_conditioned); refines the pooled activation through 24 blocks of full token-level self-attention (child modules.diffusion_transformer_token_level); decodes the token-level update back down to a per-atom position update (child modules.atom_attention_decoder); and finally blends that update with the original, unrescaled noisy input through a noise-level-weighted posterior-mean formula to produce this module's own denoised coordinates (line 8 -- relations.noisy_positions_weighted_into_denoised_output and relations.position_update_weighted_into_denoised_output, both feeding value_sites.denoised_atom_positions). At high noise the blend trusts the network's prediction; at low noise it trusts the input, which is already nearly correct
+    scale: atom_and_token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 (DiffusionModule), full algorithm box and signature (sigma_data=16, c_atom=128, c_atompair=16, c_token=768); Algorithm 18 line 8, the sampler's call site
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: diffusion_head.py DiffusionHead.__call__, the single function implementing the whole algorithm box end to end
+  - id: diffusion_conditioning
+    parent_ref: modules.diffusion_module
     decomposition:
       status: partial
       reason: Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being "used inside" this module's pair branch.
@@ -2523,7 +2564,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 22 (FourierEmbedding), full algorithm box (w, b ~ N(0, I_c), sampled once before training; return cos(2*pi*(t_hat*w + b))); Supplementary Algorithm 21 line 8, call site (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256)); Supplementary Algorithm 20 signature (sigma_data=16)
   - id: sequence_local_attention_mask
-    parent_ref: architecture
+    parent_ref: modules.diffusion_module
     decomposition:
       status: leaf
     label: Sequence-Local Attention Mask
@@ -2538,7 +2579,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 7 line 1 and signature (N_queries=32, N_keys=128, S_subset_centres = {15.5, 47.5, 79.5, ...}); Supplementary Fig. 1 (rectangular blocks along the diagonal)
   - id: atom_attention_encoder_conditioned
-    parent_ref: architecture
+    parent_ref: modules.diffusion_module
     decomposition:
       status: partial
       reason: The per-atom embedding, the two trunk broadcasts, the noisy-position injection, and the mean-pooling to tokens are modeled at value-site granularity, matching the depth already given to modules.diffusion_conditioning and modules.relative_position_encoding. Only the AtomTransformer call at Algorithm 5 line 15 gets its own child module, because that call is where the architecture's shared attention and transition blocks are actually instantiated and therefore needs a subject its block_instances can bind ports against.
@@ -2577,7 +2618,7 @@ modules:
           role: implementation_evidence
           locator: atom_cross_attention.py atom_cross_att_encoder, which instantiates diffusion_transformer.CrossAttTransformer with AtomCrossAttEncoderConfig.atom_transformer (num_blocks=3, num_intermediate_factor=2) and CrossAttentionConfig.num_head=4
   - id: diffusion_transformer_token_level
-    parent_ref: architecture
+    parent_ref: modules.diffusion_module
     decomposition:
       status: complete
     label: Diffusion Transformer (token level)
@@ -2632,7 +2673,7 @@ modules:
           role: implementation_evidence
           locator: diffusion_transformer.py transition_block with single_cond not None and Transformer.Config.num_intermediate_factor=2
   - id: atom_attention_decoder
-    parent_ref: architecture
+    parent_ref: modules.diffusion_module
     decomposition:
       status: partial
       reason: The broadcast plus skip addition and the final projection to a 3D update are modeled at value-site granularity, matching the treatment of modules.atom_attention_encoder_conditioned. Only the AtomTransformer call at Algorithm 6 line 2 gets its own child module, because that call is where the shared attention and transition blocks are instantiated and therefore needs a subject its block_instances can bind ports against.
@@ -4563,6 +4604,36 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), a projection down to a literal 3D vector in the same dimensionless space as the scaled noisy positions
+  - id: noisy_positions_weighted_into_denoised_output
+    from: value_sites.noisy_atom_positions
+    to: value_sites.denoised_atom_positions
+    kind: state_update
+    carries: [representations.denoised_atom_positions]
+    operation: weight_noisy_input_by_posterior_mean_skip_coefficient
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 8, first term (x_l^out = sigma_data^2/(sigma_data^2+t_hat^2) * x_l^noisy + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update); this term reads the original, unrescaled noisy input, not value_sites.scaled_noisy_atom_positions -- a posterior-mean-style blend where the noisy-input coefficient goes to zero at high noise and toward one at low noise, when the input is already nearly correct
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: "diffusion_head.py DiffusionHead.__call__ (skip_scaling = SIGMA_DATA**2 / (noise_level**2 + SIGMA_DATA**2); return (skip_scaling * positions_noisy + out_scaling * position_update) * atom_mask[..., None]) -- positions_noisy is the same raw argument used earlier only to compute the rescaled act, never itself overwritten"
+  - id: position_update_weighted_into_denoised_output
+    from: value_sites.atom_attention_decoder_position_update
+    to: value_sites.denoised_atom_positions
+    kind: state_update
+    carries: [representations.denoised_atom_positions]
+    operation: weight_position_update_by_posterior_mean_out_coefficient
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 8, second term (... + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update); this coefficient dominates at high noise, when the network's own prediction is trusted most, and shrinks toward zero at low noise
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: "diffusion_head.py DiffusionHead.__call__ (out_scaling = noise_level * SIGMA_DATA / jnp.sqrt(noise_level**2 + SIGMA_DATA**2)), the coefficient applied to position_update, the atom decoder's own returned tensor, immediately before the two terms are summed and masked"
 
 claims:
   - id: pairformer_has_no_msa_state

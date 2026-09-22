@@ -346,7 +346,7 @@ boards:
         row: 2
       - id: single_state_output
         ref: value_sites.single_state_output
-        label: final singles
+        label: singles after 48 blocks
         notation: 's^{trunk}'
         prominence: context
         treatment: compact
@@ -355,7 +355,7 @@ boards:
         row: 2
       - id: pair_state_output
         ref: value_sites.pair_state_output
-        label: final pairs
+        label: pairs after 48 blocks
         notation: 'z^{trunk}'
         prominence: context
         treatment: compact
