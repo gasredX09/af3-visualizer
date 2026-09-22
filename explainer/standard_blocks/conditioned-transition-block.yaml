@@ -1,0 +1,268 @@
+schema_version: standard-block-v0.3
+id: conditioned_transition_block
+name: Conditioned Transition Block
+kind: feed_forward
+status: review
+description: A pointwise SwiGLU feedforward block built around the same conditioning switch as the attention block it is paired with. An optional conditioning signal turns the pre-block normalization into Adaptive LayerNorm and adds an AdaLN-Zero gate on the returned update; with no conditioning signal the block reduces to the plain LayerNorm plus SwiGLU transition used elsewhere in the same architecture.
+parameters:
+  - id: n
+    notation: N
+    kind: sequence
+    resolution: boundary
+    role: number of items the block runs over independently; tokens at token resolution and atoms at atom resolution
+  - id: c_a
+    notation: c_a
+    kind: channel
+    resolution: boundary
+    role: channel width of the activation the block reads and returns
+  - id: c_s
+    notation: c_s
+    kind: channel
+    resolution: boundary
+    role: channel width of the conditioning signal
+  - id: c_hidden
+    notation: n_hidden
+    kind: channel
+    resolution: instance
+    role: expanded hidden width inside the gated transition; the expansion factor times the activation width
+ports:
+  - id: single_state
+    label: block input activation
+    direction: input
+    kind: representation
+    required: true
+    cardinality: one
+    relation_kinds: [data_flow, state_update]
+    glyph: single
+    notation: a_i
+    role: the activation this block transforms pointwise, one item at a time
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+  - id: conditioning_signal
+    label: conditioning signal
+    direction: conditioning
+    kind: representation
+    required: false
+    cardinality: one
+    relation_kinds: [conditioning, data_flow]
+    glyph: single
+    notation: s_i
+    role: per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: conditioning_channel, dimension: c_s }
+  - id: transition_output
+    label: transition update
+    direction: output
+    kind: representation
+    required: true
+    cardinality: one
+    relation_kinds: [data_flow]
+    glyph: single
+    notation: t_i
+    role: the block's returned update, before any residual addition owned by the surrounding architecture
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+variants:
+  - id: adaln_conditioned_transition
+    label: Conditioned (AdaLN and AdaLN-Zero)
+    description: The caller supplies a conditioning signal, so the pre-block normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.
+    step_refs:
+      - steps.adaln_normalize
+      - steps.swiglu_expansion
+      - steps.project_transition_update
+      - steps.project_output_gate
+      - steps.apply_output_gate
+  - id: unconditioned_transition
+    label: Unconditioned (plain LayerNorm)
+    description: The caller supplies no conditioning signal, so the block is a plain LayerNorm followed by a SwiGLU transition and its output projection, with no gate on the returned update.
+    step_refs:
+      - steps.layer_norm_normalize
+      - steps.swiglu_expansion
+      - steps.project_transition_update
+      - steps.return_ungated_update
+default_variant: adaln_conditioned_transition
+values:
+  - id: normalized_state
+    label: normalized activation
+    kind: representation
+    glyph: single
+    notation: a_norm
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+  - id: gated_hidden
+    label: SwiGLU hidden activation
+    kind: representation
+    glyph: single
+    notation: b_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: hidden_channel, dimension: c_hidden }
+  - id: projected_update
+    label: projected transition update
+    kind: representation
+    glyph: single
+    notation: u_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+  - id: output_gate
+    label: AdaLN-Zero output gate
+    kind: weight
+    glyph: single
+    notation: gamma_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+steps:
+  - id: adaln_normalize
+    label: Adaptive LayerNorm
+    operation: adaptive_layer_norm
+    shape_rule: preserve
+    inputs: [ports.single_state, ports.conditioning_signal]
+    outputs: [values.normalized_state]
+    role: normalize the block input with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal
+    code: "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+    code_bindings:
+      - { lexeme: a_norm, ref: values.normalized_state, access: write }
+      - { lexeme: single_state, ref: ports.single_state, access: read }
+      - { lexeme: conditioning_signal, ref: ports.conditioning_signal, access: read }
+  - id: layer_norm_normalize
+    label: Plain LayerNorm
+    operation: layer_normalization
+    shape_rule: preserve
+    inputs: [ports.single_state]
+    outputs: [values.normalized_state]
+    role: the fallback normalization taken when the caller supplies no conditioning signal
+    code: "a_norm = LayerNorm(single_state)"
+    code_bindings:
+      - { lexeme: a_norm, ref: values.normalized_state, access: write }
+      - { lexeme: single_state, ref: ports.single_state, access: read }
+  - id: swiglu_expansion
+    label: Gated expansion
+    operation: swiglu_transition
+    shape_rule: linear
+    inputs: [values.normalized_state]
+    outputs: [values.gated_hidden]
+    role: two independent linear projections of the same normalized activation, one passed through swish and used to gate the other elementwise, so the nonlinearity and the second linear layer are fused rather than stacked
+    code: "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+    code_bindings:
+      - { lexeme: gated_hidden, ref: values.gated_hidden, access: write }
+      - { lexeme: a_norm, ref: values.normalized_state, access: read }
+  - id: project_transition_update
+    label: Project back to the block width
+    operation: output_projection
+    shape_rule: linear
+    inputs: [values.gated_hidden]
+    outputs: [values.projected_update]
+    role: project the expanded hidden activation back down to the width of the block's own input
+    code: "projected_update = LinearNoBias(gated_hidden)"
+    code_bindings:
+      - { lexeme: projected_update, ref: values.projected_update, access: write }
+      - { lexeme: gated_hidden, ref: values.gated_hidden, access: read }
+  - id: project_output_gate
+    label: Project the AdaLN-Zero gate
+    operation: adaln_zero_gate_projection
+    shape_rule: linear
+    inputs: [ports.conditioning_signal]
+    outputs: [values.output_gate]
+    role: a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds
+    code: "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+    code_bindings:
+      - { lexeme: output_gate, ref: values.output_gate, access: write }
+      - { lexeme: conditioning_signal, ref: ports.conditioning_signal, access: read }
+  - id: apply_output_gate
+    label: Apply the AdaLN-Zero gate
+    operation: adaln_zero_output_gate
+    shape_rule: preserve
+    inputs: [values.projected_update, values.output_gate]
+    outputs: [ports.transition_output]
+    role: gate the projected update before returning it
+    code: "transition_output = output_gate * projected_update"
+    code_bindings:
+      - { lexeme: transition_output, ref: ports.transition_output, access: write }
+      - { lexeme: projected_update, ref: values.projected_update, access: read }
+      - { lexeme: output_gate, ref: values.output_gate, access: read }
+  - id: return_ungated_update
+    label: Return the update ungated
+    operation: return_update_without_adaln_zero_gate
+    shape_rule: preserve
+    inputs: [values.projected_update]
+    outputs: [ports.transition_output]
+    role: with no conditioning signal there is no AdaLN-Zero gate, so the projected update is returned as it stands
+    code: "transition_output = projected_update"
+    code_bindings:
+      - { lexeme: transition_output, ref: ports.transition_output, access: write }
+      - { lexeme: projected_update, ref: values.projected_update, access: read }
+visual_template:
+  grid:
+    columns: 9
+    rows: 3
+    column_sizing: content
+    row_sizing: content
+    col_gap: 20
+    row_gap: 36
+  nodes:
+    - { id: single_state, ref: ports.single_state, col: 1, row: 1, prominence: secondary, treatment: compact }
+    - { id: conditioning_signal, ref: ports.conditioning_signal, col: 1, row: 3, prominence: secondary, treatment: compact }
+    - { id: adaln_normalize, ref: steps.adaln_normalize, col: 2, row: 1, prominence: primary, treatment: compact }
+    - { id: layer_norm_normalize, ref: steps.layer_norm_normalize, col: 2, row: 2, prominence: primary, treatment: compact }
+    - { id: normalized_state, ref: values.normalized_state, col: 3, row: 1, prominence: context, treatment: compact }
+    - { id: swiglu_expansion, ref: steps.swiglu_expansion, col: 4, row: 1, prominence: primary, treatment: compact }
+    - { id: gated_hidden, ref: values.gated_hidden, col: 5, row: 1, prominence: context, treatment: compact }
+    - { id: project_transition_update, ref: steps.project_transition_update, col: 6, row: 1, prominence: primary, treatment: compact }
+    - { id: project_output_gate, ref: steps.project_output_gate, col: 6, row: 3, prominence: primary, treatment: compact }
+    - { id: projected_update, ref: values.projected_update, col: 7, row: 1, prominence: context, treatment: compact }
+    - { id: output_gate, ref: values.output_gate, col: 7, row: 3, prominence: context, treatment: compact }
+    - { id: apply_output_gate, ref: steps.apply_output_gate, col: 8, row: 1, prominence: primary, treatment: compact }
+    - { id: return_ungated_update, ref: steps.return_ungated_update, col: 8, row: 2, prominence: primary, treatment: compact }
+    - { id: transition_output, ref: ports.transition_output, col: 9, row: 1, prominence: secondary, treatment: compact }
+  segments:
+    - id: normalize
+      label: Normalize
+      description: The conditioning signal decides whether the block input is normalized adaptively, with a scale and shift recomputed from that signal at every call, or by a plain LayerNorm with static parameters.
+      node_refs:
+        - ports.single_state
+        - ports.conditioning_signal
+        - steps.adaln_normalize
+        - steps.layer_norm_normalize
+        - values.normalized_state
+    - id: gated_transition
+      label: Gated transition
+      description: One normalized activation feeds two independent projections into the expanded hidden width; swish on one branch gates the other, which is what makes this a SwiGLU transition rather than a plain two-layer feedforward.
+      node_refs:
+        - steps.swiglu_expansion
+        - values.gated_hidden
+    - id: project_and_gate
+      label: Project, then gate
+      description: The hidden activation is projected back to the block's own width, and the conditioned path applies one more near-closed gate before returning the update to whatever residual connection the surrounding architecture owns.
+      node_refs:
+        - steps.project_transition_update
+        - values.projected_update
+        - steps.project_output_gate
+        - values.output_gate
+        - steps.apply_output_gate
+        - steps.return_ungated_update
+        - ports.transition_output
+evidence_policy:
+  generic_definition: Reusable vocabulary for one pointwise gated feedforward block whose normalization and output gating are switched by the presence of a conditioning signal. The block ends at the returned update; residual addition and the repeat count of any surrounding block loop belong to the surrounding architecture layer.
+  usage_requires:
+    - Evidence for whether a conditioning signal is supplied, which fixes both the normalization branch and whether the output gate is present.
+    - Evidence for the expansion factor behind the hidden width, which the boundary tensors do not determine.

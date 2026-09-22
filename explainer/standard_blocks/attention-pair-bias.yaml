@@ -1,0 +1,469 @@
+schema_version: standard-block-v0.3
+id: attention_pair_bias
+name: Attention with Pair Bias
+kind: attention
+status: review
+description: Multi-head self-attention over one activation track whose logits carry an additive term projected from a pair tensor, with the caller's own additive mask folded into that same term, a content-derived output gate, and an optional conditioning signal that switches the pre-attention normalization from plain LayerNorm to Adaptive LayerNorm and adds an AdaLN-Zero gate on the returned update.
+parameters:
+  - id: n
+    notation: N
+    kind: sequence
+    resolution: boundary
+    role: number of attended items; tokens at token resolution and atoms at atom resolution
+  - id: c_a
+    notation: c_a
+    kind: channel
+    resolution: boundary
+    role: channel width of the activation being attended
+  - id: c_s
+    notation: c_s
+    kind: channel
+    resolution: boundary
+    role: channel width of the conditioning signal
+  - id: c_z
+    notation: c_z
+    kind: channel
+    resolution: boundary
+    role: channel width of the pair tensor that supplies the attention bias
+  - id: h
+    notation: N_head
+    kind: heads
+    resolution: instance
+    role: number of attention heads
+  - id: c
+    notation: c
+    kind: channel
+    resolution: instance
+    role: per-head query/key/value width; the attended width divided by the head count
+ports:
+  - id: single_state
+    label: attended activation
+    direction: input
+    kind: representation
+    required: true
+    cardinality: one
+    relation_kinds: [data_flow, state_update]
+    glyph: single
+    notation: a_i
+    role: the activation track this block attends over and returns an update for
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+  - id: conditioning_signal
+    label: conditioning signal
+    direction: conditioning
+    kind: representation
+    required: false
+    cardinality: one
+    relation_kinds: [conditioning, data_flow]
+    glyph: single
+    notation: s_i
+    role: per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: conditioning_channel, dimension: c_s }
+  - id: pair_context
+    label: pair context
+    direction: conditioning
+    kind: representation
+    required: true
+    cardinality: one
+    relation_kinds: [conditioning, data_flow]
+    glyph: pair
+    notation: z_ij
+    role: pair tensor projected into a per-head additive bias on the attention logits
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: key_token, dimension: n }
+        - { id: pair_channel, dimension: c_z }
+  - id: mask_bias
+    label: additive mask term
+    direction: conditioning
+    kind: mask
+    required: false
+    cardinality: one
+    relation_kinds: [conditioning, control]
+    glyph: pair
+    notation: beta_ij
+    role: the caller's own additive term on the same bias slot the pair projection writes into; a locality mask supplies large negative values on disallowed pairs, and a caller that supplies nothing leaves the slot at zero
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: key_token, dimension: n }
+  - id: attention_output
+    label: attention update
+    direction: output
+    kind: representation
+    required: true
+    cardinality: one
+    relation_kinds: [data_flow]
+    glyph: single
+    notation: b_i
+    role: the block's returned update, before any residual addition owned by the surrounding architecture
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+variants:
+  - id: adaln_conditioned
+    label: Conditioned (AdaLN and AdaLN-Zero)
+    description: The caller supplies a conditioning signal, so the pre-attention normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.
+    step_refs:
+      - steps.adaln_normalize
+      - steps.project_qkv
+      - steps.form_pair_bias_term
+      - steps.form_attention_logits
+      - steps.softmax_attention
+      - steps.project_content_gate
+      - steps.aggregate_gated_values
+      - steps.project_attention_update
+      - steps.project_output_gate
+      - steps.apply_output_gate
+  - id: unconditioned_layer_norm
+    label: Unconditioned (plain LayerNorm)
+    description: The caller supplies no conditioning signal, so the pre-attention normalization is plain LayerNorm and the AdaLN-Zero output gate is skipped entirely, leaving the content-derived gate as the block's only gating.
+    step_refs:
+      - steps.layer_norm_normalize
+      - steps.project_qkv
+      - steps.form_pair_bias_term
+      - steps.form_attention_logits
+      - steps.softmax_attention
+      - steps.project_content_gate
+      - steps.aggregate_gated_values
+      - steps.project_attention_update
+      - steps.return_ungated_update
+default_variant: adaln_conditioned
+values:
+  - id: normalized_state
+    label: normalized activation
+    kind: representation
+    glyph: single
+    notation: a_norm
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+  - id: qkv
+    label: per-head Q/K/V
+    kind: representation
+    glyph: single
+    notation: qkv
+    shape_contract:
+      kind: tuple
+      fields:
+        - id: q
+          shape:
+            kind: tensor
+            axes:
+              - { id: query_token, dimension: n }
+              - { id: head, dimension: h }
+              - { id: hidden_channel, dimension: c }
+        - id: k
+          shape:
+            kind: tensor
+            axes:
+              - { id: key_token, dimension: n }
+              - { id: head, dimension: h }
+              - { id: hidden_channel, dimension: c }
+        - id: v
+          shape:
+            kind: tensor
+            axes:
+              - { id: key_token, dimension: n }
+              - { id: head, dimension: h }
+              - { id: value_channel, dimension: c }
+  - &attention_tensor
+    id: pair_bias
+    label: pair bias and mask term
+    kind: logit
+    glyph: pair
+    notation: b_ij
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: head, dimension: h }
+        - { id: query_token, dimension: n }
+        - { id: key_token, dimension: n }
+  - <<: *attention_tensor
+    id: combined_logits
+    label: biased attention logits
+    notation: l_ij
+  - <<: *attention_tensor
+    id: attention_weights
+    label: attention weights
+    kind: weight
+    notation: A_ij
+  - id: content_gate
+    label: content gate
+    kind: weight
+    glyph: single
+    notation: g_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: head, dimension: h }
+        - { id: value_channel, dimension: c }
+  - id: attention_context
+    label: gated per-head context
+    kind: representation
+    glyph: single
+    notation: o_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: head, dimension: h }
+        - { id: value_channel, dimension: c }
+  - id: projected_update
+    label: projected attention update
+    kind: representation
+    glyph: single
+    notation: u_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+  - id: output_gate
+    label: AdaLN-Zero output gate
+    kind: weight
+    glyph: single
+    notation: gamma_i
+    shape_contract:
+      kind: tensor
+      axes:
+        - { id: query_token, dimension: n }
+        - { id: single_channel, dimension: c_a }
+steps:
+  - id: adaln_normalize
+    label: Adaptive LayerNorm
+    operation: adaptive_layer_norm
+    shape_rule: preserve
+    inputs: [ports.single_state, ports.conditioning_signal]
+    outputs: [values.normalized_state]
+    role: normalize the attended activation with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal
+    code: "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+    code_bindings:
+      - { lexeme: a_norm, ref: values.normalized_state, access: write }
+      - { lexeme: single_state, ref: ports.single_state, access: read }
+      - { lexeme: conditioning_signal, ref: ports.conditioning_signal, access: read }
+  - id: layer_norm_normalize
+    label: Plain LayerNorm
+    operation: layer_normalization
+    shape_rule: preserve
+    inputs: [ports.single_state]
+    outputs: [values.normalized_state]
+    role: the fallback normalization taken when the caller supplies no conditioning signal
+    code: "a_norm = LayerNorm(single_state)"
+    code_bindings:
+      - { lexeme: a_norm, ref: values.normalized_state, access: write }
+      - { lexeme: single_state, ref: ports.single_state, access: read }
+  - id: project_qkv
+    label: Project per-head Q/K/V
+    operation: query_key_value_projection
+    shape_rule: split_heads
+    inputs: [values.normalized_state]
+    outputs: [values.qkv]
+    role: split the normalized activation into per-head queries, keys, and values; the query projection carries a bias term and the key/value projections do not
+    code: "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+    code_bindings:
+      - { lexeme: q, ref: values.qkv, access: write }
+      - { lexeme: k, ref: values.qkv, access: write }
+      - { lexeme: v, ref: values.qkv, access: write }
+      - { lexeme: a_norm, ref: values.normalized_state, access: read }
+  - id: form_pair_bias_term
+    label: Form the pair bias and mask term
+    operation: pair_bias_and_mask_projection
+    shape_rule: linear
+    inputs: [ports.pair_context, ports.mask_bias]
+    outputs: [values.pair_bias]
+    role: one additive slot serves two jobs, a soft per-head bias projected from the pair tensor and whatever additive mask the caller supplies on top of it
+    code: "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+    code_bindings:
+      - { lexeme: pair_bias, ref: values.pair_bias, access: write }
+      - { lexeme: pair_context, ref: ports.pair_context, access: read }
+      - { lexeme: mask_bias, ref: ports.mask_bias, access: read }
+  - id: form_attention_logits
+    label: Form biased attention logits
+    operation: biased_attention_logits
+    shape_rule: logit_composition
+    inputs: [values.qkv, values.pair_bias]
+    outputs: [values.combined_logits]
+    role: scaled query-key dot products plus the pair bias and mask term
+    code: "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+    code_bindings:
+      - { lexeme: combined_logits, ref: values.combined_logits, access: write }
+      - { lexeme: q, ref: values.qkv, access: read }
+      - { lexeme: k, ref: values.qkv, access: read }
+      - { lexeme: pair_bias, ref: values.pair_bias, access: read }
+  - id: softmax_attention
+    label: Normalize over keys
+    operation: softmax
+    shape_rule: softmax
+    inputs: [values.combined_logits]
+    outputs: [values.attention_weights]
+    role: one softmax per head over the key axis, which is where a large negative mask value drives a disallowed pair to zero weight
+    code: "attention_weights = softmax(combined_logits, dim=keys)"
+    code_bindings:
+      - { lexeme: attention_weights, ref: values.attention_weights, access: write }
+      - { lexeme: combined_logits, ref: values.combined_logits, access: read }
+  - id: project_content_gate
+    label: Project the content gate
+    operation: content_gate_projection
+    shape_rule: linear
+    inputs: [values.normalized_state]
+    outputs: [values.content_gate]
+    role: a per-query, per-head sigmoid gate read from the query's own normalized activation, applied after the weighted average rather than before it
+    code: "content_gate = sigmoid(LinearNoBias(a_norm))"
+    code_bindings:
+      - { lexeme: content_gate, ref: values.content_gate, access: write }
+      - { lexeme: a_norm, ref: values.normalized_state, access: read }
+  - id: aggregate_gated_values
+    label: Aggregate values and gate
+    operation: gated_value_aggregation
+    shape_rule: linear
+    inputs: [values.attention_weights, values.qkv, values.content_gate]
+    outputs: [values.attention_context]
+    role: average the per-head values under the attention weights, then scale each query's result by its own content gate
+    code: "attention_context = content_gate * weighted_sum(attention_weights, v)"
+    code_bindings:
+      - { lexeme: attention_context, ref: values.attention_context, access: write }
+      - { lexeme: attention_weights, ref: values.attention_weights, access: read }
+      - { lexeme: v, ref: values.qkv, access: read }
+      - { lexeme: content_gate, ref: values.content_gate, access: read }
+  - id: project_attention_update
+    label: Concatenate heads and project
+    operation: concat_heads_and_project
+    shape_rule: linear
+    inputs: [values.attention_context]
+    outputs: [values.projected_update]
+    role: concatenate the per-head contexts and project them back to the attended width
+    code: "projected_update = LinearNoBias(concat_heads(attention_context))"
+    code_bindings:
+      - { lexeme: projected_update, ref: values.projected_update, access: write }
+      - { lexeme: attention_context, ref: values.attention_context, access: read }
+  - id: project_output_gate
+    label: Project the AdaLN-Zero gate
+    operation: adaln_zero_gate_projection
+    shape_rule: linear
+    inputs: [ports.conditioning_signal]
+    outputs: [values.output_gate]
+    role: a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds
+    code: "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+    code_bindings:
+      - { lexeme: output_gate, ref: values.output_gate, access: write }
+      - { lexeme: conditioning_signal, ref: ports.conditioning_signal, access: read }
+  - id: apply_output_gate
+    label: Apply the AdaLN-Zero gate
+    operation: adaln_zero_output_gate
+    shape_rule: preserve
+    inputs: [values.projected_update, values.output_gate]
+    outputs: [ports.attention_output]
+    role: gate the projected update before returning it
+    code: "attention_output = output_gate * projected_update"
+    code_bindings:
+      - { lexeme: attention_output, ref: ports.attention_output, access: write }
+      - { lexeme: projected_update, ref: values.projected_update, access: read }
+      - { lexeme: output_gate, ref: values.output_gate, access: read }
+  - id: return_ungated_update
+    label: Return the update ungated
+    operation: return_update_without_adaln_zero_gate
+    shape_rule: preserve
+    inputs: [values.projected_update]
+    outputs: [ports.attention_output]
+    role: with no conditioning signal there is no AdaLN-Zero gate, so the projected update is returned as it stands
+    code: "attention_output = projected_update"
+    code_bindings:
+      - { lexeme: attention_output, ref: ports.attention_output, access: write }
+      - { lexeme: projected_update, ref: values.projected_update, access: read }
+visual_template:
+  grid:
+    columns: 15
+    rows: 6
+    column_sizing: content
+    row_sizing: content
+    col_gap: 20
+    row_gap: 36
+  nodes:
+    - { id: single_state, ref: ports.single_state, col: 1, row: 1, prominence: secondary, treatment: compact }
+    - { id: conditioning_signal, ref: ports.conditioning_signal, col: 1, row: 3, prominence: secondary, treatment: compact }
+    - { id: pair_context, ref: ports.pair_context, col: 1, row: 5, prominence: secondary, treatment: compact }
+    - { id: mask_bias, ref: ports.mask_bias, col: 1, row: 6, prominence: context, treatment: chip }
+    - { id: adaln_normalize, ref: steps.adaln_normalize, col: 2, row: 1, prominence: primary, treatment: compact }
+    - { id: layer_norm_normalize, ref: steps.layer_norm_normalize, col: 2, row: 2, prominence: primary, treatment: compact }
+    - { id: form_pair_bias_term, ref: steps.form_pair_bias_term, col: 2, row: 5, prominence: primary, treatment: compact }
+    - { id: normalized_state, ref: values.normalized_state, col: 3, row: 1, prominence: context, treatment: compact }
+    - { id: pair_bias, ref: values.pair_bias, col: 3, row: 5, prominence: context, treatment: compact }
+    - { id: project_qkv, ref: steps.project_qkv, col: 4, row: 1, prominence: primary, treatment: compact }
+    - { id: project_content_gate, ref: steps.project_content_gate, col: 4, row: 3, prominence: primary, treatment: compact }
+    - { id: qkv, ref: values.qkv, col: 5, row: 1, prominence: context, treatment: compact }
+    - { id: content_gate, ref: values.content_gate, col: 5, row: 3, prominence: context, treatment: compact }
+    - { id: form_attention_logits, ref: steps.form_attention_logits, col: 6, row: 1, prominence: primary, treatment: compact }
+    - { id: combined_logits, ref: values.combined_logits, col: 7, row: 1, prominence: context, treatment: compact }
+    - { id: softmax_attention, ref: steps.softmax_attention, col: 8, row: 1, prominence: primary, treatment: compact }
+    - { id: attention_weights, ref: values.attention_weights, col: 9, row: 1, prominence: context, treatment: compact }
+    - { id: aggregate_gated_values, ref: steps.aggregate_gated_values, col: 10, row: 1, prominence: primary, treatment: compact }
+    - { id: attention_context, ref: values.attention_context, col: 11, row: 1, prominence: context, treatment: compact }
+    - { id: project_attention_update, ref: steps.project_attention_update, col: 12, row: 1, prominence: primary, treatment: compact }
+    - { id: project_output_gate, ref: steps.project_output_gate, col: 12, row: 3, prominence: primary, treatment: compact }
+    - { id: projected_update, ref: values.projected_update, col: 13, row: 1, prominence: context, treatment: compact }
+    - { id: output_gate, ref: values.output_gate, col: 13, row: 3, prominence: context, treatment: compact }
+    - { id: apply_output_gate, ref: steps.apply_output_gate, col: 14, row: 1, prominence: primary, treatment: compact }
+    - { id: return_ungated_update, ref: steps.return_ungated_update, col: 14, row: 2, prominence: primary, treatment: compact }
+    - { id: attention_output, ref: ports.attention_output, col: 15, row: 1, prominence: secondary, treatment: compact }
+  segments:
+    - id: normalize_and_project
+      label: Normalize, then project
+      description: The conditioning signal decides how the attended activation is normalized. The normalized result feeds the per-head query, key, and value projections and the content gate, while the pair tensor and the caller's additive mask term are folded into one bias term.
+      node_refs:
+        - ports.single_state
+        - ports.conditioning_signal
+        - ports.pair_context
+        - ports.mask_bias
+        - steps.adaln_normalize
+        - steps.layer_norm_normalize
+        - steps.form_pair_bias_term
+        - values.normalized_state
+        - values.pair_bias
+        - steps.project_qkv
+        - steps.project_content_gate
+        - values.qkv
+        - values.content_gate
+    - id: attention_weights
+      label: Form and normalize the weights
+      description: Scaled query-key dot products carry the pair bias and mask term into the logits, and one softmax over keys turns them into attention weights. A large negative mask value here is what removes a disallowed pair.
+      node_refs:
+        - steps.form_attention_logits
+        - values.combined_logits
+        - steps.softmax_attention
+        - values.attention_weights
+    - id: aggregate_and_gate
+      label: Aggregate, project, gate
+      description: The shared weights average the per-head values, the content gate scales each query's result, the heads are concatenated and projected back to the attended width, and the conditioned path applies one more near-closed gate before returning the update.
+      node_refs:
+        - steps.aggregate_gated_values
+        - values.attention_context
+        - steps.project_attention_update
+        - values.projected_update
+        - steps.project_output_gate
+        - values.output_gate
+        - steps.apply_output_gate
+        - steps.return_ungated_update
+        - ports.attention_output
+evidence_policy:
+  generic_definition: Reusable vocabulary for one attention pass whose logits carry an additive pair-derived bias and whose normalization and output gating are switched by the presence of a conditioning signal. The block ends at the returned update; residual addition, the repeat count of any surrounding block loop, and the construction of the mask term itself belong to the surrounding architecture layer.
+  usage_requires:
+    - Evidence that a projection of the pair tensor is added to the attention logits.
+    - Evidence for which additive mask term, if any, the caller supplies on that same slot.
+    - Evidence for whether a conditioning signal is supplied, which fixes both the normalization branch and whether the output gate is present.
+    - Evidence for the head count and the per-head width, neither of which the boundary tensors determine.

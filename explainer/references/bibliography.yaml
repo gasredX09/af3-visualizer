@@ -265,6 +265,24 @@ sources:
     path: src/alphafold3/model/network/template_modules.py
     url: https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py
 
+  - id: af3_atom_cross_attention_code
+    kind: code
+    title: AlphaFold 3 atom attention encoder and decoder implementation
+    organization: Google DeepMind
+    repository: google-deepmind/alphafold3
+    revision: f3e86f27dfac16559d16f470bb2f9323eb357f1f
+    path: src/alphafold3/model/network/atom_cross_attention.py
+    url: https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/atom_cross_attention.py
+
+  - id: af3_diffusion_head_code
+    kind: code
+    title: AlphaFold 3 diffusion module and sampler implementation
+    organization: Google DeepMind
+    repository: google-deepmind/alphafold3
+    revision: f3e86f27dfac16559d16f470bb2f9323eb357f1f
+    path: src/alphafold3/model/network/diffusion_head.py
+    url: https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_head.py
+
   - id: af3_featurization_code
     kind: code
     title: AlphaFold 3 input feature construction, including relative position encoding

@@ -1744,3 +1744,57 @@ boards:
           title: Average and project
           role: module output
           inside: The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution.
+
+  - id: token_attention_pair_bias_internals
+    kind: standard_block_instance
+    title: Token Attention with Pair Bias Internals
+    summary: One block's attention branch at token resolution. Adaptive LayerNorm recomputes a scale and shift from the conditioned single vector, the conditioned pair tensor is projected into a per-head additive bias on the logits, sixteen heads attend over all tokens, and an AdaLN-Zero gate that starts almost closed scales the update on its way out. The additive mask slot stays empty here, so the pair tensor is the only source of bias.
+    parent: diffusion_transformer_token_detail
+    subject_ref: modules.token_attention_pair_bias
+    expansion_depth: 0
+    block_instance_ref: block_instances.token_level_attention_pair_bias
+
+  - id: token_conditioned_transition_internals
+    kind: standard_block_instance
+    title: Token Conditioned Transition Internals
+    summary: One block's transition branch at token resolution, reading the same pre-block activation the attention branch reads rather than its output. Adaptive LayerNorm, a SwiGLU expansion to twice the block width, a projection back down, and the same near-closed AdaLN-Zero gate. Half the expansion factor of the Pairformer's own Transition, a direct compute trade for a block that runs on every denoising step.
+    parent: diffusion_transformer_token_detail
+    subject_ref: modules.token_conditioned_transition
+    expansion_depth: 0
+    block_instance_ref: block_instances.token_level_conditioned_transition
+
+  - id: atom_encoder_attention_pair_bias_internals
+    kind: standard_block_instance
+    title: Encoder Atom Attention Internals
+    summary: The same attention block as the token level, running inside the encoder's AtomTransformer call. Two things change. The additive slot that stays empty at token level now carries the sequence-local mask that confines each atom to a 128-atom neighbourhood, and conditioning is per atom rather than per token. Four heads instead of sixteen, inside a three-block loop instead of twenty-four.
+    parent: atom_attention_encoder_detail
+    subject_ref: modules.atom_encoder_atom_transformer
+    expansion_depth: 0
+    block_instance_ref: block_instances.atom_encoder_attention_pair_bias
+
+  - id: atom_encoder_conditioned_transition_internals
+    kind: standard_block_instance
+    title: Encoder Atom Transition Internals
+    summary: The transition branch of the encoder's atom-level blocks, conditioned on each atom's own vector and expanded over the 128-channel atom width. The locality mask that shapes the attention branch never reaches this branch, which has no pair input at all.
+    parent: atom_attention_encoder_detail
+    subject_ref: modules.atom_encoder_atom_transformer
+    expansion_depth: 0
+    block_instance_ref: block_instances.atom_encoder_conditioned_transition
+
+  - id: atom_decoder_attention_pair_bias_internals
+    kind: standard_block_instance
+    title: Decoder Atom Attention Internals
+    summary: The third occurrence of the same attention block, shaped exactly like the encoder's but conditioned on the tensors the encoder saved before the token bottleneck rather than on anything recomputed here. That reuse of the saved conditioning and pair tensors is what makes the decoder a skip connection across the bottleneck rather than a second encoder.
+    parent: atom_attention_decoder_detail
+    subject_ref: modules.atom_decoder_atom_transformer
+    expansion_depth: 0
+    block_instance_ref: block_instances.atom_decoder_attention_pair_bias
+
+  - id: atom_decoder_conditioned_transition_internals
+    kind: standard_block_instance
+    title: Decoder Atom Transition Internals
+    summary: The transition branch of the decoder's atom-level blocks, conditioned on the encoder's saved per-atom conditioning. Same shape as the encoder's atom-level transition, separate parameters; what is reused across the three occurrences is the routine, not the weights.
+    parent: atom_attention_decoder_detail
+    subject_ref: modules.atom_decoder_atom_transformer
+    expansion_depth: 0
+    block_instance_ref: block_instances.atom_decoder_conditioned_transition

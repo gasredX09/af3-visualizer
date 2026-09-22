@@ -5,6 +5,34 @@ family: transformer
 status: review
 task_modes:
   - prediction
+
+reference_configuration:
+  diffusion_token_channels: 768
+  diffusion_token_transformer_blocks: 24
+  diffusion_token_transformer_heads: 16
+  diffusion_token_transformer_head_width: 48
+  diffusion_token_transition_hidden_width: 1536
+  atom_channels: 128
+  atom_pair_channels: 16
+  atom_transformer_blocks: 3
+  atom_transformer_heads: 4
+  atom_transformer_head_width: 32
+  atom_transition_hidden_width: 256
+  sequence_local_attention_queries: 32
+  sequence_local_attention_keys: 128
+  evidence:
+    status: confirmed_from_code
+    refs:
+      - source_ref: af3_2024
+        role: paper_evidence
+        locator: "Supplementary Algorithm 20 signature (c_atom=128, c_atompair=16, c_token=768); Algorithm 20 line 5 (DiffusionTransformer with N_block=24, N_head=16); Algorithm 7 signature (AtomTransformer with N_block=3, N_queries=32, N_keys=128); Algorithm 5 line 15 and Algorithm 6 line 2 (both atom-level calls use N_block=3, N_head=4); Algorithm 24 header (c = c_a / N_head, giving 48 at token level and 32 at atom level); Algorithm 25 signature (expansion factor n=2, giving 1536 and 256)"
+      - source_ref: af3_self_attention_code
+        role: configuration_evidence
+        locator: "diffusion_transformer.py Transformer.Config (num_blocks=24, num_intermediate_factor=2), SelfAttentionConfig (num_head=16), CrossAttentionConfig (num_head=4); key_dim defaults to the activation width and is then divided by the head count, which is where the per-head widths come from"
+      - source_ref: af3_atom_cross_attention_code
+        role: configuration_evidence
+        locator: "atom_cross_attention.py AtomCrossAttEncoderConfig (per_token_channels=768, per_atom_channels=128, per_atom_pair_channels=16, atom_transformer num_blocks=3 and num_intermediate_factor=2) and AtomCrossAttDecoderConfig (per_atom_channels=128, same atom_transformer settings)"
+
 sources:
   - source_ref: af3_2024
     role: architecture_source
@@ -806,6 +834,122 @@ representations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 21 lines 6-12 (single conditioning branch; c_s=384 per the algorithm's own signature)
+  - id: noisy_atom_positions
+    scale: atom
+    semantic_role: the current noisy heavy-atom coordinates handed to the diffusion module at this denoising step, in angstroms, before the module rescales them
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries:
+      - one 3D position per heavy atom at the current point in the denoising trajectory
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 signature (DiffusionModule({x_l^noisy}, t_hat, ...)); Algorithm 18 line 7 (the churned positions SampleDiffusion passes in at every sampling step)
+  - id: scaled_noisy_atom_positions
+    scale: atom
+    semantic_role: the same noisy coordinates divided by sqrt(t_hat^2 + sigma_data^2), which makes them dimensionless and roughly unit variance at every noise level, so one set of weights sees inputs on the same numeric scale across the whole schedule
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries:
+      - dimensionless per-atom position at roughly unit variance
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 2 (r_l^noisy = x_l^noisy / sqrt(t_hat^2 + sigma_data^2), r_l^noisy in R^3); sigma_data=16 per Algorithm 20's signature
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: "diffusion_head.py DiffusionHead.__call__ (act = positions_noisy * atom_mask; act = act / jnp.sqrt(noise_level**2 + SIGMA_DATA**2)), performed by the diffusion module before the atom encoder is called, not inside the encoder"
+  - id: atom_single_representation
+    scale: atom
+    semantic_role: the per-atom activation track (q_l) that both atom-level transformer passes attend over, at the atom channel width c_atom=128; distinct from the per-atom conditioning that modulates it
+    shape: "N_atom x 128"
+    glyph: single
+    carries:
+      - per-atom activation carrying reference-conformer chemistry
+      - the atom's current noisy position, in the encoder pass
+      - the broadcast token-level update, in the decoder pass
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 7, 11, 15 (q_l in R^c_atom, initialized from the atom conditioning, then carrying the projected noisy position into AtomTransformer); Algorithm 6 lines 1-2 (the decoder's own q_l); Algorithm 20 signature (c_atom=128)
+  - id: atom_single_conditioning
+    scale: atom
+    semantic_role: the per-atom conditioning vector (c_l) built from reference-conformer metadata and, in conditioned mode, the parent token's trunk single representation; this is what drives Adaptive LayerNorm at atom resolution, one conditioning vector per atom rather than per token
+    shape: "N_atom x 128"
+    glyph: single
+    carries:
+      - per-atom reference position, charge, element, and atom-name encoding
+      - the parent token's raw trunk single representation, broadcast onto every atom of that token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 1 (c_l = LinearNoBias(concat(ref_pos, ref_charge, ref_mask, ref_element, ref_atom_name_chars)), c_l in R^c_atom) and line 9 (c_l += LinearNoBias(LayerNorm(s_trunk_tok_idx(l)))); Algorithm 7 line 2, where c_l takes the s_i slot of DiffusionTransformer
+  - id: atom_pair_representation
+    scale: atom_pair
+    semantic_role: the per-atom-pair tensor (p_lm) at the narrow atom-pair width c_atompair=16, built from reference-conformer geometry and, in conditioned mode, the trunk's already-conditioned pair tensor read at the two atoms' parent tokens; it supplies the attention bias for both atom-level passes
+    shape: "N_atom x N_atom x 16"
+    glyph: pair
+    carries:
+      - reference-conformer offsets and inverse-square-distance proximity between atom pairs, zeroed across separately generated conformers
+      - the parent token pair's entry in the conditioned pair tensor
+      - the two atoms' own conditioning vectors, folded in as an outer sum
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 2-6 (reference offsets, same-instance validity mask, inverse-square distances), line 10 (p_lm += LinearNoBias(LayerNorm(z_tok_idx(l) tok_idx(m)))), lines 13-14 (outer sum of the two atoms' conditioning, then a 3-layer ReLU MLP); Algorithm 20 signature (c_atompair=16)
+  - id: sequence_local_attention_mask
+    scale: atom_pair
+    semantic_role: the additive sequence-local mask (beta_lm) that restricts atom attention to rectangular blocks along the diagonal, 0 on allowed atom pairs and -10^10 elsewhere; it is an additive logit term, not a separate masking mechanism, occupying the same slot the pair bias writes into
+    shape: "N_atom x N_atom"
+    glyph: pair
+    carries:
+      - per-atom-pair additive logit offset that is either zero or effectively negative infinity
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: "Supplementary Algorithm 7 line 1 (beta_lm = 0 if |l - c| < N_queries/2 and |m - c| < N_keys/2 for some subset centre c, else -10^10), with N_queries=32, N_keys=128 and subset centres at 15.5, 47.5, 79.5 and so on; Algorithm 24 line 8, where beta enters the same additive term as the pair projection"
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: "atom_cross_attention.py, where the released implementation realizes the same restriction as an explicit queries/keys gather layout (batch.atom_cross_att.queries_to_keys) feeding CrossAttTransformer, rather than materializing a full N_atom x N_atom bias tensor"
+  - id: diffusion_token_activation
+    scale: token
+    semantic_role: the per-token activation (a_i) inside the diffusion module at the token channel width c_token=768; produced by mean-pooling the atom encoder's output, refined by the token-level transformer, and read back down by the atom decoder. It is a per-denoising-step activation, distinct from the trunk's own single_state and from the diffusion conditioning tensors
+    shape: "N_token x 768"
+    glyph: single
+    carries:
+      - per-token summary of the current noisy structure at atom resolution
+      - the fully conditioned single vector, injected once as a residual at the token bottleneck's entrance
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 16 (a_i = mean over the token's atoms of relu(LinearNoBias(q_l)), a_i in R^c_token); Algorithm 20 lines 3-6 and signature (c_token=768), which is a wider c_token than the bare-mode call in Algorithm 2 line 1 (c_token=384)
+  - id: atom_position_update
+    scale: atom
+    semantic_role: the atom decoder's returned per-atom position update (r_l^update), in the same dimensionless space as the scaled noisy positions rather than in angstroms; the diffusion module rescales and blends it with the noisy input to produce coordinates
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries:
+      - per-atom 3D correction proposed by this denoising step
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))); Algorithm 20 line 8, where it is rescaled by sigma_data * t_hat / sqrt(sigma_data^2 + t_hat^2) and blended with the noisy input
 
 value_sites:
   - id: single_state_input
@@ -1452,7 +1596,7 @@ value_sites:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 21 lines 3-5, 13 (for all b in [1,2] do z_ij += Transition(z_ij, n=2); return {s_i}, {z_ij}) -- the pair branch's final returned tensor, ready to bias AttentionPairBias logits throughout DiffusionTransformer; not yet consumed by any relation as of this task
+          locator: Supplementary Algorithm 21 lines 3-5, 13 (for all b in [1,2] do z_ij += Transition(z_ij, n=2); return {s_i}, {z_ij}) -- the pair branch's final returned tensor, which biases AttentionPairBias logits at every block of the token-level DiffusionTransformer and is also the pair tensor broadcast onto atom pairs inside the atom attention encoder at Algorithm 20 line 3
   - id: diffusion_single_conditioning_projected
     representation_ref: representations.diffusion_single_conditioning
     scope_ref: modules.diffusion_conditioning
@@ -1482,7 +1626,248 @@ value_sites:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 21 lines 10-13 (for all b in [1,2] do s_i += Transition(s_i, n=2); return {s_i}, {z_ij}) -- the single branch's final returned tensor, ready to drive Adaptive LayerNorm scale/shift throughout DiffusionTransformer; not yet consumed by any relation as of this task
+          locator: Supplementary Algorithm 21 lines 10-13 (for all b in [1,2] do s_i += Transition(s_i, n=2); return {s_i}, {z_ij}) -- the single branch's final returned tensor, which drives Adaptive LayerNorm scale/shift at every block of the token-level DiffusionTransformer and is also injected once additively at Algorithm 20 line 4
+  - id: noisy_atom_positions
+    representation_ref: representations.noisy_atom_positions
+    scope_ref: architecture
+    boundary: input
+    role: raw_noisy_atom_positions_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 signature ({x_l^noisy} passed into DiffusionModule), the raw per-atom coordinates this denoising step starts from, fixed by this plan as this exact id
+  - id: scaled_noisy_atom_positions
+    representation_ref: representations.scaled_noisy_atom_positions
+    scope_ref: architecture
+    role: dimensionless_scaled_noisy_positions
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 2 (r_l^noisy = x_l^noisy / sqrt(t_hat^2 + sigma_data^2)), the form in which the atom attention encoder actually receives the positions; the scaling is DiffusionModule's own line, performed before the encoder call
+  - id: atom_single_conditioning_base
+    representation_ref: representations.atom_single_conditioning
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: per_atom_reference_metadata_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 1 (c_l = LinearNoBias(concat(ref_pos, ref_charge, ref_mask, ref_element, ref_atom_name_chars))), the atom conditioning as it stands before any trunk information is added
+  - id: atom_single_conditioning_trunk_broadcast
+    representation_ref: representations.atom_single_conditioning
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: trunk_single_broadcast_atom_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 9 (c_l += LinearNoBias(LayerNorm(s_trunk_tok_idx(l)))), where every atom inherits a projected copy of its parent token's raw trunk single representation; this is the conditioning the atom transformer actually receives
+  - id: atom_pair_reference_geometry
+    representation_ref: representations.atom_pair_representation
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: reference_conformer_atom_pair_geometry
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 2-6 (offsets between reference positions, the same-instance validity mask v_lm, and the inverse-square-distance proximity feature, each zeroed where v_lm marks the two atoms as belonging to separately generated conformers)
+  - id: atom_pair_trunk_broadcast
+    representation_ref: representations.atom_pair_representation
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: conditioned_pair_broadcast_atom_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 10 (p_lm += LinearNoBias(LayerNorm(z_tok_idx(l) tok_idx(m)))), where z is the conditioned pair tensor DiffusionConditioning just produced, not the trunk's own pair output; see relations.conditioned_pair_broadcasts_onto_atom_pairs
+  - id: atom_pair_conditioning_refined
+    representation_ref: representations.atom_pair_representation
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: atom_pair_after_conditioning_fold_and_mlp
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 13-14 (p_lm += LinearNoBias(relu(c_l)) + LinearNoBias(relu(c_m)), then a 3-layer ReLU MLP), the same outer-sum-of-two-projections pattern used to build z_init; in conditioned mode the c_l folded in here already carries the trunk broadcast from line 9
+  - id: atom_query_initial
+    representation_ref: representations.atom_single_representation
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: atom_query_initialized_from_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 7 (q_l = c_l), which the algorithm box places before line 9's trunk broadcast, so the copy taken here is of the reference-metadata conditioning only; see open_questions.atom_encoder_query_initialization_order_paper_code_divergence
+  - id: atom_query_with_noisy_position
+    representation_ref: representations.atom_single_representation
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: atom_query_with_projected_noisy_position
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 11 (q_l += LinearNoBias(r_l)), the line that turns the query into a real denoising signal by encoding both what the atom should look like and where it currently sits
+  - id: atom_query_after_encoder_transformer
+    representation_ref: representations.atom_single_representation
+    scope_ref: modules.atom_attention_encoder_conditioned
+    role: atom_query_after_encoder_atom_transformer
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15 ({q_l} = AtomTransformer({q_l}, {c_l}, {p_lm}, N_block=3, N_head=4)), the per-atom activation as it stands after sequence-local attention and before mean-pooling to tokens
+  - id: atom_attention_encoder_token_output
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: architecture
+    role: mean_pooled_per_token_atom_encoding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 16 (a_i = mean over the atoms of token i of relu(LinearNoBias(q_l))), the encoder's aggregated per-token output and the tensor the token-level transformer works on, fixed by this plan as this exact id
+  - id: atom_attention_encoder_query_skip
+    representation_ref: representations.atom_single_representation
+    scope_ref: architecture
+    role: encoder_query_skip_tensor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 17 (q_l^skip = q_l), discarded by the bare-mode call in Algorithm 2 line 1 and used here as the decoder's starting point rather than recomputing per-atom detail
+  - id: atom_attention_encoder_single_conditioning_skip
+    representation_ref: representations.atom_single_conditioning
+    scope_ref: architecture
+    role: encoder_single_conditioning_skip_tensor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 17 (c_l^skip = c_l), reused unchanged by the decoder at Algorithm 6 line 2; atom identity and the trunk broadcast do not change within one denoising step, so nothing here is recomputed
+  - id: atom_attention_encoder_pair_skip
+    representation_ref: representations.atom_pair_representation
+    scope_ref: architecture
+    role: encoder_pair_skip_tensor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 17 (p_lm^skip = p_lm), reused unchanged as the decoder's pair bias at Algorithm 6 line 2
+  - id: sequence_local_atom_attention_mask
+    representation_ref: representations.sequence_local_attention_mask
+    scope_ref: architecture
+    role: sequence_local_attention_mask_term
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 7 line 1, computed identically for every AtomTransformer call and modeled here as one shared value site because it depends only on flat atom indexing and the fixed window sizes, not on any activation
+  - id: diffusion_token_activation_conditioned
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: architecture
+    role: token_activation_after_additive_conditioning_injection
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 4 (a_i += LinearNoBias(LayerNorm(s_i))), a one-time additive injection of the fully conditioned single vector at the token bottleneck's entrance; separate from, and in addition to, the Adaptive LayerNorm modulation that then happens inside every one of the 24 blocks
+  - id: diffusion_token_block_input
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: modules.diffusion_transformer_token_level
+    role: diffusion_transformer_block_activation_read
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 lines 1-3, the activation as one block reads it; both branches of the block read this same value independently
+  - id: diffusion_token_attention_branch
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: modules.diffusion_transformer_token_level
+    role: attention_branch_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2 (b_i = AttentionPairBias(a_i, s_i, z_ij, beta_ij, N_head)), the attention branch's returned update with no residual of its own
+  - id: diffusion_token_transition_branch
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: modules.diffusion_transformer_token_level
+    role: transition_branch_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3 (ConditionedTransitionBlock(a_i, s_i)), which reads the block's original input rather than the attention branch's output
+  - id: diffusion_token_block_output
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: modules.diffusion_transformer_token_level
+    role: diffusion_transformer_block_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3 (a_i <- b_i + ConditionedTransitionBlock(a_i, s_i)), the block's single combined update; see open_questions.diffusion_transformer_block_residual_paper_code_divergence
+  - id: diffusion_token_activation_normalized
+    representation_ref: representations.diffusion_token_activation
+    scope_ref: architecture
+    role: token_activation_after_output_layer_norm
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 6 (a_i <- LayerNorm(a_i)), applied to the 24-block stack's output before the atom decoder reads it
+  - id: atom_query_broadcast_with_skip
+    representation_ref: representations.atom_single_representation
+    scope_ref: modules.atom_attention_decoder
+    role: broadcast_token_update_added_to_query_skip
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 1 (q_l = LinearNoBias(a_tok_idx(l)) + q_l^skip), where each atom picks up its parent token's updated activation and adds it to where that atom left off before the token bottleneck
+  - id: atom_query_after_decoder_transformer
+    representation_ref: representations.atom_single_representation
+    scope_ref: modules.atom_attention_decoder
+    role: atom_query_after_decoder_atom_transformer
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 ({q_l} = AtomTransformer({q_l}, {c_l^skip}, {p_lm^skip}, N_block=3, N_head=4)), local reconciliation of the just-broadcast token update against each atom's own saved fine context
+  - id: atom_attention_decoder_position_update
+    representation_ref: representations.atom_position_update
+    scope_ref: architecture
+    role: per_atom_position_update_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), the decoder's returned per-atom update, consumed by Algorithm 20 line 8's blending step, fixed by this plan as this exact id
 
 modules:
   - id: pairformer_stack
@@ -2137,6 +2522,317 @@ modules:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 22 (FourierEmbedding), full algorithm box (w, b ~ N(0, I_c), sampled once before training; return cos(2*pi*(t_hat*w + b))); Supplementary Algorithm 21 line 8, call site (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256)); Supplementary Algorithm 20 signature (sigma_data=16)
+  - id: sequence_local_attention_mask
+    parent_ref: architecture
+    decomposition:
+      status: leaf
+    label: Sequence-Local Attention Mask
+    kind: operator
+    mechanisms: [sequence_local_window_masking]
+    role: build the additive block-diagonal mask that restricts atom attention to a local neighbourhood. Subset centres are spaced exactly N_queries=32 apart (15.5, 47.5, 79.5 and so on); an atom pair is allowed when some centre has the query atom inside its plus or minus 16 query half-window and the key atom inside its much wider plus or minus 64 key half-window, so each band's queries see a 128-atom key neighbourhood and realized key windows overlap between neighbouring bands. Disallowed pairs get an effectively infinite negative additive logit offset, zeroed after softmax. This is the whole content of AtomTransformer, which is otherwise the identical DiffusionTransformer routine the token level calls; the mask is what makes atom-level attention tractable at tens of thousands of atoms
+    scale: atom_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 7 line 1 and signature (N_queries=32, N_keys=128, S_subset_centres = {15.5, 47.5, 79.5, ...}); Supplementary Fig. 1 (rectangular blocks along the diagonal)
+  - id: atom_attention_encoder_conditioned
+    parent_ref: architecture
+    decomposition:
+      status: partial
+      reason: The per-atom embedding, the two trunk broadcasts, the noisy-position injection, and the mean-pooling to tokens are modeled at value-site granularity, matching the depth already given to modules.diffusion_conditioning and modules.relative_position_encoding. Only the AtomTransformer call at Algorithm 5 line 15 gets its own child module, because that call is where the architecture's shared attention and transition blocks are actually instantiated and therefore needs a subject its block_instances can bind ports against.
+    label: Atom Attention Encoder (conditioned mode)
+    kind: encoder
+    mechanisms: [per_atom_metadata_embedding, trunk_context_broadcast, noisy_position_injection, sequence_local_atom_attention, per_atom_to_per_token_mean_pooling]
+    role: the same AtomAttentionEncoder routine modules.atom_attention_encoder_bare calls, invoked here with all three of its optional arguments populated, which turns a one-time chemistry summarizer into a per-denoising-step position-correction encoder. Every atom is broadcast a projected copy of its parent token's trunk single representation, every atom pair is broadcast its two parent tokens' entry in the conditioned pair tensor, and the atom's own scaled noisy position is projected directly into its query. Sequence-local attention then runs over the resulting per-atom tensors, the result is mean-pooled into one vector per token, and the three atom-resolution tensors are saved for the decoder rather than recomputed there. Note the asymmetry in what it is handed (Algorithm 20 line 3), raw trunk single but already-conditioned pair
+    scale: atom
+    repeats: 1
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 (AtomAttentionEncoder), called from Supplementary Algorithm 20 line 3 with {r_l^noisy}, {s_i^trunk}, and {z_ij} all provided, so lines 8-12 run
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_encoder, whose trunk_single_cond and trunk_pair_cond arguments are the same two optional conditioning inputs, and which returns token_act alongside the skip_connection, queries_single_cond, and pair_cond tensors the decoder consumes
+  - id: atom_encoder_atom_transformer
+    parent_ref: modules.atom_attention_encoder_conditioned
+    decomposition:
+      status: leaf
+    label: Atom Transformer (encoder pass)
+    kind: attention
+    mechanisms: [attention_with_pair_bias, conditioned_transition, sequence_local_masking]
+    role: the encoder's AtomTransformer call, which is the identical DiffusionTransformer routine the token level runs, wearing the sequence-local mask. Three blocks, four heads, each block one AttentionPairBias branch and one ConditionedTransitionBlock branch reading the same input and summed. Conditioning is per atom here (each atom's own c_l) rather than per token, so every block activates the full Adaptive LayerNorm and AdaLN-Zero machinery
+    scale: atom
+    repeats: 3
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15 ({q_l} = AtomTransformer({q_l}, {c_l}, {p_lm}, N_block=3, N_head=4)); Algorithm 7 line 2, which forwards straight to DiffusionTransformer (Algorithm 23) with the locality mask in the beta slot
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_encoder, which instantiates diffusion_transformer.CrossAttTransformer with AtomCrossAttEncoderConfig.atom_transformer (num_blocks=3, num_intermediate_factor=2) and CrossAttentionConfig.num_head=4
+  - id: diffusion_transformer_token_level
+    parent_ref: architecture
+    decomposition:
+      status: complete
+    label: Diffusion Transformer (token level)
+    kind: refiner
+    mechanisms: [attention_with_pair_bias, conditioned_transition, parallel_residual_block]
+    role: the only genuinely quadratic stage of the diffusion module, and the reason the atom-token-atom bottleneck exists at all. Twenty-four blocks of full self-attention over tokens, sixteen heads, with no locality mask (the beta slot is zero here, leaving the conditioned pair tensor as the only source of attention bias). Each block runs an AttentionPairBias branch and a ConditionedTransitionBlock branch off the same input and sums them. This is the same routine both atom-level passes call; only the mask, the block count, and the head count differ
+    scale: token
+    repeats: 24
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 5 ({a_i} <- DiffusionTransformer({a_i}, {s_i}, {z_ij}, beta_ij=0, N_block=24, N_head=16)); Algorithm 23 (DiffusionTransformer)
+        - source_ref: af3_self_attention_code
+          role: implementation_evidence
+          locator: diffusion_transformer.py Transformer.__call__ and Transformer.Config (num_blocks=24, attention.num_head=16), called from diffusion_head.py with pair_cond set and no locality mask
+  - id: token_attention_pair_bias
+    parent_ref: modules.diffusion_transformer_token_level
+    decomposition:
+      status: leaf
+    label: Attention with Pair Bias (token level)
+    kind: attention
+    mechanisms: [adaptive_layer_normalization, pair_logit_bias, gated_attention, adaln_zero_output_gate]
+    role: one block's attention branch. Adaptive LayerNorm reparametrizes the activation from the conditioned single vector, the conditioned pair tensor is projected into a per-head additive logit bias, attention runs over all tokens, and the projected result passes through an AdaLN-Zero gate that starts near closed. This is the same routine the Pairformer calls at Algorithm 17 line 7, there with no conditioning signal at all
+    scale: token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2; Algorithm 24 (AttentionPairBias), full algorithm box, taken with {s_i} not None so lines 1-2 and 12-13 are active
+        - source_ref: af3_self_attention_code
+          role: implementation_evidence
+          locator: diffusion_transformer.py self_attention, called with single_cond not None, plus adaptive_layernorm and adaptive_zero_init
+  - id: token_conditioned_transition
+    parent_ref: modules.diffusion_transformer_token_level
+    decomposition:
+      status: leaf
+    label: Conditioned Transition Block (token level)
+    kind: feed_forward
+    mechanisms: [adaptive_layer_normalization, swiglu, adaln_zero_output_gate]
+    role: one block's transition branch, and the detail that makes the block parallel rather than sequential. It reads the block's original input, not the attention branch's output, so both branches see the same activation and the block's only residual connection is the sum of the two. Structurally it is the Pairformer's own SwiGLU Transition with Adaptive LayerNorm in front and an AdaLN-Zero gate behind, at half the expansion factor (n=2 rather than 4), a direct compute trade for a block that runs up to 200 times per structure at inference
+    scale: token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3; Algorithm 25 (ConditionedTransitionBlock), full algorithm box, whose default expansion factor n=2 is half Algorithm 11's n=4
+        - source_ref: af3_self_attention_code
+          role: implementation_evidence
+          locator: diffusion_transformer.py transition_block with single_cond not None and Transformer.Config.num_intermediate_factor=2
+  - id: atom_attention_decoder
+    parent_ref: architecture
+    decomposition:
+      status: partial
+      reason: The broadcast plus skip addition and the final projection to a 3D update are modeled at value-site granularity, matching the treatment of modules.atom_attention_encoder_conditioned. Only the AtomTransformer call at Algorithm 6 line 2 gets its own child module, because that call is where the shared attention and transition blocks are instantiated and therefore needs a subject its block_instances can bind ports against.
+    label: Atom Attention Decoder
+    kind: decoder
+    mechanisms: [token_to_atom_broadcast, skip_connection, sequence_local_atom_attention, linear_projection]
+    role: the deliberate mirror image of the conditioned encoder, closing the atom-token-atom bottleneck. Every atom picks up its parent token's now-updated activation through a linear projection and adds it to its own saved query skip tensor, so no atom reconstructs fine-grained context from the coarse token update alone. Sequence-local attention then runs again on the saved conditioning and pair skip tensors rather than recomputed ones (atom identity, reference geometry, and the trunk broadcast do not change within one denoising step), letting atoms in a local neighbourhood harmonize the broadcast update with their own fine context. A LayerNorm and a linear projection down to three channels give the per-atom position update
+    scale: atom
+    repeats: 1
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 (AtomAttentionDecoder), full algorithm box, called from Algorithm 20 line 7
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_decoder, which projects token_act down to per_atom_channels, broadcasts it, adds enc.skip_connection, reruns CrossAttTransformer on enc.queries_single_cond and enc.pair_cond, then applies LayerNorm and a linear layer to 3 outputs
+  - id: atom_decoder_atom_transformer
+    parent_ref: modules.atom_attention_decoder
+    decomposition:
+      status: leaf
+    label: Atom Transformer (decoder pass)
+    kind: attention
+    mechanisms: [attention_with_pair_bias, conditioned_transition, sequence_local_masking]
+    role: the decoder's AtomTransformer call, identical in shape to the encoder's (three blocks, four heads, the same sequence-local mask) but conditioned on the encoder's saved skip tensors rather than on anything recomputed here. Separate parameters from the encoder pass; the reuse is of the routine, not of the weights
+    scale: atom
+    repeats: 3
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 ({q_l} = AtomTransformer({q_l}, {c_l^skip}, {p_lm^skip}, N_block=3, N_head=4)); Algorithm 7 line 2 forwarding to Algorithm 23
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_decoder, which instantiates a second diffusion_transformer.CrossAttTransformer named atom_transformer_decoder with AtomCrossAttDecoderConfig.atom_transformer (num_blocks=3, num_intermediate_factor=2) and CrossAttentionConfig.num_head=4
+
+block_instances:
+  - id: token_level_attention_pair_bias
+    block_ref: standard_blocks/attention-pair-bias.yaml
+    subject_ref: modules.token_attention_pair_bias
+    variant: adaln_conditioned
+    use_scope: whole_module
+    conformance: exact
+    port_bindings:
+      - port_ref: ports.single_state
+        relation_refs: [relations.token_block_activation_enters_attention_branch]
+      - port_ref: ports.conditioning_signal
+        relation_refs: [relations.conditioned_single_drives_token_attention_adaln]
+      - port_ref: ports.pair_context
+        relation_refs: [relations.conditioned_pair_biases_token_attention]
+      - port_ref: ports.attention_output
+        relation_refs: [relations.token_attention_branch_produces_update]
+    parameter_bindings:
+      - { parameter_ref: parameters.h, configuration_ref: reference_configuration.diffusion_token_transformer_heads }
+      - { parameter_ref: parameters.c, configuration_ref: reference_configuration.diffusion_token_transformer_head_width }
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2 called from Algorithm 20 line 5 with beta_ij=0 and N_head=16, so the additive mask slot stays empty and the conditioned pair tensor is the only source of attention bias
+        - source_ref: af3_self_attention_code
+          role: implementation_evidence
+          locator: diffusion_transformer.py self_attention with single_cond supplied and pair_logits precomputed from pair_cond, exactly the conditioned variant of this template
+  - id: token_level_conditioned_transition
+    block_ref: standard_blocks/conditioned-transition-block.yaml
+    subject_ref: modules.token_conditioned_transition
+    variant: adaln_conditioned_transition
+    use_scope: whole_module
+    conformance: exact
+    port_bindings:
+      - port_ref: ports.single_state
+        relation_refs: [relations.token_block_activation_enters_transition_branch]
+      - port_ref: ports.conditioning_signal
+        relation_refs: [relations.conditioned_single_drives_token_transition_adaln]
+      - port_ref: ports.transition_output
+        relation_refs: [relations.token_transition_branch_produces_update]
+    parameter_bindings:
+      - { parameter_ref: parameters.c_hidden, configuration_ref: reference_configuration.diffusion_token_transition_hidden_width }
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3 and Algorithm 25, whose expansion factor n=2 over a 768-channel activation gives the 1536-channel hidden width bound here
+        - source_ref: af3_self_attention_code
+          role: implementation_evidence
+          locator: diffusion_transformer.py transition_block with single_cond supplied and num_intermediate_factor=2
+  - id: atom_encoder_attention_pair_bias
+    block_ref: standard_blocks/attention-pair-bias.yaml
+    subject_ref: modules.atom_encoder_atom_transformer
+    variant: adaln_conditioned
+    use_scope: internal_mechanism
+    conformance: wrapped
+    difference_summary: The same conditioned attention block as the token level, with three differences owned by the AtomTransformer wrapper around it. The additive mask slot that stays empty at token level carries the sequence-local block-diagonal mask here, which is what restricts each atom to a 128-atom neighbourhood. The head count drops from 16 to 4 and the surrounding block loop from 24 to 3. Conditioning is per atom (each atom's own c_l) rather than per token. The wrapper also owns the residual sum with the transition branch and the repetition itself; this instance covers one attention branch of one block.
+    port_bindings:
+      - port_ref: ports.single_state
+        relation_refs: [relations.atom_query_enters_encoder_atom_transformer]
+      - port_ref: ports.conditioning_signal
+        relation_refs: [relations.atom_conditioning_drives_encoder_atom_transformer]
+      - port_ref: ports.pair_context
+        relation_refs: [relations.atom_pair_biases_encoder_atom_transformer]
+      - port_ref: ports.mask_bias
+        relation_refs: [relations.locality_mask_restricts_encoder_atom_transformer]
+      - port_ref: ports.attention_output
+        relation_refs: [relations.encoder_atom_transformer_produces_query]
+    parameter_bindings:
+      - { parameter_ref: parameters.h, configuration_ref: reference_configuration.atom_transformer_heads }
+      - { parameter_ref: parameters.c, configuration_ref: reference_configuration.atom_transformer_head_width }
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15 into Algorithm 7 (the locality mask in the beta slot) into Algorithm 23 line 2 into Algorithm 24; c_l is never None on this path, so the conditioned variant is always the one taken
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_encoder, which passes queries_single_cond as the conditioning and pair_act as the pair bias into CrossAttTransformer
+  - id: atom_encoder_conditioned_transition
+    block_ref: standard_blocks/conditioned-transition-block.yaml
+    subject_ref: modules.atom_encoder_atom_transformer
+    variant: adaln_conditioned_transition
+    use_scope: internal_mechanism
+    conformance: wrapped
+    difference_summary: The same conditioned transition block as the token level, conditioned per atom rather than per token and expanded over a 128-channel activation instead of a 768-channel one. The AtomTransformer wrapper owns the three-block loop and the residual sum with the attention branch; this instance covers one transition branch of one block. The transition branch takes no pair input and no mask, so the locality restriction that shapes the attention branch does not touch it.
+    port_bindings:
+      - port_ref: ports.single_state
+        relation_refs: [relations.atom_query_enters_encoder_atom_transformer]
+      - port_ref: ports.conditioning_signal
+        relation_refs: [relations.atom_conditioning_drives_encoder_atom_transformer]
+      - port_ref: ports.transition_output
+        relation_refs: [relations.encoder_atom_transformer_produces_query]
+    parameter_bindings:
+      - { parameter_ref: parameters.c_hidden, configuration_ref: reference_configuration.atom_transition_hidden_width }
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15 into Algorithm 7 into Algorithm 23 line 3 into Algorithm 25, with the expansion factor n=2 over 128 channels giving the 256-channel hidden width bound here
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py AtomCrossAttEncoderConfig.atom_transformer (num_intermediate_factor=2) feeding diffusion_transformer.transition_block with the per-atom conditioning supplied
+  - id: atom_decoder_attention_pair_bias
+    block_ref: standard_blocks/attention-pair-bias.yaml
+    subject_ref: modules.atom_decoder_atom_transformer
+    variant: adaln_conditioned
+    use_scope: internal_mechanism
+    conformance: wrapped
+    difference_summary: Shaped exactly like the encoder's atom-level instance (four heads, three blocks, the same sequence-local mask in the additive slot), but conditioned on the encoder's saved skip tensors rather than on anything this pass computes. The conditioning and pair inputs bound here are c_skip and p_skip, carried across the token bottleneck rather than rebuilt, which is what makes this a U-Net-style skip rather than a second encoder. Parameters are the decoder's own; the reuse is of the routine, not of the weights. The wrapper owns the three-block loop and the residual sum with the transition branch.
+    port_bindings:
+      - port_ref: ports.single_state
+        relation_refs: [relations.atom_query_enters_decoder_atom_transformer]
+      - port_ref: ports.conditioning_signal
+        relation_refs: [relations.conditioning_skip_drives_decoder_atom_transformer]
+      - port_ref: ports.pair_context
+        relation_refs: [relations.pair_skip_biases_decoder_atom_transformer]
+      - port_ref: ports.mask_bias
+        relation_refs: [relations.locality_mask_restricts_decoder_atom_transformer]
+      - port_ref: ports.attention_output
+        relation_refs: [relations.decoder_atom_transformer_produces_query]
+    parameter_bindings:
+      - { parameter_ref: parameters.h, configuration_ref: reference_configuration.atom_transformer_heads }
+      - { parameter_ref: parameters.c, configuration_ref: reference_configuration.atom_transformer_head_width }
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 into Algorithm 7 into Algorithm 23 line 2 into Algorithm 24, with c_l^skip in the conditioning slot and p_lm^skip in the pair slot
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_decoder, which passes enc.queries_single_cond and enc.pair_cond straight from the encoder's returned output into its own CrossAttTransformer
+  - id: atom_decoder_conditioned_transition
+    block_ref: standard_blocks/conditioned-transition-block.yaml
+    subject_ref: modules.atom_decoder_atom_transformer
+    variant: adaln_conditioned_transition
+    use_scope: internal_mechanism
+    conformance: wrapped
+    difference_summary: Shaped exactly like the encoder's atom-level transition instance, expanded over the same 128-channel activation, but conditioned on the encoder's saved c_skip rather than on conditioning computed in this pass. The wrapper owns the three-block loop and the residual sum with the attention branch; this instance covers one transition branch of one block.
+    port_bindings:
+      - port_ref: ports.single_state
+        relation_refs: [relations.atom_query_enters_decoder_atom_transformer]
+      - port_ref: ports.conditioning_signal
+        relation_refs: [relations.conditioning_skip_drives_decoder_atom_transformer]
+      - port_ref: ports.transition_output
+        relation_refs: [relations.decoder_atom_transformer_produces_query]
+    parameter_bindings:
+      - { parameter_ref: parameters.c_hidden, configuration_ref: reference_configuration.atom_transition_hidden_width }
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 into Algorithm 7 into Algorithm 23 line 3 into Algorithm 25, with c_l^skip in the conditioning slot and the expansion factor n=2 over 128 channels
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py AtomCrossAttDecoderConfig.atom_transformer (num_intermediate_factor=2) feeding diffusion_transformer.transition_block with enc.queries_single_cond supplied as the conditioning
 
 relations:
   - id: input_pair_state_initializes_block_pair_state
@@ -3297,6 +3993,576 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 21 lines 10-12 (for all b in [1,2] do s_i += Transition(s_i, n=2)) -- two rounds of residual SwiGLU refinement, not separately modeled per-iteration, the same granularity already used for this architecture's other repeated Transition applications
+  - id: noisy_positions_scaled_to_unit_variance
+    from: value_sites.noisy_atom_positions
+    to: value_sites.scaled_noisy_atom_positions
+    kind: state_update
+    carries: [representations.scaled_noisy_atom_positions]
+    operation: scale_positions_to_dimensionless_unit_variance
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 2 (r_l^noisy = x_l^noisy / sqrt(t_hat^2 + sigma_data^2)). This is DiffusionModule's own line, applied before the atom encoder is called, so the encoder only ever sees positions that are already dimensionless; without it the same weights would have to cope with a coordinate range that changes by orders of magnitude along the noise schedule
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: diffusion_head.py DiffusionHead.__call__, which divides positions_noisy by sqrt(noise_level**2 + SIGMA_DATA**2) before passing the result to atom_cross_att_encoder
+  - id: atom_reference_features_enter_conditioned_atom_encoder
+    from: value_sites.atom_reference_features_input
+    to: modules.atom_attention_encoder_conditioned
+    kind: data_flow
+    carries: [representations.atom_reference_features]
+    operation: provide_reference_conformer_features_for_atom_embedding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 3 ({f*} passed into AtomAttentionEncoder); Algorithm 5 lines 1-6, the same raw per-atom features the bare-mode call in Algorithm 2 line 1 reads
+  - id: scaled_noisy_positions_enter_atom_encoder
+    from: value_sites.scaled_noisy_atom_positions
+    to: modules.atom_attention_encoder_conditioned
+    kind: data_flow
+    carries: [representations.scaled_noisy_atom_positions]
+    operation: provide_scaled_noisy_positions_for_query_injection
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 3 ({r_l^noisy} passed into AtomAttentionEncoder), the first of the three optional arguments whose presence switches the encoder from chemistry summarizer to position-correction encoder
+  - id: raw_trunk_single_broadcasts_onto_atoms
+    from: value_sites.single_state_output
+    to: modules.atom_attention_encoder_conditioned
+    kind: conditioning
+    carries: [representations.single_state]
+    operation: provide_raw_trunk_single_for_atom_broadcast
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 3, where AtomAttentionEncoder is handed {s_i^trunk}, the trunk's own single representation straight from the Pairformer, and not the conditioned single tensor DiffusionConditioning produced at line 1. Compare relations.conditioned_pair_broadcasts_onto_atom_pairs, which is the conditioned tensor on the pair side; this asymmetry is deliberate and easy to get wrong in both directions
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: diffusion_head.py DiffusionHead.__call__, whose atom_cross_att_encoder call passes trunk_single_cond=embeddings['single'] (the trunk output) while passing trunk_pair_cond=trunk_pair_cond (the value returned by _conditioning)
+  - id: conditioned_pair_broadcasts_onto_atom_pairs
+    from: value_sites.diffusion_conditioned_pair
+    to: modules.atom_attention_encoder_conditioned
+    kind: conditioning
+    carries: [representations.diffusion_pair_conditioning]
+    operation: provide_conditioned_pair_for_atom_pair_broadcast
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 3, where AtomAttentionEncoder is handed {z_ij}, the pair tensor DiffusionConditioning just produced at line 1, and not {z_ij^trunk}. So the atom-level encoder sees the trunk's pair information only after it has been mixed with a freshly recomputed RelativePositionEncoding, while it sees the trunk's single information raw; see relations.raw_trunk_single_broadcasts_onto_atoms
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: diffusion_head.py DiffusionHead.__call__, whose atom_cross_att_encoder call passes trunk_pair_cond=trunk_pair_cond, the second return value of _conditioning, rather than embeddings['pair']
+  - id: atom_encoder_embeds_reference_metadata
+    from: modules.atom_attention_encoder_conditioned
+    to: value_sites.atom_single_conditioning_base
+    kind: data_flow
+    carries: [representations.atom_single_conditioning]
+    operation: embed_per_atom_reference_metadata
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 1, one projection of the concatenated reference position, charge, validity mask, element one-hot, and character-encoded atom name
+  - id: trunk_single_added_to_atom_conditioning
+    from: value_sites.atom_single_conditioning_base
+    to: value_sites.atom_single_conditioning_trunk_broadcast
+    kind: state_update
+    carries: [representations.atom_single_conditioning]
+    operation: add_projected_trunk_single_to_atom_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 9 (c_l += LinearNoBias(LayerNorm(s_trunk_tok_idx(l)))). Every atom of a given residue inherits the same trunk-derived contextual vector the Pairformer computed for that residue
+  - id: atom_encoder_embeds_reference_pair_geometry
+    from: modules.atom_attention_encoder_conditioned
+    to: value_sites.atom_pair_reference_geometry
+    kind: data_flow
+    carries: [representations.atom_pair_representation]
+    operation: embed_reference_offsets_and_inverse_square_distances
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 2-6. Reference-conformer positions are only meaningful within one isolated conformer, so the validity mask v_lm zeroes every pair whose two atoms come from separately generated conformers
+  - id: conditioned_pair_added_to_atom_pair
+    from: value_sites.atom_pair_reference_geometry
+    to: value_sites.atom_pair_trunk_broadcast
+    kind: state_update
+    carries: [representations.atom_pair_representation]
+    operation: add_projected_conditioned_pair_to_atom_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 10 (p_lm += LinearNoBias(LayerNorm(z_tok_idx(l) tok_idx(m)))), which puts the trunk's structural context, already mixed with the relative-position prior, on top of the raw reference geometry
+  - id: atom_conditioning_folded_into_atom_pair
+    from: value_sites.atom_pair_trunk_broadcast
+    to: value_sites.atom_pair_conditioning_refined
+    kind: state_update
+    carries: [representations.atom_pair_representation]
+    operation: fold_atom_conditioning_into_pair_and_run_mlp
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 13-14. In conditioned mode the c_l folded in here already carries line 9's trunk broadcast, so the pair tensor receives a second, denser context injection beyond the raw geometry features
+  - id: atom_conditioning_initializes_atom_query
+    from: value_sites.atom_single_conditioning_base
+    to: value_sites.atom_query_initial
+    kind: data_flow
+    carries: [representations.atom_single_conditioning]
+    operation: copy_atom_conditioning_into_query
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 7 (q_l = c_l). The algorithm box places this copy before line 9's trunk broadcast, so the query starts from the reference-metadata conditioning alone; see open_questions.atom_encoder_query_initialization_order_paper_code_divergence
+  - id: noisy_position_added_to_atom_query
+    from: value_sites.atom_query_initial
+    to: value_sites.atom_query_with_noisy_position
+    kind: state_update
+    carries: [representations.atom_single_representation]
+    operation: add_projected_scaled_noisy_position_to_query
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 11 (q_l += LinearNoBias(r_l)). The query now encodes both what this atom's chemistry and trunk context say it should look like and where it currently sits, which is exactly what attention needs to compute a correction
+  - id: atom_query_enters_encoder_atom_transformer
+    from: value_sites.atom_query_with_noisy_position
+    to: modules.atom_encoder_atom_transformer
+    kind: data_flow
+    carries: [representations.atom_single_representation]
+    operation: attend_over_local_atom_neighbourhood
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15, the first argument of the AtomTransformer call
+  - id: atom_conditioning_drives_encoder_atom_transformer
+    from: value_sites.atom_single_conditioning_trunk_broadcast
+    to: modules.atom_encoder_atom_transformer
+    kind: conditioning
+    carries: [representations.atom_single_conditioning]
+    operation: drive_adaptive_layer_norm_per_atom
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15 ({c_l} in the second argument), which Algorithm 7 line 2 forwards into the s_i slot of DiffusionTransformer. Because c_l is never None on this path, every atom-level block runs the full Adaptive LayerNorm and AdaLN-Zero machinery, conditioning each atom on its own vector rather than each token on s_i
+  - id: atom_pair_biases_encoder_atom_transformer
+    from: value_sites.atom_pair_conditioning_refined
+    to: modules.atom_encoder_atom_transformer
+    kind: conditioning
+    carries: [representations.atom_pair_representation]
+    operation: bias_atom_attention_logits
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15 ({p_lm} in the third argument), forwarded by Algorithm 7 line 2 into the z_ij slot and projected into the per-head additive bias at Algorithm 24 line 8
+  - id: locality_mask_restricts_encoder_atom_transformer
+    from: value_sites.sequence_local_atom_attention_mask
+    to: modules.atom_encoder_atom_transformer
+    kind: conditioning
+    carries: [representations.sequence_local_attention_mask]
+    operation: restrict_attention_to_local_atom_windows
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 7 lines 1-2, where beta_lm is built and handed to DiffusionTransformer. Algorithm 24 line 8 adds it to the same term that carries the pair projection, so masking here is pair-biasing with effectively infinite negative values rather than a second, separate mechanism
+  - id: encoder_atom_transformer_produces_query
+    from: modules.atom_encoder_atom_transformer
+    to: value_sites.atom_query_after_encoder_transformer
+    kind: data_flow
+    carries: [representations.atom_single_representation]
+    operation: return_locally_attended_atom_query
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 15, the returned {q_l}, after three blocks of sequence-local attention and conditioned transition
+  - id: encoder_pools_atom_queries_into_token_activation
+    from: value_sites.atom_query_after_encoder_transformer
+    to: value_sites.atom_attention_encoder_token_output
+    kind: data_flow
+    carries: [representations.diffusion_token_activation]
+    operation: project_relu_and_mean_pool_atoms_to_tokens
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 16. Mean-pooling over each token's own atoms is the literal per-atom to per-token conversion mechanism, and it is what lets the expensive full self-attention stage run at token resolution instead of atom resolution
+  - id: encoder_saves_query_skip
+    from: value_sites.atom_query_after_encoder_transformer
+    to: value_sites.atom_attention_encoder_query_skip
+    kind: skip
+    carries: [representations.atom_single_representation]
+    operation: save_atom_query_for_decoder
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 17 (q_l^skip = q_l), discarded by the bare-mode call in Algorithm 2 line 1 and carried across the token bottleneck here
+  - id: encoder_saves_conditioning_skip
+    from: value_sites.atom_single_conditioning_trunk_broadcast
+    to: value_sites.atom_attention_encoder_single_conditioning_skip
+    kind: skip
+    carries: [representations.atom_single_conditioning]
+    operation: save_atom_conditioning_for_decoder
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 17 (c_l^skip = c_l), computed once per denoising step and reused by the decoder rather than recomputed
+  - id: encoder_saves_pair_skip
+    from: value_sites.atom_pair_conditioning_refined
+    to: value_sites.atom_attention_encoder_pair_skip
+    kind: skip
+    carries: [representations.atom_pair_representation]
+    operation: save_atom_pair_for_decoder
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 17 (p_lm^skip = p_lm), reused unchanged as the decoder's pair bias
+  - id: atom_layout_determines_locality_mask
+    from: value_sites.atom_reference_features_input
+    to: modules.sequence_local_attention_mask
+    kind: index_flow
+    carries: [representations.atom_reference_features]
+    operation: provide_flat_atom_ordering_for_locality_windows
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 7 line 1, whose condition depends only on the flat atom indices l and m and the fixed window sizes, with the flat indexing itself coming from the tokenized atom layout
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py, where the queries and keys layouts (batch.atom_cross_att.queries_to_keys) are built from the feature batch's atom layout and take the place of an explicit bias tensor
+  - id: locality_mask_module_produces_mask
+    from: modules.sequence_local_attention_mask
+    to: value_sites.sequence_local_atom_attention_mask
+    kind: data_flow
+    carries: [representations.sequence_local_attention_mask]
+    operation: build_block_diagonal_locality_mask
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 7 line 1, the full condition with N_queries=32 and N_keys=128, giving non-overlapping 32-atom query bands whose realized 128-atom key windows overlap between neighbours
+  - id: encoder_token_output_enters_token_bottleneck
+    from: value_sites.atom_attention_encoder_token_output
+    to: value_sites.diffusion_token_activation_conditioned
+    kind: state_update
+    carries: [representations.diffusion_token_activation]
+    operation: carry_forward_pooled_token_activation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 4, whose "+=" left-hand side is the same a_i the encoder just returned at line 3
+  - id: conditioned_single_injected_into_token_activation
+    from: value_sites.diffusion_conditioned_single
+    to: value_sites.diffusion_token_activation_conditioned
+    kind: state_update
+    carries: [representations.diffusion_single_conditioning]
+    operation: project_and_additively_inject_conditioned_single
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 4 (a_i += LinearNoBias(LayerNorm(s_i))). This is a second, distinct conditioning channel, easy to conflate with Adaptive LayerNorm but not the same mechanism. Line 4 sets the token representation's starting point once using the full conditioning vector; Adaptive LayerNorm then re-derives a scale and shift from that same vector inside every one of the 24 blocks
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: diffusion_head.py DiffusionHead.__call__ single_cond_embedding_projection, applied to the conditioned single and added into act before the Transformer runs
+  - id: conditioned_token_activation_initializes_block_state
+    from: value_sites.diffusion_token_activation_conditioned
+    to: value_sites.diffusion_token_block_input
+    kind: state_update
+    carries: [representations.diffusion_token_activation]
+    operation: initialize_diffusion_transformer_block_activation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 5, the activation handed to the 24-block stack; only one representative block is modeled here, not the loop
+  - id: token_block_activation_enters_attention_branch
+    from: value_sites.diffusion_token_block_input
+    to: modules.token_attention_pair_bias
+    kind: data_flow
+    carries: [representations.diffusion_token_activation]
+    operation: attend_over_all_tokens
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2, the first argument of the AttentionPairBias call
+  - id: conditioned_single_drives_token_attention_adaln
+    from: value_sites.diffusion_conditioned_single
+    to: modules.token_attention_pair_bias
+    kind: conditioning
+    carries: [representations.diffusion_single_conditioning]
+    operation: drive_adaptive_layer_norm_and_output_gate
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2 ({s_i} in the second argument), which is what makes Algorithm 24 take its conditioned branch. Because the scale and shift are recomputed from this vector at every call, one shared set of weights behaves like a different noise-level-specialized network at each point along the sampling trajectory
+  - id: conditioned_pair_biases_token_attention
+    from: value_sites.diffusion_conditioned_pair
+    to: modules.token_attention_pair_bias
+    kind: conditioning
+    carries: [representations.diffusion_pair_conditioning]
+    operation: bias_token_attention_logits
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2 ({z_ij} in the third argument), projected into the per-head additive bias at Algorithm 24 line 8. Algorithm 20 line 5 passes beta_ij=0 here, so the conditioned pair tensor is the only source of attention bias at token level
+  - id: token_attention_branch_produces_update
+    from: modules.token_attention_pair_bias
+    to: value_sites.diffusion_token_attention_branch
+    kind: data_flow
+    carries: [representations.diffusion_token_activation]
+    operation: return_gated_attention_update
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 2 (b_i = AttentionPairBias(...)) and Algorithm 24 line 15, which returns the gated update with nothing added back to the un-normalized input
+  - id: token_block_activation_enters_transition_branch
+    from: value_sites.diffusion_token_block_input
+    to: modules.token_conditioned_transition
+    kind: data_flow
+    carries: [representations.diffusion_token_activation]
+    operation: transform_token_activation_pointwise
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3, where ConditionedTransitionBlock is called with a_i, the block's original input from before the attention branch ran, not with b_i. This is what makes the block parallel rather than sequential
+  - id: conditioned_single_drives_token_transition_adaln
+    from: value_sites.diffusion_conditioned_single
+    to: modules.token_conditioned_transition
+    kind: conditioning
+    carries: [representations.diffusion_single_conditioning]
+    operation: drive_adaptive_layer_norm_and_output_gate
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3 ({s_i} in the second argument of ConditionedTransitionBlock); Algorithm 25 lines 1 and 3, the same two conditioning points as the attention branch
+  - id: token_transition_branch_produces_update
+    from: modules.token_conditioned_transition
+    to: value_sites.diffusion_token_transition_branch
+    kind: data_flow
+    carries: [representations.diffusion_token_activation]
+    operation: return_gated_transition_update
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 25 line 4, the returned update, with the residual sum left to the caller
+  - id: token_attention_branch_updates_block_output
+    from: value_sites.diffusion_token_attention_branch
+    to: value_sites.diffusion_token_block_output
+    kind: state_update
+    carries: [representations.diffusion_token_activation]
+    operation: sum_attention_branch_into_block_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3 (a_i <- b_i + ConditionedTransitionBlock(a_i, s_i)), the block's only residual connection; see open_questions.diffusion_transformer_block_residual_paper_code_divergence
+  - id: token_transition_branch_updates_block_output
+    from: value_sites.diffusion_token_transition_branch
+    to: value_sites.diffusion_token_block_output
+    kind: state_update
+    carries: [representations.diffusion_token_activation]
+    operation: sum_transition_branch_into_block_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3, the second term of the same sum. Both branches were computed independently off the same pre-block activation, which is the parallel attention and feedforward formulation also used by GPT-J and PaLM
+  - id: token_block_output_reenters_next_block
+    from: value_sites.diffusion_token_block_output
+    to: value_sites.diffusion_token_block_input
+    kind: state_update
+    carries: [representations.diffusion_token_activation]
+    operation: reenter_next_diffusion_transformer_block
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 lines 1-4, the loop over N_block=24 blocks, each with its own parameters
+  - id: final_token_block_output_normalized
+    from: value_sites.diffusion_token_block_output
+    to: value_sites.diffusion_token_activation_normalized
+    kind: state_update
+    carries: [representations.diffusion_token_activation]
+    operation: layer_norm_token_activation_after_transformer
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 6 (a_i <- LayerNorm(a_i)), applied once to the stack's output before the decoder reads it
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: diffusion_head.py DiffusionHead.__call__ output_norm, applied to the Transformer's return value before atom_cross_att_decoder is called
+  - id: normalized_token_activation_enters_atom_decoder
+    from: value_sites.diffusion_token_activation_normalized
+    to: modules.atom_attention_decoder
+    kind: data_flow
+    carries: [representations.diffusion_token_activation]
+    operation: broadcast_token_update_back_onto_atoms
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 line 7 ({a_i} passed into AtomAttentionDecoder); Algorithm 6 line 1, where each atom reads its own parent token's entry
+  - id: query_skip_enters_atom_decoder
+    from: value_sites.atom_attention_encoder_query_skip
+    to: modules.atom_attention_decoder
+    kind: skip
+    carries: [representations.atom_single_representation]
+    operation: provide_atom_query_skip_for_broadcast_addition
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 1 (q_l = LinearNoBias(a_tok_idx(l)) + q_l^skip). The atom does not reconstruct fine-grained context from the coarse token update alone; it starts from where it left off and adds the new correction on top
+  - id: atom_decoder_broadcasts_token_update_onto_atoms
+    from: modules.atom_attention_decoder
+    to: value_sites.atom_query_broadcast_with_skip
+    kind: data_flow
+    carries: [representations.atom_single_representation]
+    operation: project_broadcast_and_add_query_skip
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 1, the projection down to the atom channel width, the broadcast to every atom of the token, and the skip addition, in one line
+  - id: atom_query_enters_decoder_atom_transformer
+    from: value_sites.atom_query_broadcast_with_skip
+    to: modules.atom_decoder_atom_transformer
+    kind: data_flow
+    carries: [representations.atom_single_representation]
+    operation: reconcile_broadcast_update_locally
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2, the first argument of the decoder's AtomTransformer call
+  - id: conditioning_skip_drives_decoder_atom_transformer
+    from: value_sites.atom_attention_encoder_single_conditioning_skip
+    to: modules.atom_decoder_atom_transformer
+    kind: conditioning
+    carries: [representations.atom_single_conditioning]
+    operation: drive_adaptive_layer_norm_from_saved_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 ({c_l^skip} in the second argument), the encoder's saved conditioning rather than a recomputed one; atom identity, reference geometry, and the trunk broadcast do not change within one denoising step
+  - id: pair_skip_biases_decoder_atom_transformer
+    from: value_sites.atom_attention_encoder_pair_skip
+    to: modules.atom_decoder_atom_transformer
+    kind: conditioning
+    carries: [representations.atom_pair_representation]
+    operation: bias_decoder_atom_attention_logits
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 ({p_lm^skip} in the third argument), the encoder's saved atom-pair tensor reused as the decoder's attention bias
+  - id: locality_mask_restricts_decoder_atom_transformer
+    from: value_sites.sequence_local_atom_attention_mask
+    to: modules.atom_decoder_atom_transformer
+    kind: conditioning
+    carries: [representations.sequence_local_attention_mask]
+    operation: restrict_attention_to_local_atom_windows
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2 into Algorithm 7 line 1, the same locality mask the encoder pass uses, since both are AtomTransformer calls over the same atom ordering
+  - id: decoder_atom_transformer_produces_query
+    from: modules.atom_decoder_atom_transformer
+    to: value_sites.atom_query_after_decoder_transformer
+    kind: data_flow
+    carries: [representations.atom_single_representation]
+    operation: return_locally_reconciled_atom_query
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 2, the returned {q_l}, after atoms in a local neighbourhood have harmonized the broadcast token update with their own fine context and with each other
+  - id: decoder_query_projected_to_position_update
+    from: value_sites.atom_query_after_decoder_transformer
+    to: value_sites.atom_attention_decoder_position_update
+    kind: data_flow
+    carries: [representations.atom_position_update]
+    operation: layer_norm_and_project_to_position_update
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), a projection down to a literal 3D vector in the same dimensionless space as the scaled noisy positions
 
 claims:
   - id: pairformer_has_no_msa_state
@@ -3376,3 +4642,40 @@ open_questions:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 2
+  - id: diffusion_transformer_block_residual_paper_code_divergence
+    question: Supplementary Algorithm 23 line 3 reads a_i <- b_i + ConditionedTransitionBlock(a_i, s_i), where b_i is the attention branch's own return value. Neither Algorithm 24 nor Algorithm 25 adds anything back to its un-normalized input, so read literally the block output is Attention(a) + Transition(a), with no identity path for a itself, and the transition branch reads the pre-attention activation. The released implementation instead applies two sequential residual updates, act += self_attention(act, ...) followed by act += transition_block(act, ...), so the transition branch reads the post-attention activation and the block keeps an identity path. The two agree that each sub-block returns an update rather than a residual sum, and they differ in what the transition branch reads and in whether the block is parallel or sequential. This architecture models the paper's literal Algorithm 23, which is why value_sites.diffusion_token_block_input feeds both branches and both branch outputs are summed into value_sites.diffusion_token_block_output.
+    status: deferred
+    affected_refs:
+      - value_sites.diffusion_token_block_input
+      - value_sites.diffusion_token_block_output
+      - relations.token_block_activation_enters_transition_branch
+      - relations.token_attention_branch_updates_block_output
+      - relations.token_transition_branch_updates_block_output
+      - modules.diffusion_transformer_token_level
+    resolution_criteria: Decide whether this source set should follow the released implementation's sequential residual block instead of the paper's Algorithm 23 line 3. Following the code would mean retargeting relations.token_block_activation_enters_transition_branch to a new post-attention value site and replacing the two-branch sum with two sequential residual updates. The same question applies identically to both atom-level AtomTransformer occurrences, since they call the same routine.
+    evidence:
+      status: open_question
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 23 line 3; Algorithm 24 line 15 and Algorithm 25 line 4, neither of which adds its input back to its own output
+        - source_ref: af3_self_attention_code
+          role: implementation_evidence
+          locator: diffusion_transformer.py Transformer.__call__ block, which applies act += self_attention(act, ...) and then act += transition_block(act, ...) on the already-updated activation
+  - id: atom_encoder_query_initialization_order_paper_code_divergence
+    question: Supplementary Algorithm 5 places line 7 (q_l = c_l) before line 9 (c_l += LinearNoBias(LayerNorm(s_trunk))), so read in order the atom query is a copy of the reference-metadata conditioning only and never receives the trunk single broadcast; the broadcast reaches the query only indirectly, through the pair tensor and through Adaptive LayerNorm inside AtomTransformer. The released implementation adds the trunk broadcast into queries_single_cond first and only then forms the query from it, so its query does carry the trunk single directly. This architecture models the paper's line order, which is why relations.atom_conditioning_initializes_atom_query reads value_sites.atom_single_conditioning_base rather than value_sites.atom_single_conditioning_trunk_broadcast.
+    status: deferred
+    affected_refs:
+      - value_sites.atom_query_initial
+      - value_sites.atom_single_conditioning_base
+      - relations.atom_conditioning_initializes_atom_query
+    resolution_criteria: Confirm which order the shipped model uses, most directly by checking whether the trunk single projection is applied before or after the query is formed in the released atom encoder, and if the code's order is authoritative, retarget relations.atom_conditioning_initializes_atom_query to value_sites.atom_single_conditioning_trunk_broadcast.
+    evidence:
+      status: open_question
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 lines 7-11, where the q_l = c_l copy precedes the conditional block that augments c_l
+        - source_ref: af3_atom_cross_attention_code
+          role: implementation_evidence
+          locator: atom_cross_attention.py atom_cross_att_encoder, which adds the projected trunk_single_cond into queries_single_cond and then sets queries_act to the projected positions plus queries_single_cond

@@ -37,7 +37,9 @@ source_sets:
     architecture: architectures/alphafold3-pairformer.yaml
     view: views/alphafold3-pairformer-semantic-zoom.view.yaml
     pseudocode: pseudocode/alphafold3-pairformer.yaml
-    standard_blocks: []
+    standard_blocks:
+      - standard_blocks/attention-pair-bias.yaml
+      - standard_blocks/conditioned-transition-block.yaml
   - id: genie2
     label: Genie 2 Protein Backbone Diffusion
     directory_role: architecture
