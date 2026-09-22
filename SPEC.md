@@ -286,6 +286,124 @@ module 1's 1.
 `pair_state_input_projection -> z_init -> msa_module -> pair_state_input`
 chain renders correctly and the existing Pairformer board is unaffected.
 
+### Sub-project 1, module 3: the Template Module
+
+**Mechanism** (`~/research/src/alphafold3.typ:261-291`, `[paper] Section 3.5,
+Algorithm 16`): `TemplateEmbedder` runs once per recycle, immediately before
+`MsaModule` (Algorithm 1, line 9 precedes line 10), and writes only into
+`z_ij` — no single-representation output, unlike the main Pairformer trunk.
+For each template `t`: builds a raw per-template pair feature `a_tij` by
+concatenating the template's distogram (its own binned pairwise distances),
+backbone-frame and pseudo-beta masks (each an AND-gate — a pair only keeps
+its template distance/direction information if both tokens have a resolved
+frame/position in that specific template), a unit-vector direction feature,
+and per-token `template_restype`, then zeroes out any pair whose two tokens
+belong to different chain instances (`asym_id` gating — template-derived
+features are restricted to intra-chain pairs only, the same multi-chain
+concern already documented for `RelativePositionEncoding`). That raw feature
+is outer-summed with a projection of the current `z_ij` (line 8, the same
+"outer sum of two independent projections" pattern already used to build
+`z_init` itself) — one term carries the trunk's current structural belief,
+the other carries this specific template's raw geometric evidence — then
+refined through `N_block=2` blocks of a **pair-only** Pairformer variant
+(triangle multiplication outgoing/incoming, pair attention starting/ending
+node, pair transition). Confirmed against the reference codebase
+(`alphafold3/model/network/template_modules.py:349-357`, contrasted with
+`evoformer.py:319-324`) that this variant runs with `with_single=False`: no
+single-representation attention/transition step executes at all, unlike the
+main 48-block trunk's identical block type run with `with_single=True`.
+Results are averaged across all templates (order-invariant pooling) and
+projected once more (`LinearNoBias(ReLU(...))` — notably plain `ReLU` here,
+not the `SwiGLU` used in every `Transition` block elsewhere in the paper).
+
+**Why this matters, for the board's own takeaway**: alongside the MSA
+module, this is the other mechanism injecting genuinely new external
+evidence into the pair representation each cycle — here, actual 3D
+structural evidence from homologous templates, rather than evolutionary
+coupling. It runs first (Algorithm 1 line 9, before the MSA module's line
+10), so the Pairformer's 48 blocks of pure self-refinement start from a
+`z_ij` that has already been informed by both real templates and MSA
+coevolution signal, not from the raw `z_init` projection alone.
+
+**Scope for this pass (decided in brainstorming, 2026-09-22):**
+- `TemplateEmbedder`'s masking/feature-concat step and its pair-only
+  pair-stack are modeled with real internals, not left opaque — same call
+  module 2 made for `OuterProductMean`/`MSAPairWeightedAveraging`: neither
+  piece is a shared routine reused elsewhere, so opacity would hide the
+  actual teaching content (the AND-gate masking logic, the `with_single=False`
+  pair-only variant of the Pairformer block).
+- Only one representative template is modeled, not a literal `N_templates`
+  loop — mirrors how MSA rows are already modeled collectively rather than
+  enumerated per-row. `a_tij`/`v_ij` and related value sites stand for one
+  representative template's tensors; the cross-template averaging step
+  (line 12) is still modeled as its own real relation, and the board's
+  summary discloses "shown for one template" rather than silently
+  collapsing multiple templates into one without saying so.
+- This pass authors its own pair-stack facts for the module's pair-only
+  variant rather than extracting a shared `standard_block` — the third
+  near-duplicate of the same triangle-mult/triangle-attention/transition
+  mechanism (Pairformer's, the MSA module's, now this one's pair-only
+  variant). Consistent with module 2's own precedent, which already
+  flagged the first duplication as a deferred future cleanup rather than
+  something to fix mid-pass.
+- The z_init retargeting stays scoped to *consumption*, not production:
+  this module changes what reads `z_init` (it now flows through
+  `template_module` before reaching `msa_module`, not directly), not how
+  `z_init` itself gets built. The `open_questions.
+  relative_position_encoding_and_token_bonds_unmodeled` entry (Algorithm 1
+  lines 4-5's other contributors to `z_init`'s construction) is a different
+  edge and stays deferred as its own future task — decided explicitly in
+  brainstorming rather than bundled in just because the module lands in
+  the same neighborhood of the graph.
+
+**New facts to add** (`explainer/architectures/alphafold3-pairformer.yaml`,
+hand-edited per `DECISIONS.md`'s 2026-09-19 hand-edit entry, not via
+edit-plan — this task wires into `z_init`, an already-visible value site,
+the same condition that forces the hand-edit mechanism for every module
+after the first):
+- Module `template_module` (`parent_ref: architecture`), with child leaf
+  modules for the masking/feature-concat step and the pair-only pair-stack
+  (5 leaves — triangle multiplication outgoing/incoming, pair attention
+  starting/ending node, pair transition — mirroring `msa_pair_update_stage`'s
+  shape from module 2).
+- New `boundary: input` value sites for the raw template features:
+  `template_backbone_frame_mask`, `template_pseudo_beta_mask`,
+  `template_distogram`, `template_unit_vector`, `template_restype`,
+  `asym_id`.
+- Retarget the relation that currently connects `z_init` directly to
+  `msa_module`'s pair-state read (`z_init_initializes_msa_module_pair_state`)
+  so that `z_init` instead feeds `template_module`, and `template_module`'s
+  averaged, projected output feeds `msa_module`'s pair-state read in its
+  place — the real chain per Algorithm 1 lines 9-10.
+- Every new fact cites `~/research/src/alphafold3.typ`'s own `[paper]`
+  locators for Algorithm 16, matching modules 1-2's evidence discipline.
+
+**View**: the root board (`pairformer_overview`) is currently at 17 nodes
+with one accepted `dense_board` warning. This module gets its own child
+board from the start (`template_module_detail`), following the
+`msa_module_detail` precedent, rather than adding its internal detail to
+the root board. Tagging the six raw template value sites `boundary: input`
+forces them onto the root board (the same `missing_root_boundary` rule
+already governing every other raw input on that board), alongside the one
+collapsed `template_module` node — 23 nodes total on root, up from 17. This
+is expected and accepted per this session's board-curation research: AF2's
+own reference example carries a comparable density of boundary inputs on
+its own root board with no further restructuring, and all locally-available
+elision opportunities on this root board are already exhausted (confirmed
+during the 2026-09-22 curation review — every remaining node is either a
+locked boundary input/output, a primary pipeline block with its own detail
+board, or was deliberately kept visible for an earlier correctness fix).
+The child board itself will likely need a `msa_pair_track`-style split
+(a grandchild board for the pair-only pair-stack) to stay under its own
+12-node `dense_board` threshold, mirroring module 2's own final-review fix
+— anticipate this rather than treating it as a surprise if it recurs.
+
+**Verification**: same pipeline as modules 1-2 — `lint_sources.rb`,
+`verify_architecture.rb --source-set alphafold3`, `build-manifest.rb
+--check`, plus an actual rendered check confirming the retargeted
+`z_init -> template_module -> msa_module -> pair_state_input` chain renders
+correctly and the existing Pairformer and MSA module boards are unaffected.
+
 ## Core screens
 
 These four carry the main narrative: what AF3 takes in, how it transforms it,
