@@ -755,10 +755,10 @@ boards:
       density: compact
       col: 1
       row: 4
-    - id: value_z_init
-      ref: value_sites.z_init
-      label: initial pairs
-      notation: 'z^{init}'
+    - id: value_template_module_pair_output
+      ref: value_sites.template_module_pair_output
+      label: template contribution
+      notation: z
       prominence: context
       treatment: compact
       density: compact
@@ -826,12 +826,12 @@ boards:
         role: shared row anchor
         inside: The same raw input embedding used everywhere else in AF3 is added identically into every MSA row.
     - match:
-        relation_ref: relations.z_init_initializes_msa_module_pair_state
-      label: z^{init}
+        relation_ref: relations.template_module_pair_output_updates_msa_module_pair_state
+      label: z
       connection:
         title: Pair state enters the block
         role: block-input pair state
-        inside: The pair representation arrives here straight from the input projection, before anything else has touched it; the Pairformer only ever sees what this module returns.
+        inside: The pair representation arrives here from the Template Module's own pooled, cross-template contribution (z_init plus every template's evidence), not straight from the input projection; the Pairformer only ever sees what this module returns.
     - match:
         relation_ref: relations.outer_product_mean_contribution_updates_msa_module_pair_state
       label: '+ Δz_comm'

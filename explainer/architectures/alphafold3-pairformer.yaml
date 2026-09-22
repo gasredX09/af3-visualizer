@@ -533,6 +533,120 @@ representations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 10 line 5 (w_ij^h = softmax_j(b_ij^h))
+  - id: template_backbone_frame_mask
+    scale: template
+    semantic_role: raw per-template, per-token mask indicating whether coordinates exist for all atoms required to compute that template's backbone frame at that token; AND-gated pairwise inside the template embedder to build the pairwise backbone-frame mask
+    shape: "N_templates x N_token"
+    glyph: matrix
+    carries:
+      - backbone-frame-resolved flag for each template at each token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 template_backbone_frame_mask [N_templ, N_token] ("Mask indicating if coordinates exist for all atoms required to compute the backbone frame (used in the template_unit_vector feature)"); Supplementary Algorithm 16 line 1 (f_ti^template_backbone_frame_mask, single-token index t,i, AND-gated pairwise as b_ij^template_backbone_frame_mask inside the template embedder itself, not a raw pairwise feature)
+  - id: template_pseudo_beta_mask
+    scale: template
+    semantic_role: raw per-template, per-token mask indicating whether the template has resolved Cbeta (Calpha for glycine) coordinates at that token; AND-gated pairwise inside the template embedder to build the pairwise pseudo-beta mask
+    shape: "N_templates x N_token"
+    glyph: matrix
+    carries:
+      - pseudo-beta-resolved flag for each template at each token
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 template_pseudo_beta_mask [N_templ, N_token] ("Mask indicating if the Cbeta (Calpha for glycine) has coordinates for the template at this residue"); Supplementary Algorithm 16 line 2 (f_ti^template_pseudo_beta_mask, single-token index t,i, AND-gated pairwise as b_ij^template_pseudo_beta_mask inside the template embedder itself, not a raw pairwise feature)
+  - id: template_distogram
+    scale: template
+    semantic_role: raw one-hot pairwise Cbeta (Calpha for glycine) distance bin per template, discretized into 39 bins (38 equal-width bins between 3.25 and 50.75 angstroms plus one catch-all bin for larger distances); already pairwise as a raw feature, unlike the two AND-gate masks
+    shape: "N_templates x N_token x N_token x 39"
+    glyph: volume
+    carries:
+      - one-hot pairwise Cbeta distance bin per template
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 template_distogram [N_templ, N_token, N_token, 39] ("A one-hot pairwise feature indicating the distance between Cbeta atoms (Calpha for glycine). Pairwise distances are discretized into 38 bins of equal width between 3.25A and 50.75A; one more bin contains any larger distances"); Supplementary Algorithm 16 line 3 (f_tij^template_distogram, double-index tij, already pairwise)
+  - id: template_unit_vector
+    scale: template
+    semantic_role: raw pairwise unit vector of the displacement between each pair of residues' Calpha atoms, expressed in the local frame of each residue, per template; already pairwise as a raw feature, unlike the two AND-gate masks
+    shape: "N_templates x N_token x N_token x 3"
+    glyph: volume
+    carries:
+      - pairwise directional unit vector (x, y, z) per template
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 template_unit_vector [N_templ, N_token, N_token, 3] ("The unit vector of the displacement of the Calpha atom of all residues within the local frame of each residue"); Supplementary Algorithm 16 line 3 (f_tij^template_unit_vector, double-index tij, already pairwise)
+  - id: template_restype
+    scale: template
+    semantic_role: raw per-template, per-token residue/nucleotide/ligand-as-unknown-amino-acid class id (32 possible values, same scheme as restype); stored as a class id, not already one-hot -- one-hot encoding to 32 channels happens inside modules.template_pair_feature_construction, confirmed against code since Table 5's shape entry omits the resulting one-hot width unlike restype's own [N_token, 32] entry
+    shape: "N_templates x N_token"
+    glyph: vector
+    carries:
+      - per-template, per-token residue/nucleotide/ligand type class id, one-hot encoded during concatenation rather than already one-hot in the raw feature
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 template_restype [N_templ, N_token] ("One-hot encoding of the template sequence, see restype" -- the shape entry itself omits the trailing 32-class dimension, unlike restype's own documented [N_token, 32] shape); Supplementary Algorithm 16 line 5 (f_ti^template_restype)
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py lines 277-284 (aatype = templates.aatype; aatype = jax.nn.one_hot(aatype, residue_names.POLYMER_TYPES_NUM_WITH_UNKNOWN_AND_GAP, axis=-1, dtype=dtype); the raw feature templates.aatype is a per-template, per-token class id, not already one-hot -- the one-hot encoding is a concatenation-time operation, resolving Table 5's ambiguous shape entry)"
+  - id: asym_id
+    scale: token
+    semantic_role: raw per-token chain-instance identifier (a unique integer per distinct chain copy); used here to gate template-derived pair features to intra-chain pairs only, since a single template structure only constrains one chain's internal geometry
+    shape: "N_token"
+    glyph: vector
+    carries:
+      - chain-instance id per token, shared by every token belonging to the same chain copy
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 asym_id [N_token] ("Unique integer for each distinct chain"); Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id) -- this same raw feature also feeds RelativePositionEncoding's unmodeled b_same_entity/a_rel_chain signals (see open_questions.relative_position_encoding_and_token_bonds_unmodeled), not modeled here
+  - id: template_pair_feature
+    scale: token_pair
+    semantic_role: the masked and concatenated raw per-template pair feature (a_tij) for one representative template, built by AND-gating the two raw per-token masks into pairwise masks, concatenating the pairwise distogram and unit-vector evidence with those pairwise masks, zeroing every cross-chain pair via the asym_id gate, then concatenating the one-hot restype of both tokens onto the already-gated result -- restype is added after the gate and so is not itself asym_id-gated
+    shape: "N_token x N_token x 108"
+    glyph: pair
+    carries:
+      - 39-bin pairwise distogram
+      - backbone-frame AND-gate mask (1 channel)
+      - pairwise unit vector (3 channels)
+      - pseudo-beta AND-gate mask (1 channel)
+      - one-hot restype at token i (32 channels) and token j (32 channels), concatenated after the asym_id gate
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: "Supplementary Algorithm 16 lines 1-5 (b_ij^template_backbone_frame_mask, b_ij^template_pseudo_beta_mask, a_tij = concat(f_tij^template_distogram, b_ij^template_backbone_frame_mask, f_tij^template_unit_vector, b_ij^template_pseudo_beta_mask), a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id), a_tij <- concat(a_tij, f_ti^template_restype, f_tj^template_restype)); channel width (39+1+3+1+32+32=108) summed from the individually cited widths of representations.template_distogram, template_backbone_frame_mask, template_unit_vector, template_pseudo_beta_mask, and template_restype (one-hot encoded to 32 channels per representations.template_restype)"
+  - id: template_conditioned_pair_state
+    scale: token_pair
+    semantic_role: one representative template's own pair-conditioned state at the template embedder's internal channel width (c=64, distinct from and narrower than the trunk's 128-channel pair_state); reused across this template's pre-pair-stack state, every intermediate state inside its own pair-only pair-stack, and its post-pair-stack state
+    shape: "N_token x N_token x 64"
+    glyph: pair
+    carries:
+      - per-template pair-conditioned state at the template embedder's own 64-channel width
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: "Supplementary Algorithm 16 signature (TemplateEmbedder({f*}, {z_ij}, N_block=2, c=64)); line 8 (v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), v_ij in R^c)"
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py line 113 (TemplateEmbedding.Config.num_channels: int = 64) -- confirms this width is a fixed, narrower channel count distinct from the trunk's c_z=128 pair_state, not a notational shorthand"
 
 value_sites:
   - id: single_state_input
@@ -716,6 +830,72 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 1 (f_Si^deletion_value)
+  - id: template_backbone_frame_mask
+    representation_ref: representations.template_backbone_frame_mask
+    scope_ref: architecture
+    boundary: input
+    role: raw_template_backbone_frame_mask_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 1 (f_ti^template_backbone_frame_mask)
+  - id: template_pseudo_beta_mask
+    representation_ref: representations.template_pseudo_beta_mask
+    scope_ref: architecture
+    boundary: input
+    role: raw_template_pseudo_beta_mask_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 2 (f_ti^template_pseudo_beta_mask)
+  - id: template_distogram
+    representation_ref: representations.template_distogram
+    scope_ref: architecture
+    boundary: input
+    role: raw_template_distogram_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 3 (f_tij^template_distogram)
+  - id: template_unit_vector
+    representation_ref: representations.template_unit_vector
+    scope_ref: architecture
+    boundary: input
+    role: raw_template_unit_vector_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 3 (f_tij^template_unit_vector)
+  - id: template_restype
+    representation_ref: representations.template_restype
+    scope_ref: architecture
+    boundary: input
+    role: raw_template_restype_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 5 (f_ti^template_restype, f_tj^template_restype)
+  - id: asym_id
+    representation_ref: representations.asym_id
+    scope_ref: architecture
+    boundary: input
+    role: raw_asym_id_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id)
   - id: msa_activations
     representation_ref: representations.msa_activations
     scope_ref: modules.msa_row_embedding
@@ -886,6 +1066,99 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 13; line 15 (#kw[return] {z_ij}) -- this is the module's own returned z_ij, the final value written into value_sites.pair_state_input
+  - id: template_module_pair_state_read
+    representation_ref: representations.pair_state
+    scope_ref: modules.template_module
+    role: template_module_entry_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 signature ({z_ij} passed into TemplateEmbedder as its second argument); Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- the module's own entry state, mirroring value_sites.msa_module_pair_state_read's role for modules.msa_module exactly, read once (this task models one representative template, not the N_templates loop) at line 8 for the outer-sum conditioning term LinearNoBias(LayerNorm(z_ij))
+  - id: template_pair_feature
+    representation_ref: representations.template_pair_feature
+    scope_ref: modules.template_pair_feature_construction
+    role: masked_concatenated_per_template_pair_feature
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 5 (the fully masked and concatenated a_tij, after lines 1-4's masking/gating steps and line 5's final restype concatenation); read by modules.template_pair_conditioning at line 8 as the LinearNoBias(a_tij) outer-sum term
+  - id: template_pair_conditioned_state
+    representation_ref: representations.template_conditioned_pair_state
+    scope_ref: modules.template_pair_conditioning
+    role: pre_pair_stack_per_template_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 8 (v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij)) -- this representative template's own pair-conditioned state, at the template embedder's 64-channel width, before modules.template_pair_update_stage's N_block=2 pair-only pair-stack refines it (line 9)
+  - id: template_pair_after_outgoing_multiplication
+    representation_ref: representations.template_conditioned_pair_state
+    scope_ref: modules.template_pair_update_stage
+    role: template_outgoing_triangle_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 2 (TriangleMultiplicationOutgoing, the pair-only stack's first sub-step)
+  - id: template_pair_after_incoming_multiplication
+    representation_ref: representations.template_conditioned_pair_state
+    scope_ref: modules.template_pair_update_stage
+    role: template_incoming_triangle_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 3 (TriangleMultiplicationIncoming, the pair-only stack's second sub-step)
+  - id: template_pair_after_starting_attention
+    representation_ref: representations.template_conditioned_pair_state
+    scope_ref: modules.template_pair_update_stage
+    role: template_starting_node_attention_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 4 (TriangleAttentionStartingNode, the pair-only stack's third sub-step)
+  - id: template_pair_after_ending_attention
+    representation_ref: representations.template_conditioned_pair_state
+    scope_ref: modules.template_pair_update_stage
+    role: template_ending_node_attention_updated_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 5 (TriangleAttentionEndingNode, the pair-only stack's fourth sub-step)
+  - id: template_pair_after_transition
+    representation_ref: representations.template_conditioned_pair_state
+    scope_ref: modules.template_module
+    role: template_module_post_stack_per_template_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition, the pair-only stack's fifth and final sub-step, whose output is what line 9's call returns) -- this representative template's fully refined state, read by modules.template_pair_conditioning at line 10 (u_ij += LayerNorm(v_ij)) for cross-template accumulation
+  - id: template_module_pair_output
+    representation_ref: representations.pair_state
+    scope_ref: modules.template_module
+    role: template_module_final_pair_contribution
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: "Supplementary Algorithm 16 lines 10, 12-13 (u_ij += LayerNorm(v_ij) accumulated across every template; u_ij <- u_ij / N_templates; u_ij <- LinearNoBias(ReLU(u_ij))); line 14 (#kw[return] {u_ij}) -- this is the module's own returned contribution, mirroring value_sites.msa_pair_after_transition's role for modules.msa_module"
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py lines 198-204 (embedding = summed_template_embeddings / (1e-7 + num_templates); embedding = jax.nn.relu(embedding); embedding = hm.Linear(query_num_channels, initializer='relu', name='output_linear')(embedding); assert embedding.shape == (num_residues, num_residues, query_num_channels)) -- confirms the final LinearNoBias(ReLU(...)) projection widens from the module's own 64-channel width to query_num_channels, which equals the trunk's c_z=128, matching representations.pair_state; the paper's own Algorithm 16 line 13 shape annotation (u_ij in R^c, c=64) does not show this widening explicitly"
 
 modules:
   - id: pairformer_stack
@@ -1319,6 +1592,176 @@ modules:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 13 ({z_ij} += Transition({z_ij})); Algorithm 11 (Transition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6)
+  - id: template_module
+    parent_ref: architecture
+    decomposition:
+      status: complete
+    label: Template Module
+    kind: refiner
+    mechanisms: [template_feature_masking, outer_sum_conditioning, triangle_multiplication, axial_pair_attention, transition, cross_template_pooling]
+    role: run once per recycle, immediately before the MSA module (Algorithm 1 line 9 precedes line 10), reading the raw per-template AF3 template features together with the current pair representation z_ij and writing a pooled contribution back into it; for one representative template, mask and concatenate the raw template evidence (the backbone-frame and pseudo-beta AND-gate masks, the distogram and unit-vector pairwise evidence, an asym_id intra-chain gate, and the one-hot restype of both tokens) into a per-template pair feature, outer-sum it with a projection of the current pair state to form that template's own pair-conditioned state at the module's narrower 64-channel width, refine it through the module's own N_block=2 pair-only (with_single=False) Pairformer block, accumulate the LayerNorm'd result across every template, average, and project once more through a plain ReLU (not SwiGLU) into a 128-channel contribution added into the pair representation before the MSA module runs; only one representative pass through the module is modeled here, not the N_templates loop, the N_block=2 pair-stack repeat, or the outer per-recycle loop
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 (TemplateEmbedder), lines 1-14; Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})); Section 3.5 ("combines all raw template features to a pair representation, and processes it together with the given pair representation z_ij... This allows the network to attend to specific regions in the template based on its current belief about the structure")
+  - id: template_pair_feature_construction
+    parent_ref: modules.template_module
+    decomposition:
+      status: leaf
+    label: Template Pair Feature Construction
+    kind: operator
+    mechanisms: [elementwise_masking, feature_concatenation, one_hot_encoding, chain_instance_gating]
+    role: AND-gate the raw per-token backbone-frame and pseudo-beta masks into pairwise masks (lines 1-2); concatenate the pairwise distogram and unit-vector evidence with those two pairwise masks (line 3); zero every cross-chain pair by gating the concatenation on asym_id equality (line 4); then one-hot encode and concatenate both tokens' template restype onto the already-gated feature -- restype is added after the gate, so it is not itself asym_id-gated (line 5, confirmed against code -- template_restype's raw feature is a per-token class id, one-hot encoded here, not already one-hot)
+    scale: token_pair
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 lines 1-5
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py lines 255-284 (dgram/pseudo_beta_mask_2d construction and multichain_mask_2d gating, restype one-hot encoding); lines 286-315 (unit_vector/backbone_mask_2d construction and multichain_mask_2d gating); lines 325-333 (per-feature LinearNoBias projections summed together, algebraically the same outer-sum-of-concatenated-features pattern the paper's concat + LinearNoBias notation describes)"
+  - id: template_pair_conditioning
+    parent_ref: modules.template_module
+    decomposition:
+      status: partial
+      reason: Real internal structure (the two independent LinearNoBias projections combined by outer sum at line 8, the per-template LayerNorm-and-accumulate step at line 10, the division by N_templates at line 12, and the final plain-ReLU LinearNoBias projection at line 13) is modeled at value-site granularity rather than as further child modules, mirroring modules.outer_product_mean's treatment.
+    label: Template Pair Conditioning
+    kind: operator
+    mechanisms: [layer_normalization, linear_projection, outer_sum, mean_pooling, relu_projection]
+    role: combine one representative template's masked/concatenated pair feature with a LinearNoBias-projected, LayerNorm'd read of the current pair state via an outer sum, at the module's own 64-channel width, into that template's pair-conditioned state (line 8); after modules.template_pair_update_stage's pair-only pair-stack refines that state, LayerNorm and accumulate the result across every template, divide by N_templates (order-invariant pooling, line 12), and project once more with a plain LinearNoBias(ReLU(...)) -- notably plain ReLU here, not the SwiGLU used in every Transition block elsewhere in this architecture -- up to the trunk's 128-channel width to produce the module's final pair-state contribution (line 13)
+    scale: token_pair
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 lines 6, 8, 10, 12-13
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py lines 191-202 (scan-accumulated per-template embeddings summed via hk.scan's carry, matching line 10's accumulator; divided by num_templates, relu'd, then projected by hm.Linear to query_num_channels=128); line 113 (num_channels=64, the pre-projection width)"
+  - id: template_pair_update_stage
+    parent_ref: modules.template_module
+    decomposition:
+      status: complete
+    label: Template Pair Stack (pair-only)
+    kind: refiner
+    mechanisms: [triangle_multiplication, axial_pair_attention, transition]
+    role: run the template embedder's own N_block=2 pair-only Pairformer block over each representative template's pair-conditioned state, at the module's own 64-channel width; unlike both the main 48-block trunk (with_single=True) and the MSA module's own pair-stack, this stack has no single-representation step at all -- PairFormerIteration's with_single constructor flag defaults to False and is never overridden by the template embedder's per-template call, so only the five pair-only sub-steps below run and no single_act is passed in or returned
+    scale: token_pair
+    repeats: 2
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py lines 338-348 (per-template call: modules.PairFormerIteration(c.template_stack, gc, name='template_embedding_iteration')(act=x, pair_mask=padding_mask_2d) -- with_single left at its constructor default, no single_act argument passed); line 115 (template_stack num_layer=2, matching N_block=2)"
+        - source_ref: af3_pairformer_code
+          role: implementation_evidence
+          locator: "modules.py line 442 (PairFormerIteration.__init__ with_single=False default)"
+        - source_ref: af3_evoformer_code
+          role: implementation_evidence
+          locator: "evoformer.py lines 317-323 (main trunk Pairformer stack instantiated with an explicit single_act argument, i.e. with_single=True) -- contrastive evidence that the template embedder's own stack is a genuinely different, pair-only invocation of the same PairFormerIteration mechanism, not an abbreviation or a paper typo"
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); N_block=2 per the TemplateEmbedder signature
+  - id: template_triangle_multiplication_outgoing
+    parent_ref: modules.template_pair_update_stage
+    decomposition:
+      status: leaf
+    label: Template Triangle Multiplication Outgoing
+    kind: operator
+    mechanisms: [triangle_multiplication, gated_projection, residual_update]
+    role: aggregate products over shared outgoing edges and add the result to the per-template pair-conditioned state; the same TriangleMultiplicationOutgoing mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the first step of the template embedder's own N_block=2 pair-only pair-stack, at the module's narrower 64-channel width
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 2 (TriangleMultiplicationOutgoing); Algorithm 12 (TriangleMultiplicationOutgoing definition)
+  - id: template_triangle_multiplication_incoming
+    parent_ref: modules.template_pair_update_stage
+    decomposition:
+      status: leaf
+    label: Template Triangle Multiplication Incoming
+    kind: operator
+    mechanisms: [triangle_multiplication, gated_projection, residual_update]
+    role: aggregate products over shared incoming edges and add the result to the per-template pair-conditioned state; the same TriangleMultiplicationIncoming mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the second step of the template embedder's own pair-only pair-stack
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 3 (TriangleMultiplicationIncoming); Algorithm 13 (TriangleMultiplicationIncoming definition)
+  - id: template_pair_attention_starting_node
+    parent_ref: modules.template_pair_update_stage
+    decomposition:
+      status: leaf
+    label: Template Triangle Attention Starting Node
+    kind: attention
+    mechanisms: [axial_attention, self_derived_pair_bias, query_gating, residual_update]
+    role: update each ordered pair by attending along the starting-node pair-grid axis; the same TriangleAttentionStartingNode mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the third step of the template embedder's own pair-only pair-stack
+    scale: token_pair
+    attention:
+      pattern: pair_grid_starting_node
+      query_scale: token_pair
+      key_value_scale: token_pair
+      heads: 4
+      pair_bias: true
+      pair_bias_source: normalized_pair_state
+      positional_encoding:
+        kind: none
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 4 (TriangleAttentionStartingNode); Algorithm 14 (TriangleAttentionStartingNode definition, N_head=4, c=32)
+  - id: template_pair_attention_ending_node
+    parent_ref: modules.template_pair_update_stage
+    decomposition:
+      status: leaf
+    label: Template Triangle Attention Ending Node
+    kind: attention
+    mechanisms: [axial_attention, self_derived_pair_bias, query_gating, residual_update]
+    role: transpose the pair grid, attend along the complementary ending-node axis, and add the result to the per-template pair-conditioned state; the same TriangleAttentionEndingNode mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the fourth step of the template embedder's own pair-only pair-stack
+    scale: token_pair
+    attention:
+      pattern: pair_grid_ending_node
+      query_scale: token_pair
+      key_value_scale: token_pair
+      heads: 4
+      pair_bias: true
+      pair_bias_source: normalized_pair_state
+      positional_encoding:
+        kind: none
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 5 (TriangleAttentionEndingNode); Algorithm 15 (TriangleAttentionEndingNode definition, N_head=4, c=32)
+  - id: template_pair_transition
+    parent_ref: modules.template_pair_update_stage
+    decomposition:
+      status: leaf
+    label: Template Pair Transition
+    kind: feed_forward
+    mechanisms: [layer_normalization, swiglu, residual_update]
+    role: apply a pointwise 4x SwiGLU transition and add its 64-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights), run here as the final step of the template embedder's own pair-only pair-stack, whose output is this representative template's fully refined state
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition); Algorithm 11 (Transition definition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6) and the MSA module's own msa_pair_transition
 
 relations:
   - id: input_pair_state_initializes_block_pair_state
@@ -1873,18 +2316,18 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) -- s_inputs is added into every MSA row identically
-  - id: z_init_initializes_msa_module_pair_state
+  - id: z_init_initializes_template_module_pair_state
     from: value_sites.z_init
-    to: value_sites.msa_module_pair_state_read
+    to: value_sites.template_module_pair_state_read
     kind: state_update
     carries: [representations.pair_state]
-    operation: initialize_msa_module_pair_state
+    operation: initialize_template_module_pair_state
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument); Algorithm 1 line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer
+          locator: Supplementary Algorithm 16 signature ({z_ij} passed into TemplateEmbedder as its second argument); Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer. Retargeted from producing value_sites.msa_module_pair_state_read directly (module 2's original wiring, when nothing sat between z_init and the MSA module) to producing value_sites.template_module_pair_state_read, now that value_sites.z_init -> modules.template_module -> value_sites.msa_module_pair_state_read is the real chain (Algorithm 1 line 9 precedes line 10; Algorithm 16). The template module's own contribution now reaches msa_module_pair_state_read via relations.template_module_pair_output_updates_msa_module_pair_state.
   - id: outer_product_mean_contribution_updates_msa_module_pair_state
     from: value_sites.outer_product_mean_pair_contribution
     to: value_sites.msa_module_pair_state_read
@@ -1984,6 +2427,237 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 15 (#kw[return] {z_ij}) -- only z_ij is returned, the MSA representation is discarded; this is the module's actual contribution to the architecture's persistent pair_state_input, per Algorithm 1 line 10 ({z_ij} += MsaModule(...)) feeding the 48-block PairformerStack call on line 12
+  - id: template_backbone_frame_mask_enters_feature_construction
+    from: value_sites.template_backbone_frame_mask
+    to: modules.template_pair_feature_construction
+    kind: data_flow
+    carries: [representations.template_backbone_frame_mask]
+    operation: provide_raw_backbone_frame_mask_for_and_gate
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 1
+  - id: template_pseudo_beta_mask_enters_feature_construction
+    from: value_sites.template_pseudo_beta_mask
+    to: modules.template_pair_feature_construction
+    kind: data_flow
+    carries: [representations.template_pseudo_beta_mask]
+    operation: provide_raw_pseudo_beta_mask_for_and_gate
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 2
+  - id: template_distogram_enters_feature_construction
+    from: value_sites.template_distogram
+    to: modules.template_pair_feature_construction
+    kind: data_flow
+    carries: [representations.template_distogram]
+    operation: provide_raw_distogram_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 3
+  - id: template_unit_vector_enters_feature_construction
+    from: value_sites.template_unit_vector
+    to: modules.template_pair_feature_construction
+    kind: data_flow
+    carries: [representations.template_unit_vector]
+    operation: provide_raw_unit_vector_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 3
+  - id: asym_id_conditions_feature_construction
+    from: value_sites.asym_id
+    to: modules.template_pair_feature_construction
+    kind: conditioning
+    carries: [representations.asym_id]
+    operation: gate_template_feature_to_intra_chain_pairs
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 4 (a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id))
+  - id: template_restype_enters_feature_construction
+    from: value_sites.template_restype
+    to: modules.template_pair_feature_construction
+    kind: data_flow
+    carries: [representations.template_restype]
+    operation: provide_raw_restype_for_concatenation
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 5
+  - id: feature_construction_produces_template_pair_feature
+    from: modules.template_pair_feature_construction
+    to: value_sites.template_pair_feature
+    kind: state_update
+    carries: [representations.template_pair_feature]
+    operation: build_masked_concatenated_per_template_pair_feature
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 lines 1-5
+  - id: template_pair_state_enters_conditioning
+    from: value_sites.template_module_pair_state_read
+    to: modules.template_pair_conditioning
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: read_pair_state_for_outer_sum_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 8 (LinearNoBias(LayerNorm(z_ij)) term)
+  - id: template_pair_feature_enters_conditioning
+    from: value_sites.template_pair_feature
+    to: modules.template_pair_conditioning
+    kind: data_flow
+    carries: [representations.template_pair_feature]
+    operation: read_masked_feature_for_outer_sum_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 8 (LinearNoBias(a_tij) term)
+  - id: conditioning_produces_pre_stack_state
+    from: modules.template_pair_conditioning
+    to: value_sites.template_pair_conditioned_state
+    kind: state_update
+    carries: [representations.template_conditioned_pair_state]
+    operation: outer_sum_project_pair_state_and_template_feature
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 8 (v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij))
+  - id: template_pre_stack_state_enters_outgoing_multiplication
+    from: value_sites.template_pair_conditioned_state
+    to: modules.template_triangle_multiplication_outgoing
+    kind: data_flow
+    carries: [representations.template_conditioned_pair_state]
+    operation: compute_template_outgoing_triangle_delta
+    evidence: &template_pair_stack_evidence
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass
+  - id: template_outgoing_multiplication_updates_pair_state
+    from: modules.template_triangle_multiplication_outgoing
+    to: value_sites.template_pair_after_outgoing_multiplication
+    kind: state_update
+    carries: [representations.template_conditioned_pair_state]
+    operation: add_template_outgoing_triangle_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_outgoing_pair_state_enters_incoming_multiplication
+    from: value_sites.template_pair_after_outgoing_multiplication
+    to: modules.template_triangle_multiplication_incoming
+    kind: data_flow
+    carries: [representations.template_conditioned_pair_state]
+    operation: compute_template_incoming_triangle_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_incoming_multiplication_updates_pair_state
+    from: modules.template_triangle_multiplication_incoming
+    to: value_sites.template_pair_after_incoming_multiplication
+    kind: state_update
+    carries: [representations.template_conditioned_pair_state]
+    operation: add_template_incoming_triangle_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_incoming_pair_state_enters_starting_attention
+    from: value_sites.template_pair_after_incoming_multiplication
+    to: modules.template_pair_attention_starting_node
+    kind: data_flow
+    carries: [representations.template_conditioned_pair_state]
+    operation: attend_template_starting_node_axis
+    evidence: *template_pair_stack_evidence
+  - id: template_starting_attention_updates_pair_state
+    from: modules.template_pair_attention_starting_node
+    to: value_sites.template_pair_after_starting_attention
+    kind: state_update
+    carries: [representations.template_conditioned_pair_state]
+    operation: add_template_starting_node_attention_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_starting_pair_state_enters_ending_attention
+    from: value_sites.template_pair_after_starting_attention
+    to: modules.template_pair_attention_ending_node
+    kind: data_flow
+    carries: [representations.template_conditioned_pair_state]
+    operation: attend_template_ending_node_axis
+    evidence: *template_pair_stack_evidence
+  - id: template_ending_attention_updates_pair_state
+    from: modules.template_pair_attention_ending_node
+    to: value_sites.template_pair_after_ending_attention
+    kind: state_update
+    carries: [representations.template_conditioned_pair_state]
+    operation: add_template_ending_node_attention_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_ending_pair_state_enters_pair_transition
+    from: value_sites.template_pair_after_ending_attention
+    to: modules.template_pair_transition
+    kind: data_flow
+    carries: [representations.template_conditioned_pair_state]
+    operation: compute_template_pair_transition_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_pair_transition_updates_pair_state
+    from: modules.template_pair_transition
+    to: value_sites.template_pair_after_transition
+    kind: state_update
+    carries: [representations.template_conditioned_pair_state]
+    operation: add_template_pair_transition_delta
+    evidence: *template_pair_stack_evidence
+  - id: template_post_stack_state_enters_pooling
+    from: value_sites.template_pair_after_transition
+    to: modules.template_pair_conditioning
+    kind: data_flow
+    carries: [representations.template_conditioned_pair_state]
+    operation: accumulate_refined_template_state_for_cross_template_pooling
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 line 10 (u_ij += LayerNorm(v_ij)) -- this representative template's fully refined state, read back into modules.template_pair_conditioning for cross-template accumulation
+  - id: conditioning_produces_template_module_pair_output
+    from: modules.template_pair_conditioning
+    to: value_sites.template_module_pair_output
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: average_across_templates_and_relu_project
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 16 lines 12-13 (u_ij <- u_ij / N_templates; u_ij <- LinearNoBias(ReLU(u_ij)))
+  - id: template_module_pair_output_updates_msa_module_pair_state
+    from: value_sites.template_module_pair_output
+    to: value_sites.msa_module_pair_state_read
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_template_module_contribution_to_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's own returned contribution lands in z_ij before the MSA module reads its own entry state, taking over the role relations.z_init_initializes_template_module_pair_state's predecessor relation used to play for msa_module directly before this task retargeted it
 
 claims:
   - id: pairformer_has_no_msa_state
