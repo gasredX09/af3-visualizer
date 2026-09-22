@@ -446,3 +446,38 @@ section's own description of its authoring mechanism (file paths, the
 `architecture-edit-v0.2` plan claim, and the `semantic_flow_v1` layout
 claim), which was reconciled with what actually shipped in the
 2026-09-19 final-review fix wave.
+
+## 2026-09-22 -- Defer upstreaming AF3 content to ramithuh/explainer
+
+**Decision:** Do not pursue merging this project's AF3 architecture/view
+content back into the upstream `ramithuh/explainer` repo now. Revisit
+once sub-project 1 (the full AF3 architecture, all modules) is complete
+and reviewed, not before.
+
+**Options considered:** (1) Open an upstream PR now with what exists
+(Input Feature Embedder + MSA Module). (2) Defer until sub-project 1 is
+complete, then offer the finished AF3 example architecture upstream,
+likely as new files only (`architectures/alphafold3-pairformer.yaml`,
+`views/alphafold3-pairformer-semantic-zoom.view.yaml`) since none of
+`explainer/lib/`, `explainer/scripts/`, or the JS renderer has been
+modified in this project -- only content under `architectures/` and
+`views/` was added or hand-edited. (3) Keep the vendored copy permanently
+separate, never upstream.
+
+**Why:** Raised by the user's mentor (the tool's co-creator) as a
+"what do you think" question, not urgent. A partial AF3 slice (2 of
+~6 planned modules) is a weak, unfinished contribution to hand back; a
+completed AF3 example (comparable in scope to the existing AF2 example
+already in the tool's own `views/`) is a much stronger and more obviously
+useful one. Because the changes so far are additive content files, not
+engine changes, the eventual merge is low-risk regardless of when it
+happens -- deferring costs nothing structurally, only delays the ask.
+One open item to resolve before acting on option 2: `explainer/LICENSE`
+is AGPL-3.0, matching upstream, so a generic AF3 example architecture is
+clean to contribute under the same terms; anything that stays specific
+to this project's teaching-tool framing (the GenAI BioMed 2026 Fall talk,
+the fixed example complex) should stay out of any upstream PR.
+
+**Supersedes:** none. Extends the 2026-09-18 pivot entry's decision to
+vendor rather than fork/upstream immediately; this entry only adds the
+completion-gated revisit plan.
