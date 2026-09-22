@@ -3,7 +3,7 @@ export const manifest = {
   "build": {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
-      "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
+      "references/bibliography.yaml": "d5e315f0a115362ffe834d79d83c3880b315f95fecf06f1d5f56372aecec555f",
       "architectures/genie3.yaml": "e1681f7d81c9887505a3b13decf0d773842f8cf8d4c26e41c01371e16dfa8900",
       "views/genie3-semantic-zoom.view.yaml": "9f6e321145753993bd3604cdea84b2a9d42a924b7be6a3ec835050f61f49ac88",
       "pseudocode/genie3.yaml": "822369fcf368f6fc2cf07c70a810d408a122d4cc1bad4f33ef2fbbf6b848d09c",
@@ -10587,6 +10587,17 @@ export const manifest = {
         "path": "src/alphafold3/model/network/diffusion_transformer.py",
         "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_transformer.py",
         "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_transformer.py"
+      },
+      {
+        "id": "af3_template_code",
+        "kind": "code",
+        "title": "AlphaFold 3 template embedder implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/template_modules.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py"
       },
       {
         "id": "genie2_2024",

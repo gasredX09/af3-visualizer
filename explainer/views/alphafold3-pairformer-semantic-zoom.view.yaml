@@ -7,15 +7,15 @@ root_board: pairformer_overview
 boards:
   - id: pairformer_overview
     title: AlphaFold 3
-    summary: AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The MSA module then reads the raw per-row MSA and folds evolutionary coupling, correlated variation across aligned sequences, into the pair representation, the only place in the model where that happens. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.
+    summary: AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The Template module then reads raw per-template structural evidence (masked distograms, unit vectors, and residue types from homologous templates) and writes a pooled contribution into the pair representation before anything else touches it. The MSA module reads the raw per-row MSA next and folds evolutionary coupling, correlated variation across aligned sequences, into that same pair representation -- structural template evidence and evolutionary coupling are the only two places new external evidence enters the pair representation each cycle, template evidence first. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 11
-      rows: 5
+      columns: 13
+      rows: 7
       column_sizing: content
-      col_gap: 40
-      row_gap: 32
+      col_gap: 36
+      row_gap: 24
     nodes:
     - id: atom_reference_features_input
       ref: value_sites.atom_reference_features_input
@@ -24,7 +24,7 @@ boards:
       treatment: chip
       density: micro
       col: 1
-      row: 1
+      row: 2
     - id: restype_input
       ref: value_sites.restype_input
       label: restype
@@ -32,7 +32,7 @@ boards:
       treatment: chip
       density: micro
       col: 1
-      row: 2
+      row: 3
     - id: profile_input
       ref: value_sites.profile_input
       label: MSA profile
@@ -40,7 +40,7 @@ boards:
       treatment: chip
       density: micro
       col: 1
-      row: 4
+      row: 5
     - id: deletion_mean_input
       ref: value_sites.deletion_mean_input
       label: deletion mean
@@ -48,14 +48,14 @@ boards:
       treatment: chip
       density: micro
       col: 1
-      row: 5
+      row: 6
     - id: input_feature_embedder
       ref: modules.input_feature_embedder
       label: Input Feature Embedder
       prominence: primary
       treatment: block
       col: 2
-      row: 3
+      row: 4
       board_ref: input_feature_embedder_detail
     - id: s_inputs
       ref: value_sites.s_inputs
@@ -65,7 +65,7 @@ boards:
       treatment: compact
       density: compact
       col: 3
-      row: 3
+      row: 4
     - id: single_state_input_projection
       ref: modules.single_state_input_projection
       label: project singles
@@ -73,7 +73,7 @@ boards:
       treatment: chip
       density: micro
       col: 4
-      row: 2
+      row: 3
     - id: pair_state_input_projection
       ref: modules.pair_state_input_projection
       label: project pairs
@@ -81,7 +81,7 @@ boards:
       treatment: chip
       density: micro
       col: 4
-      row: 4
+      row: 5
     - id: token_mask_input
       ref: value_sites.token_mask_input
       label: token mask
@@ -89,7 +89,7 @@ boards:
       treatment: chip
       density: micro
       col: 5
-      row: 1
+      row: 2
     - id: pair_mask_input
       ref: value_sites.pair_mask_input
       label: pair mask
@@ -97,46 +97,102 @@ boards:
       treatment: chip
       density: micro
       col: 5
+      row: 6
+    - id: template_backbone_frame_mask
+      ref: value_sites.template_backbone_frame_mask
+      label: backbone-frame mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 1
+    - id: template_pseudo_beta_mask
+      ref: value_sites.template_pseudo_beta_mask
+      label: pseudo-beta mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 2
+    - id: template_distogram
+      ref: value_sites.template_distogram
+      label: distogram
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 3
+    - id: template_unit_vector
+      ref: value_sites.template_unit_vector
+      label: unit vector
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
       row: 5
+    - id: template_restype
+      ref: value_sites.template_restype
+      label: template restype
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 6
+    - id: asym_id
+      ref: value_sites.asym_id
+      label: chain id (asym_id)
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 7
+    - id: template_module
+      ref: modules.template_module
+      label: Template Module
+      prominence: primary
+      treatment: block
+      col: 7
+      row: 4
+      board_ref: template_module_detail
     - id: msa_input
       ref: value_sites.msa_input
       label: MSA identity
       prominence: context
       treatment: chip
       density: micro
-      col: 6
-      row: 1
+      col: 8
+      row: 2
     - id: has_deletion_input
       ref: value_sites.has_deletion_input
       label: has deletion
       prominence: context
       treatment: chip
       density: micro
-      col: 6
-      row: 2
+      col: 8
+      row: 3
     - id: deletion_value_input
       ref: value_sites.deletion_value_input
       label: deletion value
       prominence: context
       treatment: chip
       density: micro
-      col: 6
-      row: 4
+      col: 8
+      row: 5
     - id: msa_module
       ref: modules.msa_module
       label: MSA Module
       prominence: primary
       treatment: block
-      col: 7
-      row: 3
+      col: 9
+      row: 4
       board_ref: msa_module_detail
     - id: pairformer_stack
       ref: modules.pairformer_stack
       label: 48-block Pairformer
       prominence: primary
       treatment: block
-      col: 9
-      row: 3
+      col: 11
+      row: 4
       board_ref: pairformer_block
     - id: single_state_output
       ref: value_sites.single_state_output
@@ -145,8 +201,8 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 11
-      row: 2
+      col: 13
+      row: 3
     - id: pair_state_output
       ref: value_sites.pair_state_output
       label: trunk pairs
@@ -154,8 +210,8 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 11
-      row: 4
+      col: 13
+      row: 5
     edge_overrides:
     - match:
         relation_ref: relations.final_single_block_state_becomes_output
@@ -1240,3 +1296,451 @@ boards:
           title: Combine, project, and write back
           role: module output
           inside: Row s's gate multiplies that row's own weighted average of values (using the shared weights above), a LinearNoBias layer concatenates and projects across heads, and the result is added back into that row's MSA activations.
+
+  - id: template_module_detail
+    title: The Template Module
+    summary: Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, a pairwise unit vector, and each token's template residue type) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate, then outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.
+    subject_ref: modules.template_module
+    expansion_depth: 1
+    parent: pairformer_overview
+    grid:
+      columns: 7
+      rows: 8
+      column_sizing: content
+      col_gap: 24
+      row_gap: 20
+    nodes:
+    - id: value_template_backbone_frame_mask
+      ref: value_sites.template_backbone_frame_mask
+      label: backbone-frame mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 1
+    - id: value_template_pseudo_beta_mask
+      ref: value_sites.template_pseudo_beta_mask
+      label: pseudo-beta mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 2
+    - id: value_template_distogram
+      ref: value_sites.template_distogram
+      label: distogram
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 3
+    - id: value_template_unit_vector
+      ref: value_sites.template_unit_vector
+      label: unit vector
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 5
+    - id: value_template_restype
+      ref: value_sites.template_restype
+      label: template restype
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 6
+    - id: value_asym_id
+      ref: value_sites.asym_id
+      label: chain id (asym_id)
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 1
+      row: 7
+    - id: value_template_module_pair_state_read
+      ref: value_sites.template_module_pair_state_read
+      label: pair state entry
+      notation: z
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 1
+      row: 8
+    - id: module_template_pair_feature_construction
+      ref: modules.template_pair_feature_construction
+      prominence: primary
+      treatment: block
+      col: 2
+      row: 4
+    - id: value_template_pair_feature
+      ref: value_sites.template_pair_feature
+      label: masked template feature
+      notation: a_{tij}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 3
+      row: 4
+    - id: module_template_pair_conditioning
+      ref: modules.template_pair_conditioning
+      prominence: primary
+      treatment: block
+      col: 4
+      row: 4
+      board_ref: template_pair_conditioning_detail
+    - id: value_template_pair_conditioned_state
+      ref: value_sites.template_pair_conditioned_state
+      label: pre-stack state
+      notation: v_{ij}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 5
+      row: 3
+    - id: value_template_pair_after_transition
+      ref: value_sites.template_pair_after_transition
+      label: post-stack state
+      notation: v_{ij}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 5
+      row: 5
+    - id: module_template_pair_update_stage
+      ref: modules.template_pair_update_stage
+      prominence: primary
+      treatment: block
+      col: 6
+      row: 4
+      board_ref: template_pair_track
+    - id: value_template_module_pair_output
+      ref: value_sites.template_module_pair_output
+      label: template contribution
+      notation: u_{ij}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 7
+      row: 4
+    exclude:
+    - ref: value_sites.z_init
+      reason: z_init's own construction (the raw projection of the current pair state) is shown on the parent pairformer_overview board; this board begins at the module's own entry point, template_module_pair_state_read.
+    - ref: value_sites.msa_module_pair_state_read
+      reason: Where this module's output lands inside the MSA module is shown on msa_module_detail; this board ends at the module's own output, template_module_pair_output.
+    edge_overrides:
+    - match:
+        relation_ref: relations.asym_id_conditions_feature_construction
+      label: intra-chain gate
+      connection:
+        title: Restrict to intra-chain pairs
+        role: chain-instance gate
+        inside: Every cross-chain pair is zeroed before restype is concatenated -- a single template structure only constrains one chain's own internal geometry, so its evidence must not leak across chain copies.
+    - match:
+        relation_ref: relations.feature_construction_produces_template_pair_feature
+      label: a_{tij}
+      connection:
+        title: Masked and concatenated
+        role: per-template pair feature
+        inside: The two AND-gate masks, the distogram, and the unit vector are concatenated after the asym_id gate; restype is concatenated last and so is not itself gated.
+    - match:
+        relation_ref: relations.template_pair_state_enters_conditioning
+      label: z
+      connection:
+        title: Current pair state enters conditioning
+        role: outer-sum term
+        inside: A LinearNoBias(LayerNorm(z_ij)) projection of the trunk's current pair belief becomes one of the two outer-sum terms that build this template's own conditioned state.
+    - match:
+        relation_ref: relations.template_pair_feature_enters_conditioning
+      label: a_{tij}
+      connection:
+        title: Template evidence enters conditioning
+        role: outer-sum term
+        inside: A LinearNoBias(a_tij) projection of the masked, concatenated template feature becomes the other outer-sum term, carrying this specific template's raw geometric evidence.
+    - match:
+        relation_ref: relations.conditioning_produces_pre_stack_state
+      label: v_{ij}
+      connection:
+        title: Outer sum produces the conditioned state
+        role: per-template conditioned state
+        inside: v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), at the module's own 64-channel width.
+    - match:
+        relation_ref: relations.template_pre_stack_state_enters_outgoing_multiplication
+      label: v_{ij}
+      connection:
+        title: Pre-stack state enters the pair-only stack
+        role: per-template conditioned state
+        inside: The outer-summed, 64-channel conditioned state is handed to the template embedder's own N_block=2 pair-only pair-stack (no single-representation step), shown in its own board.
+    - match:
+        relation_ref: relations.template_pair_transition_updates_pair_state
+      label: refined v_{ij}
+      connection:
+        title: Pair-only stack produces the refined state
+        role: post-stack per-template state
+        inside: After all five pair-only sub-steps (shown in template_pair_track), this representative template's fully refined state is what conditioning reads back for cross-template pooling.
+    - match:
+        relation_ref: relations.template_post_stack_state_enters_pooling
+      label: returns for pooling
+      tone: recurrence
+      route_side: bottom
+      route_clearance: 40
+      connection:
+        title: Refined state returns for pooling
+        role: cross-template accumulation input
+        inside: This representative template's fully refined state comes back from the pair-only stack and is LayerNorm'd and accumulated toward the cross-template average -- the same conditioning mechanism that read the outer-sum inputs also performs this later pooling step.
+    - match:
+        relation_ref: relations.conditioning_produces_template_module_pair_output
+      label: u_{ij}
+      connection:
+        title: Pool, average, and project
+        role: module output
+        inside: After every template's refined state is accumulated, the sum is divided by N_templates and projected once more by a plain LinearNoBias(ReLU(...)) -- notably plain ReLU, not the SwiGLU used in every Transition block elsewhere -- up to the trunk's 128-channel width. This is the module's own returned contribution, read next by the MSA module.
+
+  - id: template_pair_track
+    title: "Template Pair Stack: Five Ordered Residual Updates"
+    summary: The same five-step pair-stack mechanism as the Pairformer's own pair track and the MSA module's own pair-stack (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a 4x SwiGLU transition), with its own parameters, run here N_block=2 times at the template embedder's own narrower 64-channel width. Unlike both the 48-block trunk and the MSA module's pair-stack, this variant has no single-representation step at all -- PairFormerIteration's with_single flag is left at its constructor default of False here, so only these five pair-only sub-steps run.
+    parent: template_module_detail
+    subject_ref: modules.template_pair_update_stage
+    expansion_depth: 1
+    grid:
+      columns: 11
+      rows: 3
+      column_sizing: content
+      col_gap: 24
+      row_gap: 28
+    nodes:
+      - id: template_pair_conditioned_state
+        ref: value_sites.template_pair_conditioned_state
+        label: pre-stack template state
+        notation: v_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 1
+        row: 2
+      - id: template_triangle_multiplication_outgoing
+        ref: modules.template_triangle_multiplication_outgoing
+        label: outgoing triangle multiplication + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 2
+        row: 2
+      - id: template_pair_after_outgoing_multiplication
+        ref: value_sites.template_pair_after_outgoing_multiplication
+        label: outgoing-updated pairs
+        notation: v^{out}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 3
+        row: 2
+      - id: template_triangle_multiplication_incoming
+        ref: modules.template_triangle_multiplication_incoming
+        label: incoming triangle multiplication + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 4
+        row: 2
+      - id: template_pair_after_incoming_multiplication
+        ref: value_sites.template_pair_after_incoming_multiplication
+        label: incoming-updated pairs
+        notation: v^{in}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 5
+        row: 2
+      - id: template_pair_attention_starting_node
+        ref: modules.template_pair_attention_starting_node
+        label: starting-node attention + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 6
+        row: 2
+      - id: template_pair_after_starting_attention
+        ref: value_sites.template_pair_after_starting_attention
+        label: start-attended pairs
+        notation: v^{start}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 7
+        row: 2
+      - id: template_pair_attention_ending_node
+        ref: modules.template_pair_attention_ending_node
+        label: ending-node attention + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 8
+        row: 2
+      - id: template_pair_after_ending_attention
+        ref: value_sites.template_pair_after_ending_attention
+        label: end-attended pairs
+        notation: v^{end}
+        prominence: context
+        treatment: compact
+        density: micro
+        col: 9
+        row: 2
+      - id: template_pair_transition
+        ref: modules.template_pair_transition
+        label: pair transition + residual
+        prominence: primary
+        treatment: compact
+        density: compact
+        col: 10
+        row: 2
+      - id: template_pair_after_transition
+        ref: value_sites.template_pair_after_transition
+        label: pair-stack output
+        notation: v_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 11
+        row: 2
+    edge_overrides:
+      - match: { relation_ref: relations.template_pre_stack_state_enters_outgoing_multiplication }
+        label: v_{ij}
+        connection:
+          title: Pre-stack state enters outgoing update
+          role: ordered-pair input
+          inside: The outgoing triangle operation mixes pairs that share their outgoing endpoint pattern, reading the conditioned state conditioning just produced.
+      - match: { relation_ref: relations.template_outgoing_multiplication_updates_pair_state }
+        label: '+ Δv_out'
+        connection:
+          title: Outgoing residual update
+          role: pair-state mutation
+          inside: The gated outgoing triangle result is projected back to the module's own 64 channels and added to the incoming state.
+      - match: { relation_ref: relations.template_incoming_multiplication_updates_pair_state }
+        label: '+ Δv_in'
+        connection:
+          title: Incoming residual update
+          role: pair-state mutation
+          inside: The incoming triangle result is added to the already outgoing-updated state.
+      - match: { relation_ref: relations.template_starting_attention_updates_pair_state }
+        label: '+ Δv_start'
+        connection:
+          title: Starting-node attention update
+          role: axial pair attention
+          inside: Four-head gated attention follows one axis of the pair grid and adds its projected result.
+      - match: { relation_ref: relations.template_ending_attention_updates_pair_state }
+        label: '+ Δv_end'
+        connection:
+          title: Ending-node attention update
+          role: complementary axial pair attention
+          inside: The implementation transposes the pair grid, applies the same attention anatomy along the other axis, then transposes back.
+      - match: { relation_ref: relations.template_pair_transition_updates_pair_state }
+        label: '+ Δv_ffn'
+        connection:
+          title: Pair transition update
+          role: pointwise pair feed-forward
+          inside: LayerNorm and a 4x SwiGLU hidden projection produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation.
+
+  - id: template_pair_conditioning_detail
+    title: "Template Pair Conditioning: Outer Sum In, Cross-Template Pooling Out"
+    summary: For one representative template, a LinearNoBias(LayerNorm(z_ij)) read of the current pair state is outer-summed with a LinearNoBias(a_tij) read of the masked template feature to form this template's own pair-conditioned state at the template embedder's narrower 64-channel width. After the pair-only pair-stack (shown separately in template_pair_track) refines that state, this same mechanism LayerNorms and accumulates the result across every template, divides by N_templates (order-invariant pooling), and projects once more through a plain LinearNoBias(ReLU(...)) -- notably plain ReLU, not the SwiGLU used in every Transition block elsewhere -- up to the trunk's 128-channel width.
+    parent: template_module_detail
+    subject_ref: modules.template_pair_conditioning
+    expansion_depth: 1
+    grid:
+      columns: 5
+      rows: 3
+      column_sizing: content
+      col_gap: 26
+      row_gap: 24
+    nodes:
+      - id: value_template_module_pair_state_read_cond
+        ref: value_sites.template_module_pair_state_read
+        label: pair state entry
+        notation: z
+        prominence: context
+        treatment: compact
+        density: compact
+        col: 1
+        row: 1
+      - id: value_template_pair_feature_cond
+        ref: value_sites.template_pair_feature
+        label: masked template feature
+        notation: a_{tij}
+        prominence: context
+        treatment: compact
+        density: compact
+        col: 1
+        row: 3
+      - id: template_pair_conditioning
+        ref: modules.template_pair_conditioning
+        prominence: primary
+        treatment: block
+        col: 2
+        row: 2
+      - id: value_template_pair_conditioned_state
+        ref: value_sites.template_pair_conditioned_state
+        label: pre-stack state
+        notation: v_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 3
+        row: 2
+      - id: value_template_pair_after_transition
+        ref: value_sites.template_pair_after_transition
+        label: post-stack state
+        notation: v_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 4
+        row: 2
+      - id: value_template_module_pair_output_cond
+        ref: value_sites.template_module_pair_output
+        label: pooled contribution
+        notation: u_{ij}
+        prominence: secondary
+        treatment: compact
+        density: compact
+        col: 5
+        row: 2
+    exclude:
+      - ref: modules.template_triangle_multiplication_outgoing
+        reason: The pair-only pair-stack that reads the pre-stack state and produces the post-stack state is shown in its own board, template_pair_track; this board covers conditioning's own outer-sum and pooling mechanism.
+      - ref: modules.template_pair_transition
+        reason: The pair-only pair-stack that reads the pre-stack state and produces the post-stack state is shown in its own board, template_pair_track; this board covers conditioning's own outer-sum and pooling mechanism.
+    edge_overrides:
+      - match: { relation_ref: relations.template_pair_state_enters_conditioning }
+        label: z
+        connection:
+          title: Current pair state enters the outer sum
+          role: outer-sum term
+          inside: LinearNoBias(LayerNorm(z_ij)) becomes one of the two independent projections combined by outer sum.
+      - match: { relation_ref: relations.template_pair_feature_enters_conditioning }
+        label: a_{tij}
+        connection:
+          title: Template evidence enters the outer sum
+          role: outer-sum term
+          inside: LinearNoBias(a_tij) becomes the other outer-sum term, carrying this template's own masked geometric evidence.
+      - match: { relation_ref: relations.conditioning_produces_pre_stack_state }
+        label: v_{ij}
+        connection:
+          title: Outer sum produces the conditioned state
+          role: per-template conditioned state
+          inside: v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), at the module's own 64-channel width, before the pair-only pair-stack (template_pair_track) refines it.
+      - match: { relation_ref: relations.template_post_stack_state_enters_pooling }
+        label: v_{ij} refined
+        tone: recurrence
+        route_side: bottom
+        route_clearance: 36
+        connection:
+          title: Refined state returns for pooling
+          role: cross-template accumulation input
+          inside: After template_pair_track's pair-only stack refines v_ij, this same conditioning mechanism LayerNorms and accumulates the result across every template -- the module reads its own inputs once early (the outer sum) and once again late (the pooling accumulation).
+      - match: { relation_ref: relations.conditioning_produces_template_module_pair_output }
+        label: u_{ij}
+        connection:
+          title: Average and project
+          role: module output
+          inside: The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution.

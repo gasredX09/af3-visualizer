@@ -3,9 +3,9 @@ export const manifest = {
   "build": {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
-      "references/bibliography.yaml": "82f709e900c8a4856e4b834e7d3d7269313b9e4aa08f6bea91d75c33ef974bdd",
-      "architectures/alphafold3-pairformer.yaml": "b26bc51f2036bdc5f25fb316c124b72b82f6b5fa5be3aa1a210401979f462766",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "f7b173b63de9150cabf4071c854c5f70899e941c46973b012d34d37aad33bbec",
+      "references/bibliography.yaml": "d5e315f0a115362ffe834d79d83c3880b315f95fecf06f1d5f56372aecec555f",
+      "architectures/alphafold3-pairformer.yaml": "50238056a02686b7d1679226e2540d9f82b3b0e270e4169c40789d2fdceba035",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "bab8c9eaa739d48a71310213baf0a68add357a3fdf8be2bc7edca7dec01d0d5d",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -68,13 +68,14 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 5,
+          "immediateModuleCount": 6,
           "immediateModuleRefs": [
             "modules.pairformer_stack",
             "modules.input_feature_embedder",
             "modules.single_state_input_projection",
             "modules.pair_state_input_projection",
-            "modules.msa_module"
+            "modules.msa_module",
+            "modules.template_module"
           ]
         },
         "modules.pairformer_stack": {
@@ -311,16 +312,95 @@ export const manifest = {
           "immediateModuleRefs": [
 
           ]
+        },
+        "modules.template_module": {
+          "status": "complete",
+          "depth": 1,
+          "immediateModuleCount": 3,
+          "immediateModuleRefs": [
+            "modules.template_pair_feature_construction",
+            "modules.template_pair_conditioning",
+            "modules.template_pair_update_stage"
+          ]
+        },
+        "modules.template_pair_feature_construction": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.template_pair_conditioning": {
+          "status": "partial",
+          "reason": "Real internal structure (the two independent LinearNoBias projections combined by outer sum at line 8, the per-template LayerNorm-and-accumulate step at line 10, the division by N_templates at line 12, and the final plain-ReLU LinearNoBias projection at line 13) is modeled at value-site granularity rather than as further child modules, mirroring modules.outer_product_mean's treatment.",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.template_pair_update_stage": {
+          "status": "complete",
+          "depth": 2,
+          "immediateModuleCount": 5,
+          "immediateModuleRefs": [
+            "modules.template_triangle_multiplication_outgoing",
+            "modules.template_triangle_multiplication_incoming",
+            "modules.template_pair_attention_starting_node",
+            "modules.template_pair_attention_ending_node",
+            "modules.template_pair_transition"
+          ]
+        },
+        "modules.template_triangle_multiplication_outgoing": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.template_triangle_multiplication_incoming": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.template_pair_attention_starting_node": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.template_pair_attention_ending_node": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.template_pair_transition": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
-        "scopeCount": 28,
-        "expandedScopeCount": 7,
-        "completeExpandedScopeCount": 7,
-        "partialScopeCount": 2,
-        "leafFrontierCount": 18,
+        "scopeCount": 37,
+        "expandedScopeCount": 9,
+        "completeExpandedScopeCount": 9,
+        "partialScopeCount": 3,
+        "leafFrontierCount": 24,
         "opaqueFrontierCount": 1,
-        "partialFrontierCount": 2,
+        "partialFrontierCount": 3,
         "maximumAuthoredDepth": 3
       },
       "opaqueFrontierRefs": [
@@ -328,7 +408,8 @@ export const manifest = {
       ],
       "partialScopeRefs": [
         "modules.outer_product_mean",
-        "modules.msa_pair_weighted_averaging"
+        "modules.msa_pair_weighted_averaging",
+        "modules.template_pair_conditioning"
       ]
     },
     "modules": [
@@ -1105,6 +1186,297 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "template_module",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Template Module",
+        "kind": "refiner",
+        "mechanisms": [
+          "template_feature_masking",
+          "outer_sum_conditioning",
+          "triangle_multiplication",
+          "axial_pair_attention",
+          "transition",
+          "cross_template_pooling"
+        ],
+        "role": "run once per recycle, immediately before the MSA module (Algorithm 1 line 9 precedes line 10), reading the raw per-template AF3 template features together with the current pair representation z_ij and writing a pooled contribution back into it; for one representative template, mask and concatenate the raw template evidence (the backbone-frame and pseudo-beta AND-gate masks, the distogram and unit-vector pairwise evidence, an asym_id intra-chain gate, and the one-hot restype of both tokens) into a per-template pair feature, outer-sum it with a projection of the current pair state to form that template's own pair-conditioned state at the module's narrower 64-channel width, refine it through the module's own N_block=2 pair-only (with_single=False) Pairformer block, accumulate the LayerNorm'd result across every template, average, and project once more through a plain ReLU (not SwiGLU) into a 128-channel contribution added into the pair representation before the MSA module runs; only one representative pass through the module is modeled here, not the N_templates loop, the N_block=2 pair-stack repeat, or the outer per-recycle loop",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 (TemplateEmbedder), lines 1-14; Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})); Section 3.5 (\"combines all raw template features to a pair representation, and processes it together with the given pair representation z_ij... This allows the network to attend to specific regions in the template based on its current belief about the structure\")"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_feature_construction",
+        "parent_ref": "modules.template_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Template Pair Feature Construction",
+        "kind": "operator",
+        "mechanisms": [
+          "elementwise_masking",
+          "feature_concatenation",
+          "one_hot_encoding",
+          "chain_instance_gating"
+        ],
+        "role": "AND-gate the raw per-token backbone-frame and pseudo-beta masks into pairwise masks (lines 1-2); concatenate the pairwise distogram and unit-vector evidence with those two pairwise masks (line 3); zero every cross-chain pair by gating the concatenation on asym_id equality (line 4); then one-hot encode and concatenate both tokens' template restype onto the already-gated feature -- restype is added after the gate, so it is not itself asym_id-gated (line 5, confirmed against code -- template_restype's raw feature is a per-token class id, one-hot encoded here, not already one-hot)",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 lines 1-5"
+            },
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py lines 255-284 (dgram/pseudo_beta_mask_2d construction and multichain_mask_2d gating, restype one-hot encoding); lines 286-315 (unit_vector/backbone_mask_2d construction and multichain_mask_2d gating); lines 325-333 (per-feature LinearNoBias projections summed together, algebraically the same outer-sum-of-concatenated-features pattern the paper's concat + LinearNoBias notation describes)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_conditioning",
+        "parent_ref": "modules.template_module",
+        "decomposition": {
+          "status": "partial",
+          "reason": "Real internal structure (the two independent LinearNoBias projections combined by outer sum at line 8, the per-template LayerNorm-and-accumulate step at line 10, the division by N_templates at line 12, and the final plain-ReLU LinearNoBias projection at line 13) is modeled at value-site granularity rather than as further child modules, mirroring modules.outer_product_mean's treatment."
+        },
+        "label": "Template Pair Conditioning",
+        "kind": "operator",
+        "mechanisms": [
+          "layer_normalization",
+          "linear_projection",
+          "outer_sum",
+          "mean_pooling",
+          "relu_projection"
+        ],
+        "role": "combine one representative template's masked/concatenated pair feature with a LinearNoBias-projected, LayerNorm'd read of the current pair state via an outer sum, at the module's own 64-channel width, into that template's pair-conditioned state (line 8); after modules.template_pair_update_stage's pair-only pair-stack refines that state, LayerNorm and accumulate the result across every template, divide by N_templates (order-invariant pooling, line 12), and project once more with a plain LinearNoBias(ReLU(...)) -- notably plain ReLU here, not the SwiGLU used in every Transition block elsewhere in this architecture -- up to the trunk's 128-channel width to produce the module's final pair-state contribution (line 13)",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 lines 6, 8, 10, 12-13"
+            },
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py lines 191-202 (scan-accumulated per-template embeddings summed via hk.scan's carry, matching line 10's accumulator; divided by num_templates, relu'd, then projected by hm.Linear to query_num_channels=128); line 113 (num_channels=64, the pre-projection width)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_update_stage",
+        "parent_ref": "modules.template_module",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Template Pair Stack (pair-only)",
+        "kind": "refiner",
+        "mechanisms": [
+          "triangle_multiplication",
+          "axial_pair_attention",
+          "transition"
+        ],
+        "role": "run the template embedder's own N_block=2 pair-only Pairformer block over each representative template's pair-conditioned state, at the module's own 64-channel width; unlike both the main 48-block trunk (with_single=True) and the MSA module's own pair-stack, this stack has no single-representation step at all -- PairFormerIteration's with_single constructor flag defaults to False and is never overridden by the template embedder's per-template call, so only the five pair-only sub-steps below run and no single_act is passed in or returned",
+        "scale": "token_pair",
+        "repeats": 2,
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py lines 338-348 (per-template call: modules.PairFormerIteration(c.template_stack, gc, name='template_embedding_iteration')(act=x, pair_mask=padding_mask_2d) -- with_single left at its constructor default, no single_act argument passed); line 115 (template_stack num_layer=2, matching N_block=2)"
+            },
+            {
+              "source_ref": "af3_pairformer_code",
+              "role": "implementation_evidence",
+              "locator": "modules.py line 442 (PairFormerIteration.__init__ with_single=False default)"
+            },
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "evoformer.py lines 317-323 (main trunk Pairformer stack instantiated with an explicit single_act argument, i.e. with_single=True) -- contrastive evidence that the template embedder's own stack is a genuinely different, pair-only invocation of the same PairFormerIteration mechanism, not an abbreviation or a paper typo"
+            },
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); N_block=2 per the TemplateEmbedder signature"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_triangle_multiplication_outgoing",
+        "parent_ref": "modules.template_pair_update_stage",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Template Triangle Multiplication Outgoing",
+        "kind": "operator",
+        "mechanisms": [
+          "triangle_multiplication",
+          "gated_projection",
+          "residual_update"
+        ],
+        "role": "aggregate products over shared outgoing edges and add the result to the per-template pair-conditioned state; the same TriangleMultiplicationOutgoing mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the first step of the template embedder's own N_block=2 pair-only pair-stack, at the module's narrower 64-channel width",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 2 (TriangleMultiplicationOutgoing); Algorithm 12 (TriangleMultiplicationOutgoing definition)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_triangle_multiplication_incoming",
+        "parent_ref": "modules.template_pair_update_stage",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Template Triangle Multiplication Incoming",
+        "kind": "operator",
+        "mechanisms": [
+          "triangle_multiplication",
+          "gated_projection",
+          "residual_update"
+        ],
+        "role": "aggregate products over shared incoming edges and add the result to the per-template pair-conditioned state; the same TriangleMultiplicationIncoming mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the second step of the template embedder's own pair-only pair-stack",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 3 (TriangleMultiplicationIncoming); Algorithm 13 (TriangleMultiplicationIncoming definition)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_attention_starting_node",
+        "parent_ref": "modules.template_pair_update_stage",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Template Triangle Attention Starting Node",
+        "kind": "attention",
+        "mechanisms": [
+          "axial_attention",
+          "self_derived_pair_bias",
+          "query_gating",
+          "residual_update"
+        ],
+        "role": "update each ordered pair by attending along the starting-node pair-grid axis; the same TriangleAttentionStartingNode mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the third step of the template embedder's own pair-only pair-stack",
+        "scale": "token_pair",
+        "attention": {
+          "pattern": "pair_grid_starting_node",
+          "query_scale": "token_pair",
+          "key_value_scale": "token_pair",
+          "heads": 4,
+          "pair_bias": true,
+          "pair_bias_source": "normalized_pair_state",
+          "positional_encoding": {
+            "kind": "none"
+          }
+        },
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 4 (TriangleAttentionStartingNode); Algorithm 14 (TriangleAttentionStartingNode definition, N_head=4, c=32)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_attention_ending_node",
+        "parent_ref": "modules.template_pair_update_stage",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Template Triangle Attention Ending Node",
+        "kind": "attention",
+        "mechanisms": [
+          "axial_attention",
+          "self_derived_pair_bias",
+          "query_gating",
+          "residual_update"
+        ],
+        "role": "transpose the pair grid, attend along the complementary ending-node axis, and add the result to the per-template pair-conditioned state; the same TriangleAttentionEndingNode mechanism the Pairformer and MSA module use (own parameters, not shared weights), run here as the fourth step of the template embedder's own pair-only pair-stack",
+        "scale": "token_pair",
+        "attention": {
+          "pattern": "pair_grid_ending_node",
+          "query_scale": "token_pair",
+          "key_value_scale": "token_pair",
+          "heads": 4,
+          "pair_bias": true,
+          "pair_bias_source": "normalized_pair_state",
+          "positional_encoding": {
+            "kind": "none"
+          }
+        },
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 5 (TriangleAttentionEndingNode); Algorithm 15 (TriangleAttentionEndingNode definition, N_head=4, c=32)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_transition",
+        "parent_ref": "modules.template_pair_update_stage",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Template Pair Transition",
+        "kind": "feed_forward",
+        "mechanisms": [
+          "layer_normalization",
+          "swiglu",
+          "residual_update"
+        ],
+        "role": "apply a pointwise 4x SwiGLU transition and add its 64-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights), run here as the final step of the template embedder's own pair-only pair-stack, whose output is this representative template's fully refined state",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition); Algorithm 11 (Transition definition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6) and the MSA module's own msa_pair_transition"
+            }
+          ]
+        }
       }
     ],
     "blockInstances": [
@@ -1601,6 +1973,180 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "template_backbone_frame_mask",
+        "scale": "template",
+        "semantic_role": "raw per-template, per-token mask indicating whether coordinates exist for all atoms required to compute that template's backbone frame at that token; AND-gated pairwise inside the template embedder to build the pairwise backbone-frame mask",
+        "shape": "N_templates x N_token",
+        "glyph": "matrix",
+        "carries": [
+          "backbone-frame-resolved flag for each template at each token"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 template_backbone_frame_mask [N_templ, N_token] (\"Mask indicating if coordinates exist for all atoms required to compute the backbone frame (used in the template_unit_vector feature)\"); Supplementary Algorithm 16 line 1 (f_ti^template_backbone_frame_mask, single-token index t,i, AND-gated pairwise as b_ij^template_backbone_frame_mask inside the template embedder itself, not a raw pairwise feature)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pseudo_beta_mask",
+        "scale": "template",
+        "semantic_role": "raw per-template, per-token mask indicating whether the template has resolved Cbeta (Calpha for glycine) coordinates at that token; AND-gated pairwise inside the template embedder to build the pairwise pseudo-beta mask",
+        "shape": "N_templates x N_token",
+        "glyph": "matrix",
+        "carries": [
+          "pseudo-beta-resolved flag for each template at each token"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 template_pseudo_beta_mask [N_templ, N_token] (\"Mask indicating if the Cbeta (Calpha for glycine) has coordinates for the template at this residue\"); Supplementary Algorithm 16 line 2 (f_ti^template_pseudo_beta_mask, single-token index t,i, AND-gated pairwise as b_ij^template_pseudo_beta_mask inside the template embedder itself, not a raw pairwise feature)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_distogram",
+        "scale": "template",
+        "semantic_role": "raw one-hot pairwise Cbeta (Calpha for glycine) distance bin per template, discretized into 39 bins (38 equal-width bins between 3.25 and 50.75 angstroms plus one catch-all bin for larger distances); already pairwise as a raw feature, unlike the two AND-gate masks",
+        "shape": "N_templates x N_token x N_token x 39",
+        "glyph": "volume",
+        "carries": [
+          "one-hot pairwise Cbeta distance bin per template"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 template_distogram [N_templ, N_token, N_token, 39] (\"A one-hot pairwise feature indicating the distance between Cbeta atoms (Calpha for glycine). Pairwise distances are discretized into 38 bins of equal width between 3.25A and 50.75A; one more bin contains any larger distances\"); Supplementary Algorithm 16 line 3 (f_tij^template_distogram, double-index tij, already pairwise)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_unit_vector",
+        "scale": "template",
+        "semantic_role": "raw pairwise unit vector of the displacement between each pair of residues' Calpha atoms, expressed in the local frame of each residue, per template; already pairwise as a raw feature, unlike the two AND-gate masks",
+        "shape": "N_templates x N_token x N_token x 3",
+        "glyph": "volume",
+        "carries": [
+          "pairwise directional unit vector (x, y, z) per template"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 template_unit_vector [N_templ, N_token, N_token, 3] (\"The unit vector of the displacement of the Calpha atom of all residues within the local frame of each residue\"); Supplementary Algorithm 16 line 3 (f_tij^template_unit_vector, double-index tij, already pairwise)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_restype",
+        "scale": "template",
+        "semantic_role": "raw per-template, per-token residue/nucleotide/ligand-as-unknown-amino-acid class id (32 possible values, same scheme as restype); stored as a class id, not already one-hot -- one-hot encoding to 32 channels happens inside modules.template_pair_feature_construction, confirmed against code since Table 5's shape entry omits the resulting one-hot width unlike restype's own [N_token, 32] entry",
+        "shape": "N_templates x N_token",
+        "glyph": "vector",
+        "carries": [
+          "per-template, per-token residue/nucleotide/ligand type class id, one-hot encoded during concatenation rather than already one-hot in the raw feature"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 template_restype [N_templ, N_token] (\"One-hot encoding of the template sequence, see restype\" -- the shape entry itself omits the trailing 32-class dimension, unlike restype's own documented [N_token, 32] shape); Supplementary Algorithm 16 line 5 (f_ti^template_restype)"
+            },
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py lines 277-284 (aatype = templates.aatype; aatype = jax.nn.one_hot(aatype, residue_names.POLYMER_TYPES_NUM_WITH_UNKNOWN_AND_GAP, axis=-1, dtype=dtype); the raw feature templates.aatype is a per-template, per-token class id, not already one-hot -- the one-hot encoding is a concatenation-time operation, resolving Table 5's ambiguous shape entry)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "asym_id",
+        "scale": "token",
+        "semantic_role": "raw per-token chain-instance identifier (a unique integer per distinct chain copy); used here to gate template-derived pair features to intra-chain pairs only, since a single template structure only constrains one chain's internal geometry",
+        "shape": "N_token",
+        "glyph": "vector",
+        "carries": [
+          "chain-instance id per token, shared by every token belonging to the same chain copy"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 asym_id [N_token] (\"Unique integer for each distinct chain\"); Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id) -- this same raw feature also feeds RelativePositionEncoding's unmodeled b_same_entity/a_rel_chain signals (see open_questions.relative_position_encoding_and_token_bonds_unmodeled), not modeled here"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_feature",
+        "scale": "token_pair",
+        "semantic_role": "the masked and concatenated raw per-template pair feature (a_tij) for one representative template, built by AND-gating the two raw per-token masks into pairwise masks, concatenating the pairwise distogram and unit-vector evidence with those pairwise masks, zeroing every cross-chain pair via the asym_id gate, then concatenating the one-hot restype of both tokens onto the already-gated result -- restype is added after the gate and so is not itself asym_id-gated",
+        "shape": "N_token x N_token x 108",
+        "glyph": "pair",
+        "carries": [
+          "39-bin pairwise distogram",
+          "backbone-frame AND-gate mask (1 channel)",
+          "pairwise unit vector (3 channels)",
+          "pseudo-beta AND-gate mask (1 channel)",
+          "one-hot restype at token i (32 channels) and token j (32 channels), concatenated after the asym_id gate"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 lines 1-5 (b_ij^template_backbone_frame_mask, b_ij^template_pseudo_beta_mask, a_tij = concat(f_tij^template_distogram, b_ij^template_backbone_frame_mask, f_tij^template_unit_vector, b_ij^template_pseudo_beta_mask), a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id), a_tij <- concat(a_tij, f_ti^template_restype, f_tj^template_restype)); channel width (39+1+3+1+32+32=108) summed from the individually cited widths of representations.template_distogram, template_backbone_frame_mask, template_unit_vector, template_pseudo_beta_mask, and template_restype (one-hot encoded to 32 channels per representations.template_restype)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_conditioned_pair_state",
+        "scale": "token_pair",
+        "semantic_role": "one representative template's own pair-conditioned state at the template embedder's internal channel width (c=64, distinct from and narrower than the trunk's 128-channel pair_state); reused across this template's pre-pair-stack state, every intermediate state inside its own pair-only pair-stack, and its post-pair-stack state",
+        "shape": "N_token x N_token x 64",
+        "glyph": "pair",
+        "carries": [
+          "per-template pair-conditioned state at the template embedder's own 64-channel width"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 signature (TemplateEmbedder({f*}, {z_ij}, N_block=2, c=64)); line 8 (v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), v_ij in R^c)"
+            },
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py line 113 (TemplateEmbedding.Config.num_channels: int = 64) -- confirms this width is a fixed, narrower channel count distinct from the trunk's c_z=128 pair_state, not a notational shorthand"
+            }
+          ]
+        }
       }
     ],
     "valueSites": [
@@ -2061,6 +2607,108 @@ export const manifest = {
         }
       },
       {
+        "id": "template_backbone_frame_mask",
+        "representation_ref": "representations.template_backbone_frame_mask",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_template_backbone_frame_mask_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 1 (f_ti^template_backbone_frame_mask)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pseudo_beta_mask",
+        "representation_ref": "representations.template_pseudo_beta_mask",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_template_pseudo_beta_mask_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 2 (f_ti^template_pseudo_beta_mask)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_distogram",
+        "representation_ref": "representations.template_distogram",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_template_distogram_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 3 (f_tij^template_distogram)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_unit_vector",
+        "representation_ref": "representations.template_unit_vector",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_template_unit_vector_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 3 (f_tij^template_unit_vector)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_restype",
+        "representation_ref": "representations.template_restype",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_template_restype_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 5 (f_ti^template_restype, f_tj^template_restype)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "asym_id",
+        "representation_ref": "representations.asym_id",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_asym_id_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id)"
+            }
+          ]
+        }
+      },
+      {
         "id": "msa_activations",
         "representation_ref": "representations.msa_activations",
         "scope_ref": "modules.msa_row_embedding",
@@ -2331,6 +2979,155 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "template_module_pair_state_read",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.template_module",
+        "role": "template_module_entry_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 signature ({z_ij} passed into TemplateEmbedder as its second argument); Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- the module's own entry state, mirroring value_sites.msa_module_pair_state_read's role for modules.msa_module exactly, read once (this task models one representative template, not the N_templates loop) at line 8 for the outer-sum conditioning term LinearNoBias(LayerNorm(z_ij))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_feature",
+        "representation_ref": "representations.template_pair_feature",
+        "scope_ref": "modules.template_pair_feature_construction",
+        "role": "masked_concatenated_per_template_pair_feature",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 5 (the fully masked and concatenated a_tij, after lines 1-4's masking/gating steps and line 5's final restype concatenation); read by modules.template_pair_conditioning at line 8 as the LinearNoBias(a_tij) outer-sum term"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_conditioned_state",
+        "representation_ref": "representations.template_conditioned_pair_state",
+        "scope_ref": "modules.template_pair_conditioning",
+        "role": "pre_pair_stack_per_template_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 8 (v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij)) -- this representative template's own pair-conditioned state, at the template embedder's 64-channel width, before modules.template_pair_update_stage's N_block=2 pair-only pair-stack refines it (line 9)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_after_outgoing_multiplication",
+        "representation_ref": "representations.template_conditioned_pair_state",
+        "scope_ref": "modules.template_pair_update_stage",
+        "role": "template_outgoing_triangle_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 2 (TriangleMultiplicationOutgoing, the pair-only stack's first sub-step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_after_incoming_multiplication",
+        "representation_ref": "representations.template_conditioned_pair_state",
+        "scope_ref": "modules.template_pair_update_stage",
+        "role": "template_incoming_triangle_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 3 (TriangleMultiplicationIncoming, the pair-only stack's second sub-step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_after_starting_attention",
+        "representation_ref": "representations.template_conditioned_pair_state",
+        "scope_ref": "modules.template_pair_update_stage",
+        "role": "template_starting_node_attention_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 4 (TriangleAttentionStartingNode, the pair-only stack's third sub-step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_after_ending_attention",
+        "representation_ref": "representations.template_conditioned_pair_state",
+        "scope_ref": "modules.template_pair_update_stage",
+        "role": "template_ending_node_attention_updated_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 5 (TriangleAttentionEndingNode, the pair-only stack's fourth sub-step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_after_transition",
+        "representation_ref": "representations.template_conditioned_pair_state",
+        "scope_ref": "modules.template_module",
+        "role": "template_module_post_stack_per_template_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition, the pair-only stack's fifth and final sub-step, whose output is what line 9's call returns) -- this representative template's fully refined state, read by modules.template_pair_conditioning at line 10 (u_ij += LayerNorm(v_ij)) for cross-template accumulation"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_module_pair_output",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "modules.template_module",
+        "role": "template_module_final_pair_contribution",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 lines 10, 12-13 (u_ij += LayerNorm(v_ij) accumulated across every template; u_ij <- u_ij / N_templates; u_ij <- LinearNoBias(ReLU(u_ij))); line 14 (#kw[return] {u_ij}) -- this is the module's own returned contribution, mirroring value_sites.msa_pair_after_transition's role for modules.msa_module"
+            },
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py lines 198-204 (embedding = summed_template_embeddings / (1e-7 + num_templates); embedding = jax.nn.relu(embedding); embedding = hm.Linear(query_num_channels, initializer='relu', name='output_linear')(embedding); assert embedding.shape == (num_residues, num_residues, query_num_channels)) -- confirms the final LinearNoBias(ReLU(...)) projection widens from the module's own 64-channel width to query_num_channels, which equals the trunk's c_z=128, matching representations.pair_state; the paper's own Algorithm 16 line 13 shape annotation (u_ij in R^c, c=64) does not show this widening explicitly"
+            }
+          ]
+        }
       }
     ],
     "valueSiteInterfaces": {
@@ -2475,13 +3272,13 @@ export const manifest = {
           "relations.pair_state_projection_produces_z_init"
         ],
         "outgoingRelationRefs": [
-          "relations.z_init_initializes_msa_module_pair_state"
+          "relations.z_init_initializes_template_module_pair_state"
         ],
         "producerRefs": [
           "modules.pair_state_input_projection"
         ],
         "consumerRefs": [
-          "value_sites.msa_module_pair_state_read"
+          "value_sites.template_module_pair_state_read"
         ]
       },
       "block_pair_state": {
@@ -2704,6 +3501,90 @@ export const manifest = {
           "modules.msa_row_embedding"
         ]
       },
+      "template_backbone_frame_mask": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_backbone_frame_mask_enters_feature_construction"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.template_pair_feature_construction"
+        ]
+      },
+      "template_pseudo_beta_mask": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_pseudo_beta_mask_enters_feature_construction"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.template_pair_feature_construction"
+        ]
+      },
+      "template_distogram": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_distogram_enters_feature_construction"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.template_pair_feature_construction"
+        ]
+      },
+      "template_unit_vector": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_unit_vector_enters_feature_construction"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.template_pair_feature_construction"
+        ]
+      },
+      "template_restype": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_restype_enters_feature_construction"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.template_pair_feature_construction"
+        ]
+      },
+      "asym_id": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.asym_id_conditions_feature_construction"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.template_pair_feature_construction"
+        ]
+      },
       "msa_activations": {
         "incomingRelationRefs": [
           "relations.row_embedding_produces_msa_activations"
@@ -2834,16 +3715,16 @@ export const manifest = {
       },
       "msa_module_pair_state_read": {
         "incomingRelationRefs": [
-          "relations.z_init_initializes_msa_module_pair_state",
-          "relations.outer_product_mean_contribution_updates_msa_module_pair_state"
+          "relations.outer_product_mean_contribution_updates_msa_module_pair_state",
+          "relations.template_module_pair_output_updates_msa_module_pair_state"
         ],
         "outgoingRelationRefs": [
           "relations.pair_state_conditions_msa_pair_weighted_averaging",
           "relations.msa_pair_state_enters_outgoing_multiplication"
         ],
         "producerRefs": [
-          "value_sites.z_init",
-          "value_sites.outer_product_mean_pair_contribution"
+          "value_sites.outer_product_mean_pair_contribution",
+          "value_sites.template_module_pair_output"
         ],
         "consumerRefs": [
           "modules.msa_pair_weighted_averaging",
@@ -2946,6 +3827,132 @@ export const manifest = {
         ],
         "consumerRefs": [
           "value_sites.pair_state_input"
+        ]
+      },
+      "template_module_pair_state_read": {
+        "incomingRelationRefs": [
+          "relations.z_init_initializes_template_module_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_pair_state_enters_conditioning"
+        ],
+        "producerRefs": [
+          "value_sites.z_init"
+        ],
+        "consumerRefs": [
+          "modules.template_pair_conditioning"
+        ]
+      },
+      "template_pair_feature": {
+        "incomingRelationRefs": [
+          "relations.feature_construction_produces_template_pair_feature"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_pair_feature_enters_conditioning"
+        ],
+        "producerRefs": [
+          "modules.template_pair_feature_construction"
+        ],
+        "consumerRefs": [
+          "modules.template_pair_conditioning"
+        ]
+      },
+      "template_pair_conditioned_state": {
+        "incomingRelationRefs": [
+          "relations.conditioning_produces_pre_stack_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_pre_stack_state_enters_outgoing_multiplication"
+        ],
+        "producerRefs": [
+          "modules.template_pair_conditioning"
+        ],
+        "consumerRefs": [
+          "modules.template_triangle_multiplication_outgoing"
+        ]
+      },
+      "template_pair_after_outgoing_multiplication": {
+        "incomingRelationRefs": [
+          "relations.template_outgoing_multiplication_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_outgoing_pair_state_enters_incoming_multiplication"
+        ],
+        "producerRefs": [
+          "modules.template_triangle_multiplication_outgoing"
+        ],
+        "consumerRefs": [
+          "modules.template_triangle_multiplication_incoming"
+        ]
+      },
+      "template_pair_after_incoming_multiplication": {
+        "incomingRelationRefs": [
+          "relations.template_incoming_multiplication_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_incoming_pair_state_enters_starting_attention"
+        ],
+        "producerRefs": [
+          "modules.template_triangle_multiplication_incoming"
+        ],
+        "consumerRefs": [
+          "modules.template_pair_attention_starting_node"
+        ]
+      },
+      "template_pair_after_starting_attention": {
+        "incomingRelationRefs": [
+          "relations.template_starting_attention_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_starting_pair_state_enters_ending_attention"
+        ],
+        "producerRefs": [
+          "modules.template_pair_attention_starting_node"
+        ],
+        "consumerRefs": [
+          "modules.template_pair_attention_ending_node"
+        ]
+      },
+      "template_pair_after_ending_attention": {
+        "incomingRelationRefs": [
+          "relations.template_ending_attention_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_ending_pair_state_enters_pair_transition"
+        ],
+        "producerRefs": [
+          "modules.template_pair_attention_ending_node"
+        ],
+        "consumerRefs": [
+          "modules.template_pair_transition"
+        ]
+      },
+      "template_pair_after_transition": {
+        "incomingRelationRefs": [
+          "relations.template_pair_transition_updates_pair_state"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_post_stack_state_enters_pooling"
+        ],
+        "producerRefs": [
+          "modules.template_pair_transition"
+        ],
+        "consumerRefs": [
+          "modules.template_pair_conditioning"
+        ]
+      },
+      "template_module_pair_output": {
+        "incomingRelationRefs": [
+          "relations.conditioning_produces_template_module_pair_output"
+        ],
+        "outgoingRelationRefs": [
+          "relations.template_module_pair_output_updates_msa_module_pair_state"
+        ],
+        "producerRefs": [
+          "modules.template_pair_conditioning"
+        ],
+        "consumerRefs": [
+          "value_sites.msa_module_pair_state_read"
         ]
       }
     },
@@ -4965,21 +5972,21 @@ export const manifest = {
         }
       },
       {
-        "id": "z_init_initializes_msa_module_pair_state",
+        "id": "z_init_initializes_template_module_pair_state",
         "from": "value_sites.z_init",
-        "to": "value_sites.msa_module_pair_state_read",
+        "to": "value_sites.template_module_pair_state_read",
         "kind": "state_update",
         "carries": [
           "representations.pair_state"
         ],
-        "operation": "initialize_msa_module_pair_state",
+        "operation": "initialize_template_module_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument); Algorithm 1 line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer"
+              "locator": "Supplementary Algorithm 16 signature ({z_ij} passed into TemplateEmbedder as its second argument); Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer. Retargeted from producing value_sites.msa_module_pair_state_read directly (module 2's original wiring, when nothing sat between z_init and the MSA module) to producing value_sites.template_module_pair_state_read, now that value_sites.z_init -> modules.template_module -> value_sites.msa_module_pair_state_read is the real chain (Algorithm 1 line 9 precedes line 10; Algorithm 16). The template module's own contribution now reaches msa_module_pair_state_read via relations.template_module_pair_output_updates_msa_module_pair_state."
             }
           ]
         }
@@ -5220,6 +6227,466 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 8 line 15 (#kw[return] {z_ij}) -- only z_ij is returned, the MSA representation is discarded; this is the module's actual contribution to the architecture's persistent pair_state_input, per Algorithm 1 line 10 ({z_ij} += MsaModule(...)) feeding the 48-block PairformerStack call on line 12"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_backbone_frame_mask_enters_feature_construction",
+        "from": "value_sites.template_backbone_frame_mask",
+        "to": "modules.template_pair_feature_construction",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_backbone_frame_mask"
+        ],
+        "operation": "provide_raw_backbone_frame_mask_for_and_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pseudo_beta_mask_enters_feature_construction",
+        "from": "value_sites.template_pseudo_beta_mask",
+        "to": "modules.template_pair_feature_construction",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_pseudo_beta_mask"
+        ],
+        "operation": "provide_raw_pseudo_beta_mask_for_and_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_distogram_enters_feature_construction",
+        "from": "value_sites.template_distogram",
+        "to": "modules.template_pair_feature_construction",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_distogram"
+        ],
+        "operation": "provide_raw_distogram_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_unit_vector_enters_feature_construction",
+        "from": "value_sites.template_unit_vector",
+        "to": "modules.template_pair_feature_construction",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_unit_vector"
+        ],
+        "operation": "provide_raw_unit_vector_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "asym_id_conditions_feature_construction",
+        "from": "value_sites.asym_id",
+        "to": "modules.template_pair_feature_construction",
+        "kind": "conditioning",
+        "carries": [
+          "representations.asym_id"
+        ],
+        "operation": "gate_template_feature_to_intra_chain_pairs",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 4 (a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_restype_enters_feature_construction",
+        "from": "value_sites.template_restype",
+        "to": "modules.template_pair_feature_construction",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_restype"
+        ],
+        "operation": "provide_raw_restype_for_concatenation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "feature_construction_produces_template_pair_feature",
+        "from": "modules.template_pair_feature_construction",
+        "to": "value_sites.template_pair_feature",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_pair_feature"
+        ],
+        "operation": "build_masked_concatenated_per_template_pair_feature",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 lines 1-5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_state_enters_conditioning",
+        "from": "value_sites.template_module_pair_state_read",
+        "to": "modules.template_pair_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "read_pair_state_for_outer_sum_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 8 (LinearNoBias(LayerNorm(z_ij)) term)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_feature_enters_conditioning",
+        "from": "value_sites.template_pair_feature",
+        "to": "modules.template_pair_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_pair_feature"
+        ],
+        "operation": "read_masked_feature_for_outer_sum_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 8 (LinearNoBias(a_tij) term)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioning_produces_pre_stack_state",
+        "from": "modules.template_pair_conditioning",
+        "to": "value_sites.template_pair_conditioned_state",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "outer_sum_project_pair_state_and_template_feature",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 8 (v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pre_stack_state_enters_outgoing_multiplication",
+        "from": "value_sites.template_pair_conditioned_state",
+        "to": "modules.template_triangle_multiplication_outgoing",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "compute_template_outgoing_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_outgoing_multiplication_updates_pair_state",
+        "from": "modules.template_triangle_multiplication_outgoing",
+        "to": "value_sites.template_pair_after_outgoing_multiplication",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "add_template_outgoing_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_outgoing_pair_state_enters_incoming_multiplication",
+        "from": "value_sites.template_pair_after_outgoing_multiplication",
+        "to": "modules.template_triangle_multiplication_incoming",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "compute_template_incoming_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_incoming_multiplication_updates_pair_state",
+        "from": "modules.template_triangle_multiplication_incoming",
+        "to": "value_sites.template_pair_after_incoming_multiplication",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "add_template_incoming_triangle_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_incoming_pair_state_enters_starting_attention",
+        "from": "value_sites.template_pair_after_incoming_multiplication",
+        "to": "modules.template_pair_attention_starting_node",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "attend_template_starting_node_axis",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_starting_attention_updates_pair_state",
+        "from": "modules.template_pair_attention_starting_node",
+        "to": "value_sites.template_pair_after_starting_attention",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "add_template_starting_node_attention_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_starting_pair_state_enters_ending_attention",
+        "from": "value_sites.template_pair_after_starting_attention",
+        "to": "modules.template_pair_attention_ending_node",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "attend_template_ending_node_axis",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_ending_attention_updates_pair_state",
+        "from": "modules.template_pair_attention_ending_node",
+        "to": "value_sites.template_pair_after_ending_attention",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "add_template_ending_node_attention_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_ending_pair_state_enters_pair_transition",
+        "from": "value_sites.template_pair_after_ending_attention",
+        "to": "modules.template_pair_transition",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "compute_template_pair_transition_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_pair_transition_updates_pair_state",
+        "from": "modules.template_pair_transition",
+        "to": "value_sites.template_pair_after_transition",
+        "kind": "state_update",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "add_template_pair_transition_delta",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)) -- this representative template's own pair-only pair-stack pass"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_post_stack_state_enters_pooling",
+        "from": "value_sites.template_pair_after_transition",
+        "to": "modules.template_pair_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.template_conditioned_pair_state"
+        ],
+        "operation": "accumulate_refined_template_state_for_cross_template_pooling",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 line 10 (u_ij += LayerNorm(v_ij)) -- this representative template's fully refined state, read back into modules.template_pair_conditioning for cross-template accumulation"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioning_produces_template_module_pair_output",
+        "from": "modules.template_pair_conditioning",
+        "to": "value_sites.template_module_pair_output",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "average_across_templates_and_relu_project",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 16 lines 12-13 (u_ij <- u_ij / N_templates; u_ij <- LinearNoBias(ReLU(u_ij)))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "template_module_pair_output_updates_msa_module_pair_state",
+        "from": "value_sites.template_module_pair_output",
+        "to": "value_sites.msa_module_pair_state_read",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_template_module_contribution_to_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's own returned contribution lands in z_ij before the MSA module reads its own entry state, taking over the role relations.z_init_initializes_template_module_pair_state's predecessor relation used to play for msa_module directly before this task retargeted it"
             }
           ]
         }
@@ -5642,6 +7109,17 @@ export const manifest = {
         "path": "src/alphafold3/model/network/diffusion_transformer.py",
         "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_transformer.py",
         "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_transformer.py"
+      },
+      {
+        "id": "af3_template_code",
+        "kind": "code",
+        "title": "AlphaFold 3 template embedder implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/template_modules.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py"
       },
       {
         "id": "genie2_2024",
@@ -7666,15 +9144,15 @@ export const manifest = {
       {
         "id": "pairformer_overview",
         "title": "AlphaFold 3",
-        "summary": "AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The MSA module then reads the raw per-row MSA and folds evolutionary coupling, correlated variation across aligned sequences, into the pair representation, the only place in the model where that happens. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.",
+        "summary": "AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The Template module then reads raw per-template structural evidence (masked distograms, unit vectors, and residue types from homologous templates) and writes a pooled contribution into the pair representation before anything else touches it. The MSA module reads the raw per-row MSA next and folds evolutionary coupling, correlated variation across aligned sequences, into that same pair representation -- structural template evidence and evolutionary coupling are the only two places new external evidence enters the pair representation each cycle, template evidence first. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 11,
-          "rows": 5,
+          "columns": 13,
+          "rows": 7,
           "column_sizing": "content",
-          "col_gap": 40,
-          "row_gap": 32
+          "col_gap": 36,
+          "row_gap": 24
         },
         "nodes": [
           {
@@ -7685,7 +9163,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 1,
-            "row": 1
+            "row": 2
           },
           {
             "id": "restype_input",
@@ -7695,7 +9173,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 1,
-            "row": 2
+            "row": 3
           },
           {
             "id": "profile_input",
@@ -7705,7 +9183,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 1,
-            "row": 4
+            "row": 5
           },
           {
             "id": "deletion_mean_input",
@@ -7715,7 +9193,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 1,
-            "row": 5
+            "row": 6
           },
           {
             "id": "input_feature_embedder",
@@ -7724,7 +9202,7 @@ export const manifest = {
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
-            "row": 3,
+            "row": 4,
             "board_ref": "input_feature_embedder_detail"
           },
           {
@@ -7736,7 +9214,7 @@ export const manifest = {
             "treatment": "compact",
             "density": "compact",
             "col": 3,
-            "row": 3
+            "row": 4
           },
           {
             "id": "single_state_input_projection",
@@ -7746,7 +9224,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 4,
-            "row": 2
+            "row": 3
           },
           {
             "id": "pair_state_input_projection",
@@ -7756,7 +9234,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 4,
-            "row": 4
+            "row": 5
           },
           {
             "id": "token_mask_input",
@@ -7766,7 +9244,7 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 5,
-            "row": 1
+            "row": 2
           },
           {
             "id": "pair_mask_input",
@@ -7776,7 +9254,77 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 5,
+            "row": 6
+          },
+          {
+            "id": "template_backbone_frame_mask",
+            "ref": "value_sites.template_backbone_frame_mask",
+            "label": "backbone-frame mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 1
+          },
+          {
+            "id": "template_pseudo_beta_mask",
+            "ref": "value_sites.template_pseudo_beta_mask",
+            "label": "pseudo-beta mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "template_distogram",
+            "ref": "value_sites.template_distogram",
+            "label": "distogram",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 3
+          },
+          {
+            "id": "template_unit_vector",
+            "ref": "value_sites.template_unit_vector",
+            "label": "unit vector",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
             "row": 5
+          },
+          {
+            "id": "template_restype",
+            "ref": "value_sites.template_restype",
+            "label": "template restype",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 6
+          },
+          {
+            "id": "asym_id",
+            "ref": "value_sites.asym_id",
+            "label": "chain id (asym_id)",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 7
+          },
+          {
+            "id": "template_module",
+            "ref": "modules.template_module",
+            "label": "Template Module",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 7,
+            "row": 4,
+            "board_ref": "template_module_detail"
           },
           {
             "id": "msa_input",
@@ -7785,8 +9333,8 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
-            "row": 1
+            "col": 8,
+            "row": 2
           },
           {
             "id": "has_deletion_input",
@@ -7795,8 +9343,8 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
-            "row": 2
+            "col": 8,
+            "row": 3
           },
           {
             "id": "deletion_value_input",
@@ -7805,8 +9353,8 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
-            "row": 4
+            "col": 8,
+            "row": 5
           },
           {
             "id": "msa_module",
@@ -7814,8 +9362,8 @@ export const manifest = {
             "label": "MSA Module",
             "prominence": "primary",
             "treatment": "block",
-            "col": 7,
-            "row": 3,
+            "col": 9,
+            "row": 4,
             "board_ref": "msa_module_detail"
           },
           {
@@ -7824,8 +9372,8 @@ export const manifest = {
             "label": "48-block Pairformer",
             "prominence": "primary",
             "treatment": "block",
-            "col": 9,
-            "row": 3,
+            "col": 11,
+            "row": 4,
             "board_ref": "pairformer_block"
           },
           {
@@ -7836,8 +9384,8 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 11,
-            "row": 2
+            "col": 13,
+            "row": 3
           },
           {
             "id": "pair_state_output",
@@ -7847,8 +9395,8 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 11,
-            "row": 4
+            "col": 13,
+            "row": 5
           }
         ],
         "edge_overrides": [
@@ -7888,6 +9436,30 @@ export const manifest = {
         ],
         "projection_mode": "derived",
         "edges": [
+          {
+            "id": "projection_1e58c1a7866e",
+            "from": "asym_id",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.asym_id_conditions_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.asym_id_conditions_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.asym_id"
+            ],
+            "presentation": {
+            }
+          },
           {
             "id": "projection_8c664ba9889f",
             "from": "atom_reference_features_input",
@@ -8157,22 +9729,22 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_dba7f39ba072",
+            "id": "projection_184d03e2fb95",
             "from": "pair_state_input_projection",
-            "to": "msa_module",
+            "to": "template_module",
             "projection": "contracted",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
               "relations.pair_state_projection_produces_z_init",
-              "relations.z_init_initializes_msa_module_pair_state"
+              "relations.z_init_initializes_template_module_pair_state"
             ],
             "provenance_hops": [
               {
                 "relation_ref": "relations.pair_state_projection_produces_z_init"
               },
               {
-                "relation_ref": "relations.z_init_initializes_msa_module_pair_state"
+                "relation_ref": "relations.z_init_initializes_template_module_pair_state"
               }
             ],
             "hidden_refs": [
@@ -8393,6 +9965,150 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_edd5f0648941",
+            "from": "template_backbone_frame_mask",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_backbone_frame_mask_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_backbone_frame_mask_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_backbone_frame_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ca4dd43aeb1c",
+            "from": "template_distogram",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_distogram_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_distogram_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_distogram"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_36835f050f46",
+            "from": "template_module",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_module_pair_output_updates_msa_module_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d2fc4d7a136c",
+            "from": "template_pseudo_beta_mask",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pseudo_beta_mask_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pseudo_beta_mask_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_pseudo_beta_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_af2e290cc9fb",
+            "from": "template_restype",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_restype_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_restype_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_restype"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_0b624278ce26",
+            "from": "template_unit_vector",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_unit_vector_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_unit_vector_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_unit_vector"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_d3b940b30ce4",
             "from": "token_mask_input",
             "to": "pairformer_stack",
@@ -8440,8 +10156,17 @@ export const manifest = {
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
           "modules.single_state_input_projection": "visible",
           "modules.single_transition": "collapsed:modules.pairformer_stack",
+          "modules.template_module": "visible",
+          "modules.template_pair_attention_ending_node": "collapsed:modules.template_module",
+          "modules.template_pair_attention_starting_node": "collapsed:modules.template_module",
+          "modules.template_pair_conditioning": "collapsed:modules.template_module",
+          "modules.template_pair_feature_construction": "collapsed:modules.template_module",
+          "modules.template_pair_transition": "collapsed:modules.template_module",
+          "modules.template_triangle_multiplication_incoming": "collapsed:modules.template_module",
+          "modules.template_triangle_multiplication_outgoing": "collapsed:modules.template_module",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
+          "value_sites.asym_id": "visible",
           "value_sites.atom_reference_features_input": "visible",
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
@@ -8482,6 +10207,20 @@ export const manifest = {
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
           "value_sites.single_state_input": "elided",
           "value_sites.single_state_output": "visible",
+          "value_sites.template_backbone_frame_mask": "visible",
+          "value_sites.template_distogram": "visible",
+          "value_sites.template_module_pair_output": "collapsed:modules.template_module",
+          "value_sites.template_module_pair_state_read": "collapsed:modules.template_module",
+          "value_sites.template_pair_after_ending_attention": "collapsed:modules.template_module",
+          "value_sites.template_pair_after_incoming_multiplication": "collapsed:modules.template_module",
+          "value_sites.template_pair_after_outgoing_multiplication": "collapsed:modules.template_module",
+          "value_sites.template_pair_after_starting_attention": "collapsed:modules.template_module",
+          "value_sites.template_pair_after_transition": "collapsed:modules.template_module",
+          "value_sites.template_pair_conditioned_state": "collapsed:modules.template_module",
+          "value_sites.template_pair_feature": "collapsed:modules.template_module",
+          "value_sites.template_pseudo_beta_mask": "visible",
+          "value_sites.template_restype": "visible",
+          "value_sites.template_unit_vector": "visible",
           "value_sites.token_mask_input": "visible",
           "value_sites.z_init": "elided"
         },
@@ -10543,10 +12282,10 @@ export const manifest = {
             "row": 4
           },
           {
-            "id": "value_z_init",
-            "ref": "value_sites.z_init",
-            "label": "initial pairs",
-            "notation": "z^{init}",
+            "id": "value_template_module_pair_output",
+            "ref": "value_sites.template_module_pair_output",
+            "label": "template contribution",
+            "notation": "z",
             "prominence": "context",
             "treatment": "compact",
             "density": "compact",
@@ -10638,13 +12377,13 @@ export const manifest = {
           },
           {
             "match": {
-              "relation_ref": "relations.z_init_initializes_msa_module_pair_state"
+              "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
             },
-            "label": "z^{init}",
+            "label": "z",
             "connection": {
               "title": "Pair state enters the block",
               "role": "block-input pair state",
-              "inside": "The pair representation arrives here straight from the input projection, before anything else has touched it; the Pairformer only ever sees what this module returns."
+              "inside": "The pair representation arrives here from the Template Module's own pooled, cross-template contribution (z_init plus every template's evidence), not straight from the input projection; the Pairformer only ever sees what this module returns."
             }
           },
           {
@@ -10979,18 +12718,18 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_9206d2d96c72",
-            "from": "value_z_init",
+            "id": "projection_88280a5b859c",
+            "from": "value_template_module_pair_output",
             "to": "value_msa_module_pair_state_read",
             "projection": "direct",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
-              "relations.z_init_initializes_msa_module_pair_state"
+              "relations.template_module_pair_output_updates_msa_module_pair_state"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.z_init_initializes_msa_module_pair_state"
+                "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
               }
             ],
             "hidden_refs": [
@@ -11000,11 +12739,11 @@ export const manifest = {
               "representations.pair_state"
             ],
             "presentation": {
-              "label": "z^{init}",
+              "label": "z",
               "connection": {
                 "title": "Pair state enters the block",
                 "role": "block-input pair state",
-                "inside": "The pair representation arrives here straight from the input projection, before anything else has touched it; the Pairformer only ever sees what this module returns."
+                "inside": "The pair representation arrives here from the Template Module's own pooled, cross-template contribution (z_init plus every template's evidence), not straight from the input projection; the Pairformer only ever sees what this module returns."
               }
             }
           }
@@ -11042,7 +12781,7 @@ export const manifest = {
           "value_sites.outer_product_mean_projection_b": "collapsed:modules.outer_product_mean",
           "value_sites.pair_state_input": "visible",
           "value_sites.s_inputs": "visible",
-          "value_sites.z_init": "visible"
+          "value_sites.template_module_pair_output": "visible"
         },
         "projectionMode": "derived"
       },
@@ -12302,6 +14041,1513 @@ export const manifest = {
           "value_sites.msa_pair_weighted_averaging_pair_bias": "visible",
           "value_sites.msa_pair_weighted_averaging_value": "visible",
           "value_sites.msa_pair_weighted_averaging_weights": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "template_module_detail",
+        "title": "The Template Module",
+        "summary": "Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, a pairwise unit vector, and each token's template residue type) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate, then outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.",
+        "subject_ref": "modules.template_module",
+        "expansion_depth": 1,
+        "parent": "pairformer_overview",
+        "grid": {
+          "columns": 7,
+          "rows": 8,
+          "column_sizing": "content",
+          "col_gap": 24,
+          "row_gap": 20
+        },
+        "nodes": [
+          {
+            "id": "value_template_backbone_frame_mask",
+            "ref": "value_sites.template_backbone_frame_mask",
+            "label": "backbone-frame mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "value_template_pseudo_beta_mask",
+            "ref": "value_sites.template_pseudo_beta_mask",
+            "label": "pseudo-beta mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "value_template_distogram",
+            "ref": "value_sites.template_distogram",
+            "label": "distogram",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "value_template_unit_vector",
+            "ref": "value_sites.template_unit_vector",
+            "label": "unit vector",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "value_template_restype",
+            "ref": "value_sites.template_restype",
+            "label": "template restype",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 6
+          },
+          {
+            "id": "value_asym_id",
+            "ref": "value_sites.asym_id",
+            "label": "chain id (asym_id)",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 7
+          },
+          {
+            "id": "value_template_module_pair_state_read",
+            "ref": "value_sites.template_module_pair_state_read",
+            "label": "pair state entry",
+            "notation": "z",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 8
+          },
+          {
+            "id": "module_template_pair_feature_construction",
+            "ref": "modules.template_pair_feature_construction",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 4
+          },
+          {
+            "id": "value_template_pair_feature",
+            "ref": "value_sites.template_pair_feature",
+            "label": "masked template feature",
+            "notation": "a_{tij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "module_template_pair_conditioning",
+            "ref": "modules.template_pair_conditioning",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 4,
+            "row": 4,
+            "board_ref": "template_pair_conditioning_detail"
+          },
+          {
+            "id": "value_template_pair_conditioned_state",
+            "ref": "value_sites.template_pair_conditioned_state",
+            "label": "pre-stack state",
+            "notation": "v_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 3
+          },
+          {
+            "id": "value_template_pair_after_transition",
+            "ref": "value_sites.template_pair_after_transition",
+            "label": "post-stack state",
+            "notation": "v_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 5
+          },
+          {
+            "id": "module_template_pair_update_stage",
+            "ref": "modules.template_pair_update_stage",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 6,
+            "row": 4,
+            "board_ref": "template_pair_track"
+          },
+          {
+            "id": "value_template_module_pair_output",
+            "ref": "value_sites.template_module_pair_output",
+            "label": "template contribution",
+            "notation": "u_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 7,
+            "row": 4
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "value_sites.z_init",
+            "reason": "z_init's own construction (the raw projection of the current pair state) is shown on the parent pairformer_overview board; this board begins at the module's own entry point, template_module_pair_state_read."
+          },
+          {
+            "ref": "value_sites.msa_module_pair_state_read",
+            "reason": "Where this module's output lands inside the MSA module is shown on msa_module_detail; this board ends at the module's own output, template_module_pair_output."
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.asym_id_conditions_feature_construction"
+            },
+            "label": "intra-chain gate",
+            "connection": {
+              "title": "Restrict to intra-chain pairs",
+              "role": "chain-instance gate",
+              "inside": "Every cross-chain pair is zeroed before restype is concatenated -- a single template structure only constrains one chain's own internal geometry, so its evidence must not leak across chain copies."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.feature_construction_produces_template_pair_feature"
+            },
+            "label": "a_{tij}",
+            "connection": {
+              "title": "Masked and concatenated",
+              "role": "per-template pair feature",
+              "inside": "The two AND-gate masks, the distogram, and the unit vector are concatenated after the asym_id gate; restype is concatenated last and so is not itself gated."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_pair_state_enters_conditioning"
+            },
+            "label": "z",
+            "connection": {
+              "title": "Current pair state enters conditioning",
+              "role": "outer-sum term",
+              "inside": "A LinearNoBias(LayerNorm(z_ij)) projection of the trunk's current pair belief becomes one of the two outer-sum terms that build this template's own conditioned state."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_pair_feature_enters_conditioning"
+            },
+            "label": "a_{tij}",
+            "connection": {
+              "title": "Template evidence enters conditioning",
+              "role": "outer-sum term",
+              "inside": "A LinearNoBias(a_tij) projection of the masked, concatenated template feature becomes the other outer-sum term, carrying this specific template's raw geometric evidence."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.conditioning_produces_pre_stack_state"
+            },
+            "label": "v_{ij}",
+            "connection": {
+              "title": "Outer sum produces the conditioned state",
+              "role": "per-template conditioned state",
+              "inside": "v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), at the module's own 64-channel width."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_pre_stack_state_enters_outgoing_multiplication"
+            },
+            "label": "v_{ij}",
+            "connection": {
+              "title": "Pre-stack state enters the pair-only stack",
+              "role": "per-template conditioned state",
+              "inside": "The outer-summed, 64-channel conditioned state is handed to the template embedder's own N_block=2 pair-only pair-stack (no single-representation step), shown in its own board."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_pair_transition_updates_pair_state"
+            },
+            "label": "refined v_{ij}",
+            "connection": {
+              "title": "Pair-only stack produces the refined state",
+              "role": "post-stack per-template state",
+              "inside": "After all five pair-only sub-steps (shown in template_pair_track), this representative template's fully refined state is what conditioning reads back for cross-template pooling."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_post_stack_state_enters_pooling"
+            },
+            "label": "returns for pooling",
+            "tone": "recurrence",
+            "route_side": "bottom",
+            "route_clearance": 40,
+            "connection": {
+              "title": "Refined state returns for pooling",
+              "role": "cross-template accumulation input",
+              "inside": "This representative template's fully refined state comes back from the pair-only stack and is LayerNorm'd and accumulated toward the cross-template average -- the same conditioning mechanism that read the outer-sum inputs also performs this later pooling step."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.conditioning_produces_template_module_pair_output"
+            },
+            "label": "u_{ij}",
+            "connection": {
+              "title": "Pool, average, and project",
+              "role": "module output",
+              "inside": "After every template's refined state is accumulated, the sum is divided by N_templates and projected once more by a plain LinearNoBias(ReLU(...)) -- notably plain ReLU, not the SwiGLU used in every Transition block elsewhere -- up to the trunk's 128-channel width. This is the module's own returned contribution, read next by the MSA module."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_66ee15862665",
+            "from": "module_template_pair_conditioning",
+            "to": "value_template_module_pair_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioning_produces_template_module_pair_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioning_produces_template_module_pair_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "u_{ij}",
+              "connection": {
+                "title": "Pool, average, and project",
+                "role": "module output",
+                "inside": "After every template's refined state is accumulated, the sum is divided by N_templates and projected once more by a plain LinearNoBias(ReLU(...)) -- notably plain ReLU, not the SwiGLU used in every Transition block elsewhere -- up to the trunk's 128-channel width. This is the module's own returned contribution, read next by the MSA module."
+              }
+            }
+          },
+          {
+            "id": "projection_83378fa3f9eb",
+            "from": "module_template_pair_conditioning",
+            "to": "value_template_pair_conditioned_state",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioning_produces_pre_stack_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioning_produces_pre_stack_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "v_{ij}",
+              "connection": {
+                "title": "Outer sum produces the conditioned state",
+                "role": "per-template conditioned state",
+                "inside": "v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), at the module's own 64-channel width."
+              }
+            }
+          },
+          {
+            "id": "projection_b5dab632bca3",
+            "from": "module_template_pair_feature_construction",
+            "to": "value_template_pair_feature",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.feature_construction_produces_template_pair_feature"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.feature_construction_produces_template_pair_feature"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_pair_feature"
+            ],
+            "presentation": {
+              "label": "a_{tij}",
+              "connection": {
+                "title": "Masked and concatenated",
+                "role": "per-template pair feature",
+                "inside": "The two AND-gate masks, the distogram, and the unit vector are concatenated after the asym_id gate; restype is concatenated last and so is not itself gated."
+              }
+            }
+          },
+          {
+            "id": "projection_e5161db7ba0f",
+            "from": "module_template_pair_update_stage",
+            "to": "value_template_pair_after_transition",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_pair_transition_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pair_transition_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "refined v_{ij}",
+              "connection": {
+                "title": "Pair-only stack produces the refined state",
+                "role": "post-stack per-template state",
+                "inside": "After all five pair-only sub-steps (shown in template_pair_track), this representative template's fully refined state is what conditioning reads back for cross-template pooling."
+              }
+            }
+          },
+          {
+            "id": "projection_ebdf13af6451",
+            "from": "value_asym_id",
+            "to": "module_template_pair_feature_construction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.asym_id_conditions_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.asym_id_conditions_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.asym_id"
+            ],
+            "presentation": {
+              "label": "intra-chain gate",
+              "connection": {
+                "title": "Restrict to intra-chain pairs",
+                "role": "chain-instance gate",
+                "inside": "Every cross-chain pair is zeroed before restype is concatenated -- a single template structure only constrains one chain's own internal geometry, so its evidence must not leak across chain copies."
+              }
+            }
+          },
+          {
+            "id": "projection_0f1c400190d6",
+            "from": "value_template_backbone_frame_mask",
+            "to": "module_template_pair_feature_construction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_backbone_frame_mask_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_backbone_frame_mask_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_backbone_frame_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_6b22c2285214",
+            "from": "value_template_distogram",
+            "to": "module_template_pair_feature_construction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_distogram_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_distogram_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_distogram"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_fcbe37c0da1f",
+            "from": "value_template_module_pair_state_read",
+            "to": "module_template_pair_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pair_state_enters_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pair_state_enters_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z",
+              "connection": {
+                "title": "Current pair state enters conditioning",
+                "role": "outer-sum term",
+                "inside": "A LinearNoBias(LayerNorm(z_ij)) projection of the trunk's current pair belief becomes one of the two outer-sum terms that build this template's own conditioned state."
+              }
+            }
+          },
+          {
+            "id": "projection_4c9b58e9f8ad",
+            "from": "value_template_pair_after_transition",
+            "to": "module_template_pair_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_post_stack_state_enters_pooling"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_post_stack_state_enters_pooling"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "returns for pooling",
+              "tone": "recurrence",
+              "route_side": "bottom",
+              "route_clearance": 40,
+              "connection": {
+                "title": "Refined state returns for pooling",
+                "role": "cross-template accumulation input",
+                "inside": "This representative template's fully refined state comes back from the pair-only stack and is LayerNorm'd and accumulated toward the cross-template average -- the same conditioning mechanism that read the outer-sum inputs also performs this later pooling step."
+              }
+            }
+          },
+          {
+            "id": "projection_bc595e4e36ca",
+            "from": "value_template_pair_conditioned_state",
+            "to": "module_template_pair_update_stage",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pre_stack_state_enters_outgoing_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pre_stack_state_enters_outgoing_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "v_{ij}",
+              "connection": {
+                "title": "Pre-stack state enters the pair-only stack",
+                "role": "per-template conditioned state",
+                "inside": "The outer-summed, 64-channel conditioned state is handed to the template embedder's own N_block=2 pair-only pair-stack (no single-representation step), shown in its own board."
+              }
+            }
+          },
+          {
+            "id": "projection_16308fba129b",
+            "from": "value_template_pair_feature",
+            "to": "module_template_pair_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pair_feature_enters_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pair_feature_enters_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_pair_feature"
+            ],
+            "presentation": {
+              "label": "a_{tij}",
+              "connection": {
+                "title": "Template evidence enters conditioning",
+                "role": "outer-sum term",
+                "inside": "A LinearNoBias(a_tij) projection of the masked, concatenated template feature becomes the other outer-sum term, carrying this specific template's raw geometric evidence."
+              }
+            }
+          },
+          {
+            "id": "projection_2f93f0ad127e",
+            "from": "value_template_pseudo_beta_mask",
+            "to": "module_template_pair_feature_construction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pseudo_beta_mask_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pseudo_beta_mask_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_pseudo_beta_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_5904bdb223ad",
+            "from": "value_template_restype",
+            "to": "module_template_pair_feature_construction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_restype_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_restype_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_restype"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_30e79c1547b3",
+            "from": "value_template_unit_vector",
+            "to": "module_template_pair_feature_construction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_unit_vector_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_unit_vector_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_unit_vector"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.template_pair_attention_ending_node": "collapsed:modules.template_pair_update_stage",
+          "modules.template_pair_attention_starting_node": "collapsed:modules.template_pair_update_stage",
+          "modules.template_pair_conditioning": "visible",
+          "modules.template_pair_feature_construction": "visible",
+          "modules.template_pair_transition": "collapsed:modules.template_pair_update_stage",
+          "modules.template_pair_update_stage": "visible",
+          "modules.template_triangle_multiplication_incoming": "collapsed:modules.template_pair_update_stage",
+          "modules.template_triangle_multiplication_outgoing": "collapsed:modules.template_pair_update_stage",
+          "value_sites.asym_id": "visible",
+          "value_sites.msa_module_pair_state_read": "excluded",
+          "value_sites.template_backbone_frame_mask": "visible",
+          "value_sites.template_distogram": "visible",
+          "value_sites.template_module_pair_output": "visible",
+          "value_sites.template_module_pair_state_read": "visible",
+          "value_sites.template_pair_after_ending_attention": "collapsed:modules.template_pair_update_stage",
+          "value_sites.template_pair_after_incoming_multiplication": "collapsed:modules.template_pair_update_stage",
+          "value_sites.template_pair_after_outgoing_multiplication": "collapsed:modules.template_pair_update_stage",
+          "value_sites.template_pair_after_starting_attention": "collapsed:modules.template_pair_update_stage",
+          "value_sites.template_pair_after_transition": "visible",
+          "value_sites.template_pair_conditioned_state": "visible",
+          "value_sites.template_pair_feature": "visible",
+          "value_sites.template_pseudo_beta_mask": "visible",
+          "value_sites.template_restype": "visible",
+          "value_sites.template_unit_vector": "visible",
+          "value_sites.z_init": "excluded"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "template_pair_track",
+        "title": "Template Pair Stack: Five Ordered Residual Updates",
+        "summary": "The same five-step pair-stack mechanism as the Pairformer's own pair track and the MSA module's own pair-stack (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a 4x SwiGLU transition), with its own parameters, run here N_block=2 times at the template embedder's own narrower 64-channel width. Unlike both the 48-block trunk and the MSA module's pair-stack, this variant has no single-representation step at all -- PairFormerIteration's with_single flag is left at its constructor default of False here, so only these five pair-only sub-steps run.",
+        "parent": "template_module_detail",
+        "subject_ref": "modules.template_pair_update_stage",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 11,
+          "rows": 3,
+          "column_sizing": "content",
+          "col_gap": 24,
+          "row_gap": 28
+        },
+        "nodes": [
+          {
+            "id": "template_pair_conditioned_state",
+            "ref": "value_sites.template_pair_conditioned_state",
+            "label": "pre-stack template state",
+            "notation": "v_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "template_triangle_multiplication_outgoing",
+            "ref": "modules.template_triangle_multiplication_outgoing",
+            "label": "outgoing triangle multiplication + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "template_pair_after_outgoing_multiplication",
+            "ref": "value_sites.template_pair_after_outgoing_multiplication",
+            "label": "outgoing-updated pairs",
+            "notation": "v^{out}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "template_triangle_multiplication_incoming",
+            "ref": "modules.template_triangle_multiplication_incoming",
+            "label": "incoming triangle multiplication + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "template_pair_after_incoming_multiplication",
+            "ref": "value_sites.template_pair_after_incoming_multiplication",
+            "label": "incoming-updated pairs",
+            "notation": "v^{in}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "template_pair_attention_starting_node",
+            "ref": "modules.template_pair_attention_starting_node",
+            "label": "starting-node attention + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "template_pair_after_starting_attention",
+            "ref": "value_sites.template_pair_after_starting_attention",
+            "label": "start-attended pairs",
+            "notation": "v^{start}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 7,
+            "row": 2
+          },
+          {
+            "id": "template_pair_attention_ending_node",
+            "ref": "modules.template_pair_attention_ending_node",
+            "label": "ending-node attention + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 8,
+            "row": 2
+          },
+          {
+            "id": "template_pair_after_ending_attention",
+            "ref": "value_sites.template_pair_after_ending_attention",
+            "label": "end-attended pairs",
+            "notation": "v^{end}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "micro",
+            "col": 9,
+            "row": 2
+          },
+          {
+            "id": "template_pair_transition",
+            "ref": "modules.template_pair_transition",
+            "label": "pair transition + residual",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 10,
+            "row": 2
+          },
+          {
+            "id": "template_pair_after_transition",
+            "ref": "value_sites.template_pair_after_transition",
+            "label": "pair-stack output",
+            "notation": "v_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 11,
+            "row": 2
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.template_pre_stack_state_enters_outgoing_multiplication"
+            },
+            "label": "v_{ij}",
+            "connection": {
+              "title": "Pre-stack state enters outgoing update",
+              "role": "ordered-pair input",
+              "inside": "The outgoing triangle operation mixes pairs that share their outgoing endpoint pattern, reading the conditioned state conditioning just produced."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_outgoing_multiplication_updates_pair_state"
+            },
+            "label": "+ Δv_out",
+            "connection": {
+              "title": "Outgoing residual update",
+              "role": "pair-state mutation",
+              "inside": "The gated outgoing triangle result is projected back to the module's own 64 channels and added to the incoming state."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_incoming_multiplication_updates_pair_state"
+            },
+            "label": "+ Δv_in",
+            "connection": {
+              "title": "Incoming residual update",
+              "role": "pair-state mutation",
+              "inside": "The incoming triangle result is added to the already outgoing-updated state."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_starting_attention_updates_pair_state"
+            },
+            "label": "+ Δv_start",
+            "connection": {
+              "title": "Starting-node attention update",
+              "role": "axial pair attention",
+              "inside": "Four-head gated attention follows one axis of the pair grid and adds its projected result."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_ending_attention_updates_pair_state"
+            },
+            "label": "+ Δv_end",
+            "connection": {
+              "title": "Ending-node attention update",
+              "role": "complementary axial pair attention",
+              "inside": "The implementation transposes the pair grid, applies the same attention anatomy along the other axis, then transposes back."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_pair_transition_updates_pair_state"
+            },
+            "label": "+ Δv_ffn",
+            "connection": {
+              "title": "Pair transition update",
+              "role": "pointwise pair feed-forward",
+              "inside": "LayerNorm and a 4x SwiGLU hidden projection produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_4f68f0f33450",
+            "from": "template_pair_after_ending_attention",
+            "to": "template_pair_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_ending_pair_state_enters_pair_transition"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_ending_pair_state_enters_pair_transition"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_badbf01ec5b7",
+            "from": "template_pair_after_incoming_multiplication",
+            "to": "template_pair_attention_starting_node",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_incoming_pair_state_enters_starting_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_incoming_pair_state_enters_starting_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_6d63537020f4",
+            "from": "template_pair_after_outgoing_multiplication",
+            "to": "template_triangle_multiplication_incoming",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_outgoing_pair_state_enters_incoming_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_outgoing_pair_state_enters_incoming_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_cdcca8448b5c",
+            "from": "template_pair_after_starting_attention",
+            "to": "template_pair_attention_ending_node",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_starting_pair_state_enters_ending_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_starting_pair_state_enters_ending_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_623ae9d43306",
+            "from": "template_pair_attention_ending_node",
+            "to": "template_pair_after_ending_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_ending_attention_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_ending_attention_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δv_end",
+              "connection": {
+                "title": "Ending-node attention update",
+                "role": "complementary axial pair attention",
+                "inside": "The implementation transposes the pair grid, applies the same attention anatomy along the other axis, then transposes back."
+              }
+            }
+          },
+          {
+            "id": "projection_0d3afb9f7bc8",
+            "from": "template_pair_attention_starting_node",
+            "to": "template_pair_after_starting_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_starting_attention_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_starting_attention_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δv_start",
+              "connection": {
+                "title": "Starting-node attention update",
+                "role": "axial pair attention",
+                "inside": "Four-head gated attention follows one axis of the pair grid and adds its projected result."
+              }
+            }
+          },
+          {
+            "id": "projection_8580f96aedca",
+            "from": "template_pair_conditioned_state",
+            "to": "template_triangle_multiplication_outgoing",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pre_stack_state_enters_outgoing_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pre_stack_state_enters_outgoing_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "v_{ij}",
+              "connection": {
+                "title": "Pre-stack state enters outgoing update",
+                "role": "ordered-pair input",
+                "inside": "The outgoing triangle operation mixes pairs that share their outgoing endpoint pattern, reading the conditioned state conditioning just produced."
+              }
+            }
+          },
+          {
+            "id": "projection_7f5a9d3852ad",
+            "from": "template_pair_transition",
+            "to": "template_pair_after_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_pair_transition_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pair_transition_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δv_ffn",
+              "connection": {
+                "title": "Pair transition update",
+                "role": "pointwise pair feed-forward",
+                "inside": "LayerNorm and a 4x SwiGLU hidden projection produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation."
+              }
+            }
+          },
+          {
+            "id": "projection_e8c0528d10b7",
+            "from": "template_triangle_multiplication_incoming",
+            "to": "template_pair_after_incoming_multiplication",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_incoming_multiplication_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_incoming_multiplication_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δv_in",
+              "connection": {
+                "title": "Incoming residual update",
+                "role": "pair-state mutation",
+                "inside": "The incoming triangle result is added to the already outgoing-updated state."
+              }
+            }
+          },
+          {
+            "id": "projection_707a1e96bccf",
+            "from": "template_triangle_multiplication_outgoing",
+            "to": "template_pair_after_outgoing_multiplication",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_outgoing_multiplication_updates_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_outgoing_multiplication_updates_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "+ Δv_out",
+              "connection": {
+                "title": "Outgoing residual update",
+                "role": "pair-state mutation",
+                "inside": "The gated outgoing triangle result is projected back to the module's own 64 channels and added to the incoming state."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.template_pair_attention_ending_node": "visible",
+          "modules.template_pair_attention_starting_node": "visible",
+          "modules.template_pair_transition": "visible",
+          "modules.template_triangle_multiplication_incoming": "visible",
+          "modules.template_triangle_multiplication_outgoing": "visible",
+          "value_sites.template_pair_after_ending_attention": "visible",
+          "value_sites.template_pair_after_incoming_multiplication": "visible",
+          "value_sites.template_pair_after_outgoing_multiplication": "visible",
+          "value_sites.template_pair_after_starting_attention": "visible",
+          "value_sites.template_pair_after_transition": "visible",
+          "value_sites.template_pair_conditioned_state": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "template_pair_conditioning_detail",
+        "title": "Template Pair Conditioning: Outer Sum In, Cross-Template Pooling Out",
+        "summary": "For one representative template, a LinearNoBias(LayerNorm(z_ij)) read of the current pair state is outer-summed with a LinearNoBias(a_tij) read of the masked template feature to form this template's own pair-conditioned state at the template embedder's narrower 64-channel width. After the pair-only pair-stack (shown separately in template_pair_track) refines that state, this same mechanism LayerNorms and accumulates the result across every template, divides by N_templates (order-invariant pooling), and projects once more through a plain LinearNoBias(ReLU(...)) -- notably plain ReLU, not the SwiGLU used in every Transition block elsewhere -- up to the trunk's 128-channel width.",
+        "parent": "template_module_detail",
+        "subject_ref": "modules.template_pair_conditioning",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 3,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "value_template_module_pair_state_read_cond",
+            "ref": "value_sites.template_module_pair_state_read",
+            "label": "pair state entry",
+            "notation": "z",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "value_template_pair_feature_cond",
+            "ref": "value_sites.template_pair_feature",
+            "label": "masked template feature",
+            "notation": "a_{tij}",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "template_pair_conditioning",
+            "ref": "modules.template_pair_conditioning",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "value_template_pair_conditioned_state",
+            "ref": "value_sites.template_pair_conditioned_state",
+            "label": "pre-stack state",
+            "notation": "v_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "value_template_pair_after_transition",
+            "ref": "value_sites.template_pair_after_transition",
+            "label": "post-stack state",
+            "notation": "v_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "value_template_module_pair_output_cond",
+            "ref": "value_sites.template_module_pair_output",
+            "label": "pooled contribution",
+            "notation": "u_{ij}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "modules.template_triangle_multiplication_outgoing",
+            "reason": "The pair-only pair-stack that reads the pre-stack state and produces the post-stack state is shown in its own board, template_pair_track; this board covers conditioning's own outer-sum and pooling mechanism."
+          },
+          {
+            "ref": "modules.template_pair_transition",
+            "reason": "The pair-only pair-stack that reads the pre-stack state and produces the post-stack state is shown in its own board, template_pair_track; this board covers conditioning's own outer-sum and pooling mechanism."
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.template_pair_state_enters_conditioning"
+            },
+            "label": "z",
+            "connection": {
+              "title": "Current pair state enters the outer sum",
+              "role": "outer-sum term",
+              "inside": "LinearNoBias(LayerNorm(z_ij)) becomes one of the two independent projections combined by outer sum."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_pair_feature_enters_conditioning"
+            },
+            "label": "a_{tij}",
+            "connection": {
+              "title": "Template evidence enters the outer sum",
+              "role": "outer-sum term",
+              "inside": "LinearNoBias(a_tij) becomes the other outer-sum term, carrying this template's own masked geometric evidence."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.conditioning_produces_pre_stack_state"
+            },
+            "label": "v_{ij}",
+            "connection": {
+              "title": "Outer sum produces the conditioned state",
+              "role": "per-template conditioned state",
+              "inside": "v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), at the module's own 64-channel width, before the pair-only pair-stack (template_pair_track) refines it."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_post_stack_state_enters_pooling"
+            },
+            "label": "v_{ij} refined",
+            "tone": "recurrence",
+            "route_side": "bottom",
+            "route_clearance": 36,
+            "connection": {
+              "title": "Refined state returns for pooling",
+              "role": "cross-template accumulation input",
+              "inside": "After template_pair_track's pair-only stack refines v_ij, this same conditioning mechanism LayerNorms and accumulates the result across every template -- the module reads its own inputs once early (the outer sum) and once again late (the pooling accumulation)."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.conditioning_produces_template_module_pair_output"
+            },
+            "label": "u_{ij}",
+            "connection": {
+              "title": "Average and project",
+              "role": "module output",
+              "inside": "The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution."
+            }
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_f569c68e350b",
+            "from": "template_pair_conditioning",
+            "to": "value_template_module_pair_output_cond",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioning_produces_template_module_pair_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioning_produces_template_module_pair_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "u_{ij}",
+              "connection": {
+                "title": "Average and project",
+                "role": "module output",
+                "inside": "The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution."
+              }
+            }
+          },
+          {
+            "id": "projection_da6ed8775f6e",
+            "from": "template_pair_conditioning",
+            "to": "value_template_pair_conditioned_state",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioning_produces_pre_stack_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioning_produces_pre_stack_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "v_{ij}",
+              "connection": {
+                "title": "Outer sum produces the conditioned state",
+                "role": "per-template conditioned state",
+                "inside": "v_ij = LinearNoBias(LayerNorm(z_ij)) + LinearNoBias(a_tij), at the module's own 64-channel width, before the pair-only pair-stack (template_pair_track) refines it."
+              }
+            }
+          },
+          {
+            "id": "projection_115afb7c1950",
+            "from": "value_template_module_pair_state_read_cond",
+            "to": "template_pair_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pair_state_enters_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pair_state_enters_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z",
+              "connection": {
+                "title": "Current pair state enters the outer sum",
+                "role": "outer-sum term",
+                "inside": "LinearNoBias(LayerNorm(z_ij)) becomes one of the two independent projections combined by outer sum."
+              }
+            }
+          },
+          {
+            "id": "projection_b74f0387b13d",
+            "from": "value_template_pair_after_transition",
+            "to": "template_pair_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_post_stack_state_enters_pooling"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_post_stack_state_enters_pooling"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_conditioned_pair_state"
+            ],
+            "presentation": {
+              "label": "v_{ij} refined",
+              "tone": "recurrence",
+              "route_side": "bottom",
+              "route_clearance": 36,
+              "connection": {
+                "title": "Refined state returns for pooling",
+                "role": "cross-template accumulation input",
+                "inside": "After template_pair_track's pair-only stack refines v_ij, this same conditioning mechanism LayerNorms and accumulates the result across every template -- the module reads its own inputs once early (the outer sum) and once again late (the pooling accumulation)."
+              }
+            }
+          },
+          {
+            "id": "projection_088558a1e93e",
+            "from": "value_template_pair_feature_cond",
+            "to": "template_pair_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pair_feature_enters_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pair_feature_enters_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_pair_feature"
+            ],
+            "presentation": {
+              "label": "a_{tij}",
+              "connection": {
+                "title": "Template evidence enters the outer sum",
+                "role": "outer-sum term",
+                "inside": "LinearNoBias(a_tij) becomes the other outer-sum term, carrying this template's own masked geometric evidence."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.template_pair_conditioning": "visible",
+          "modules.template_pair_transition": "excluded",
+          "modules.template_triangle_multiplication_outgoing": "excluded",
+          "value_sites.template_module_pair_output": "visible",
+          "value_sites.template_module_pair_state_read": "visible",
+          "value_sites.template_pair_after_transition": "visible",
+          "value_sites.template_pair_conditioned_state": "visible",
+          "value_sites.template_pair_feature": "visible"
         },
         "projectionMode": "derived"
       }
