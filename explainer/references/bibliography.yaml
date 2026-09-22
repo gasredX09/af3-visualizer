@@ -265,6 +265,15 @@ sources:
     path: src/alphafold3/model/network/template_modules.py
     url: https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py
 
+  - id: af3_featurization_code
+    kind: code
+    title: AlphaFold 3 input feature construction, including relative position encoding
+    organization: Google DeepMind
+    repository: google-deepmind/alphafold3
+    revision: f3e86f27dfac16559d16f470bb2f9323eb357f1f
+    path: src/alphafold3/model/network/featurization.py
+    url: https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py
+
   - id: genie2_2024
     kind: paper
     title: "Out of Many, One: Designing and Scaffolding Proteins at the Scale of the Structural Universe with Genie 2"

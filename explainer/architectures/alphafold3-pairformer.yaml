@@ -707,7 +707,7 @@ representations:
           locator: Supplementary Algorithm 3 line 3 (b_same_entity_ij = f_i^entity_id == f_j^entity_id)
   - id: relative_chain_offset
     scale: token_pair
-    semantic_role: RelativePositionEncoding's chain-copy-number offset signal (a_rel_chain) -- the clipped, one-hot-encoded sym_id difference between two tokens, only defined for pairs not in the same physical chain (b_same_chain, built from asym_id equality). Lets the network express "different physical chains, but specifically the 1st and 3rd copies of the same repeated entity," directly relevant to homomer/symmetric-assembly geometry
+    semantic_role: RelativePositionEncoding's chain-copy-number offset signal (a_rel_chain) -- the clipped, one-hot-encoded sym_id difference between two tokens, only defined for pairs not in the same physical chain (b_same_chain, built from asym_id equality), per the paper's literal Algorithm 3 line 8. Lets the network express "different physical chains, but specifically the 1st and 3rd copies of the same repeated entity," directly relevant to homomer/symmetric-assembly geometry. The reference implementation instead gates this on entity_id_same, not b_same_chain -- see open_questions.relative_chain_offset_gate_paper_code_divergence
     shape: "N_token x N_token x 6"
     glyph: pair
     carries:
@@ -2310,13 +2310,13 @@ relations:
     to: modules.relative_position_encoding
     kind: conditioning
     carries: [representations.asym_id]
-    operation: determine_same_chain_gate_for_residue_and_token_offsets
+    operation: determine_same_chain_gate_for_offset_signals
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 3 line 1 (b_same_chain_ij = f_i^asym_id == f_j^asym_id), gating both line 4's a_rel_pos and line 6's a_rel_token
+          locator: Supplementary Algorithm 3 line 1 (b_same_chain_ij = f_i^asym_id == f_j^asym_id), gating line 4's a_rel_pos (same-chain), line 6's a_rel_token (same-chain and same-residue), and line 8's a_rel_chain (not same-chain, per the paper's literal condition -- see open_questions.relative_chain_offset_gate_paper_code_divergence for the reference implementation's differing gate)
   - id: entity_id_enters_relative_position_encoding
     from: value_sites.entity_id
     to: modules.relative_position_encoding
@@ -3030,19 +3030,37 @@ claims:
 
 open_questions:
   - id: token_bonds_embedding_unmodeled
-    question: Algorithm 1 line 5 adds a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3) and RelativePositionEncoding (line 4, now modeled by modules.relative_position_encoding). The token_bonds embedding itself -- a separate, small contributor to z_init built from user-provided bond information, unrelated to modules.relative_position_encoding -- is not yet represented as its own value site, module, or relation.
+    question: Algorithm 1 line 5 adds a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3) and RelativePositionEncoding (line 4). RelativePositionEncoding is now modeled by modules.relative_position_encoding and reachable via value_sites.relative_position_encoding_output, but no relation wires that output into value_sites.z_init itself -- only s_inputs (via relations.pair_state_projection_produces_z_init) is a graph-connected contributor to z_init today. The token_bonds embedding -- a separate, small contributor to z_init built from user-provided bond information, unrelated to modules.relative_position_encoding -- is not yet represented as its own value site, module, or relation at all.
     status: deferred
     affected_refs:
       - value_sites.z_init
       - relations.pair_state_projection_produces_z_init
       - modules.pair_state_input_projection
-    resolution_criteria: Model the token_bonds embedding (a LinearNoBias projection of the user-provided token_bonds feature) as its own boundary:input value site and relation feeding z_init, alongside the existing s_inputs and RelativePositionEncoding contributions.
+    resolution_criteria: Model the token_bonds embedding (a LinearNoBias projection of the user-provided token_bonds feature) as its own boundary:input value site and relation feeding z_init, alongside the existing s_inputs contribution (relations.pair_state_projection_produces_z_init). Separately, and only if wanted, also add a relation from value_sites.relative_position_encoding_output into z_init -- RelativePositionEncoding is modeled but that specific wire does not exist yet.
     evidence:
       status: open_question
       refs:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 1 line 5
+  - id: relative_chain_offset_gate_paper_code_divergence
+    question: Supplementary Algorithm 3 line 8 (paper) gates a_rel_chain's offset on "not b_same_chain" (built from asym_id) -- same-chain token pairs fall into the catch-all bucket, cross-chain pairs get a real offset. The reference implementation's create_relative_encoding() instead gates the equivalent computation on entity_id_same. These are not equivalent conditions -- same-chain implies same-entity, but same-entity does not imply same-chain (e.g. two different physical copies of a homotrimer share entity_id but not asym_id), so a same-chain token pair gets the catch-all bucket per the paper but a real (zero) offset per the code. representations.relative_chain_offset and its producing relation are grounded in the paper's literal condition, not the code's.
+    status: deferred
+    affected_refs:
+      - representations.relative_chain_offset
+      - modules.relative_position_encoding
+      - relations.relative_position_encoding_produces_chain_offset
+      - relations.asym_id_conditions_relative_position_encoding
+    resolution_criteria: Determine which condition the shipped model actually relies on (e.g. by tracing training/inference behavior on a same-chain, same-entity example) and, if it differs from the paper's literal Algorithm 3 line 8, update representations.relative_chain_offset's construction and evidence to match the reference implementation instead.
+    evidence:
+      status: open_question
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 3 line 8 (d_chain_ij gated on not b_same_chain_ij)
+        - source_ref: af3_featurization_code
+          role: implementation_evidence
+          locator: "create_relative_encoding(), rel_chain construction (final_rel_chain = jnp.where(entity_id_same, clipped_rel_chain, catch_all))"
   - id: msa_row_resampling_unmodeled
     question: Algorithm 8 line 2 (SampleRandomWithoutReplacement) draws a random subset of MSA rows fresh at every recycle before line 3's embedding. This resampling step is not modeled as its own value site, module, or relation; value_sites.msa_activations treats N_msa as the working (already-sampled) row count without a separate value site distinguishing the full alignment depth from the per-recycle sampled subset.
     status: deferred
