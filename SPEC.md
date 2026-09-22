@@ -385,7 +385,7 @@ board from the start (`template_module_detail`), following the
 the root board. Tagging the six raw template value sites `boundary: input`
 forces them onto the root board (the same `missing_root_boundary` rule
 already governing every other raw input on that board), alongside the one
-collapsed `template_module` node — 23 nodes total on root, up from 17. This
+collapsed `template_module` node — 24 nodes total on root, up from 17. This
 is expected and accepted per this session's board-curation research: AF2's
 own reference example carries a comparable density of boundary inputs on
 its own root board with no further restructuring, and all locally-available

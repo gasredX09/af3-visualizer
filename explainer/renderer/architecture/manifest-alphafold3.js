@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "d5e315f0a115362ffe834d79d83c3880b315f95fecf06f1d5f56372aecec555f",
-      "architectures/alphafold3-pairformer.yaml": "50238056a02686b7d1679226e2540d9f82b3b0e270e4169c40789d2fdceba035",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "bab8c9eaa739d48a71310213baf0a68add357a3fdf8be2bc7edca7dec01d0d5d",
+      "architectures/alphafold3-pairformer.yaml": "583cafc7345aa5b1bf375e9b05ff087109ea7b7894fb956ea3bb3ccdee14ecf2",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "d56f0ff768298b78748c074363385c29a501302d37fa3f361123bc47ee38f6ab",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
     }
   },
@@ -1295,7 +1295,7 @@ export const manifest = {
           "axial_pair_attention",
           "transition"
         ],
-        "role": "run the template embedder's own N_block=2 pair-only Pairformer block over each representative template's pair-conditioned state, at the module's own 64-channel width; unlike both the main 48-block trunk (with_single=True) and the MSA module's own pair-stack, this stack has no single-representation step at all -- PairFormerIteration's with_single constructor flag defaults to False and is never overridden by the template embedder's per-template call, so only the five pair-only sub-steps below run and no single_act is passed in or returned",
+        "role": "run the template embedder's own N_block=2 pair-only Pairformer block over each representative template's pair-conditioned state, at the module's own 64-channel width; unlike the main 48-block trunk (with_single=True), this stack has no single-representation step at all -- PairFormerIteration's with_single constructor flag defaults to False and is never overridden by the template embedder's per-template call, so only the five pair-only sub-steps below run and no single_act is passed in or returned",
         "scale": "token_pair",
         "repeats": 2,
         "evidence": {
@@ -1465,15 +1465,20 @@ export const manifest = {
           "swiglu",
           "residual_update"
         ],
-        "role": "apply a pointwise 4x SwiGLU transition and add its 64-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights), run here as the final step of the template embedder's own pair-only pair-stack, whose output is this representative template's fully refined state",
+        "role": "apply a pointwise 2x SwiGLU transition and add its 64-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights) but with its intermediate-channel factor overridden from the default 4x to 2x for this stack, run here as the final step of the template embedder's own pair-only pair-stack, whose output is this representative template's fully refined state",
         "scale": "token_pair",
         "evidence": {
-          "status": "confirmed_from_paper",
+          "status": "confirmed_from_code",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition); Algorithm 11 (Transition definition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6) and the MSA module's own msa_pair_transition"
+              "locator": "Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition); Algorithm 11 (Transition definition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6) and the MSA module's own msa_pair_transition; the algorithm box itself does not state an intermediate-channel factor"
+            },
+            {
+              "source_ref": "af3_template_code",
+              "role": "implementation_evidence",
+              "locator": "template_modules.py TemplateEmbedding.Config (template_stack = PairFormerIteration.Config(num_layer=2, pair_transition=TransitionBlock.Config(num_intermediate_factor=2))) -- overrides TransitionBlock.Config's num_intermediate_factor default of 4 (modules.py) to 2 for this stack's transition only, the one place in the architecture this factor is not 4"
             }
           ]
         }
@@ -2057,7 +2062,7 @@ export const manifest = {
       {
         "id": "template_restype",
         "scale": "template",
-        "semantic_role": "raw per-template, per-token residue/nucleotide/ligand-as-unknown-amino-acid class id (32 possible values, same scheme as restype); stored as a class id, not already one-hot -- one-hot encoding to 32 channels happens inside modules.template_pair_feature_construction, confirmed against code since Table 5's shape entry omits the resulting one-hot width unlike restype's own [N_token, 32] entry",
+        "semantic_role": "raw per-template, per-token residue/nucleotide/ligand-as-unknown-amino-acid class id (31 possible values, a different one-hot width than restype's own 32-class scheme); stored as a class id, not already one-hot -- one-hot encoding to 31 channels happens inside modules.template_pair_feature_construction, confirmed against code since Table 5's shape entry omits the resulting one-hot width unlike restype's own [N_token, 32] entry",
         "shape": "N_templates x N_token",
         "glyph": "vector",
         "carries": [
@@ -2103,14 +2108,14 @@ export const manifest = {
         "id": "template_pair_feature",
         "scale": "token_pair",
         "semantic_role": "the masked and concatenated raw per-template pair feature (a_tij) for one representative template, built by AND-gating the two raw per-token masks into pairwise masks, concatenating the pairwise distogram and unit-vector evidence with those pairwise masks, zeroing every cross-chain pair via the asym_id gate, then concatenating the one-hot restype of both tokens onto the already-gated result -- restype is added after the gate and so is not itself asym_id-gated",
-        "shape": "N_token x N_token x 108",
+        "shape": "N_token x N_token x 106",
         "glyph": "pair",
         "carries": [
           "39-bin pairwise distogram",
           "backbone-frame AND-gate mask (1 channel)",
           "pairwise unit vector (3 channels)",
           "pseudo-beta AND-gate mask (1 channel)",
-          "one-hot restype at token i (32 channels) and token j (32 channels), concatenated after the asym_id gate"
+          "one-hot restype at token i (31 channels) and token j (31 channels), concatenated after the asym_id gate"
         ],
         "evidence": {
           "status": "confirmed_from_paper",
@@ -2118,7 +2123,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 16 lines 1-5 (b_ij^template_backbone_frame_mask, b_ij^template_pseudo_beta_mask, a_tij = concat(f_tij^template_distogram, b_ij^template_backbone_frame_mask, f_tij^template_unit_vector, b_ij^template_pseudo_beta_mask), a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id), a_tij <- concat(a_tij, f_ti^template_restype, f_tj^template_restype)); channel width (39+1+3+1+32+32=108) summed from the individually cited widths of representations.template_distogram, template_backbone_frame_mask, template_unit_vector, template_pseudo_beta_mask, and template_restype (one-hot encoded to 32 channels per representations.template_restype)"
+              "locator": "Supplementary Algorithm 16 lines 1-5 (b_ij^template_backbone_frame_mask, b_ij^template_pseudo_beta_mask, a_tij = concat(f_tij^template_distogram, b_ij^template_backbone_frame_mask, f_tij^template_unit_vector, b_ij^template_pseudo_beta_mask), a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id), a_tij <- concat(a_tij, f_ti^template_restype, f_tj^template_restype)); channel width (39+1+3+1+31+31=106) summed from the individually cited widths of representations.template_distogram, template_backbone_frame_mask, template_unit_vector, template_pseudo_beta_mask, and template_restype (one-hot encoded to 31 channels per representations.template_restype)"
             }
           ]
         }
@@ -12285,7 +12290,7 @@ export const manifest = {
             "id": "value_template_module_pair_output",
             "ref": "value_sites.template_module_pair_output",
             "label": "template contribution",
-            "notation": "z",
+            "notation": "u_{ij}",
             "prominence": "context",
             "treatment": "compact",
             "density": "compact",
@@ -12383,7 +12388,7 @@ export const manifest = {
             "connection": {
               "title": "Pair state enters the block",
               "role": "block-input pair state",
-              "inside": "The pair representation arrives here from the Template Module's own pooled, cross-template contribution (z_init plus every template's evidence), not straight from the input projection; the Pairformer only ever sees what this module returns."
+              "inside": "The pair representation arrives here after the Template Module's own pooled, cross-template contribution has been added into it -- what msa_module_pair_state_read now holds is z_init plus every template's evidence, not straight from the input projection; the Pairformer only ever sees what this module returns."
             }
           },
           {
@@ -12743,7 +12748,7 @@ export const manifest = {
               "connection": {
                 "title": "Pair state enters the block",
                 "role": "block-input pair state",
-                "inside": "The pair representation arrives here from the Template Module's own pooled, cross-template contribution (z_init plus every template's evidence), not straight from the input projection; the Pairformer only ever sees what this module returns."
+                "inside": "The pair representation arrives here after the Template Module's own pooled, cross-template contribution has been added into it -- what msa_module_pair_state_read now holds is z_init plus every template's evidence, not straight from the input projection; the Pairformer only ever sees what this module returns."
               }
             }
           }
@@ -14047,7 +14052,7 @@ export const manifest = {
       {
         "id": "template_module_detail",
         "title": "The Template Module",
-        "summary": "Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, a pairwise unit vector, and each token's template residue type) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate, then outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.",
+        "summary": "Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, and a pairwise unit vector) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate; each token's template residue type is concatenated on afterward and is not itself gated, so it reaches every pair, cross-chain included. The result is outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.",
         "subject_ref": "modules.template_module",
         "expansion_depth": 1,
         "parent": "pairformer_overview",
@@ -14743,7 +14748,7 @@ export const manifest = {
       {
         "id": "template_pair_track",
         "title": "Template Pair Stack: Five Ordered Residual Updates",
-        "summary": "The same five-step pair-stack mechanism as the Pairformer's own pair track and the MSA module's own pair-stack (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a 4x SwiGLU transition), with its own parameters, run here N_block=2 times at the template embedder's own narrower 64-channel width. Unlike both the 48-block trunk and the MSA module's pair-stack, this variant has no single-representation step at all -- PairFormerIteration's with_single flag is left at its constructor default of False here, so only these five pair-only sub-steps run.",
+        "summary": "The same five-step pair-stack mechanism as the Pairformer's own pair track and the MSA module's own pair-stack (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a transition), with its own parameters, run here N_block=2 times at the template embedder's own narrower 64-channel width -- but with one difference from those other two, this stack's transition is a 2x SwiGLU transition, not the 4x used everywhere else. Unlike the 48-block trunk, this variant has no single-representation step at all -- PairFormerIteration's with_single flag is left at its constructor default of False here, so only these five pair-only sub-steps run.",
         "parent": "template_module_detail",
         "subject_ref": "modules.template_pair_update_stage",
         "expansion_depth": 1,
@@ -14936,7 +14941,7 @@ export const manifest = {
             "connection": {
               "title": "Pair transition update",
               "role": "pointwise pair feed-forward",
-              "inside": "LayerNorm and a 4x SwiGLU hidden projection produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation."
+              "inside": "LayerNorm and a 2x SwiGLU hidden projection (64 to 128 channels, half the 4x expansion used elsewhere) produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation."
             }
           }
         ],
@@ -15154,7 +15159,7 @@ export const manifest = {
               "connection": {
                 "title": "Pair transition update",
                 "role": "pointwise pair feed-forward",
-                "inside": "LayerNorm and a 4x SwiGLU hidden projection produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation."
+                "inside": "LayerNorm and a 2x SwiGLU hidden projection (64 to 128 channels, half the 4x expansion used elsewhere) produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation."
               }
             }
           },

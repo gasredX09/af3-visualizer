@@ -587,7 +587,7 @@ representations:
           locator: Supplementary Table 5 template_unit_vector [N_templ, N_token, N_token, 3] ("The unit vector of the displacement of the Calpha atom of all residues within the local frame of each residue"); Supplementary Algorithm 16 line 3 (f_tij^template_unit_vector, double-index tij, already pairwise)
   - id: template_restype
     scale: template
-    semantic_role: raw per-template, per-token residue/nucleotide/ligand-as-unknown-amino-acid class id (32 possible values, same scheme as restype); stored as a class id, not already one-hot -- one-hot encoding to 32 channels happens inside modules.template_pair_feature_construction, confirmed against code since Table 5's shape entry omits the resulting one-hot width unlike restype's own [N_token, 32] entry
+    semantic_role: raw per-template, per-token residue/nucleotide/ligand-as-unknown-amino-acid class id (31 possible values, a different one-hot width than restype's own 32-class scheme); stored as a class id, not already one-hot -- one-hot encoding to 31 channels happens inside modules.template_pair_feature_construction, confirmed against code since Table 5's shape entry omits the resulting one-hot width unlike restype's own [N_token, 32] entry
     shape: "N_templates x N_token"
     glyph: vector
     carries:
@@ -617,20 +617,20 @@ representations:
   - id: template_pair_feature
     scale: token_pair
     semantic_role: the masked and concatenated raw per-template pair feature (a_tij) for one representative template, built by AND-gating the two raw per-token masks into pairwise masks, concatenating the pairwise distogram and unit-vector evidence with those pairwise masks, zeroing every cross-chain pair via the asym_id gate, then concatenating the one-hot restype of both tokens onto the already-gated result -- restype is added after the gate and so is not itself asym_id-gated
-    shape: "N_token x N_token x 108"
+    shape: "N_token x N_token x 106"
     glyph: pair
     carries:
       - 39-bin pairwise distogram
       - backbone-frame AND-gate mask (1 channel)
       - pairwise unit vector (3 channels)
       - pseudo-beta AND-gate mask (1 channel)
-      - one-hot restype at token i (32 channels) and token j (32 channels), concatenated after the asym_id gate
+      - one-hot restype at token i (31 channels) and token j (31 channels), concatenated after the asym_id gate
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: "Supplementary Algorithm 16 lines 1-5 (b_ij^template_backbone_frame_mask, b_ij^template_pseudo_beta_mask, a_tij = concat(f_tij^template_distogram, b_ij^template_backbone_frame_mask, f_tij^template_unit_vector, b_ij^template_pseudo_beta_mask), a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id), a_tij <- concat(a_tij, f_ti^template_restype, f_tj^template_restype)); channel width (39+1+3+1+32+32=108) summed from the individually cited widths of representations.template_distogram, template_backbone_frame_mask, template_unit_vector, template_pseudo_beta_mask, and template_restype (one-hot encoded to 32 channels per representations.template_restype)"
+          locator: "Supplementary Algorithm 16 lines 1-5 (b_ij^template_backbone_frame_mask, b_ij^template_pseudo_beta_mask, a_tij = concat(f_tij^template_distogram, b_ij^template_backbone_frame_mask, f_tij^template_unit_vector, b_ij^template_pseudo_beta_mask), a_tij <- a_tij (dot) (f_i^asym_id == f_j^asym_id), a_tij <- concat(a_tij, f_ti^template_restype, f_tj^template_restype)); channel width (39+1+3+1+31+31=106) summed from the individually cited widths of representations.template_distogram, template_backbone_frame_mask, template_unit_vector, template_pseudo_beta_mask, and template_restype (one-hot encoded to 31 channels per representations.template_restype)"
   - id: template_conditioned_pair_state
     scale: token_pair
     semantic_role: one representative template's own pair-conditioned state at the template embedder's internal channel width (c=64, distinct from and narrower than the trunk's 128-channel pair_state); reused across this template's pre-pair-stack state, every intermediate state inside its own pair-only pair-stack, and its post-pair-stack state
@@ -1651,7 +1651,7 @@ modules:
     label: Template Pair Stack (pair-only)
     kind: refiner
     mechanisms: [triangle_multiplication, axial_pair_attention, transition]
-    role: run the template embedder's own N_block=2 pair-only Pairformer block over each representative template's pair-conditioned state, at the module's own 64-channel width; unlike both the main 48-block trunk (with_single=True) and the MSA module's own pair-stack, this stack has no single-representation step at all -- PairFormerIteration's with_single constructor flag defaults to False and is never overridden by the template embedder's per-template call, so only the five pair-only sub-steps below run and no single_act is passed in or returned
+    role: run the template embedder's own N_block=2 pair-only Pairformer block over each representative template's pair-conditioned state, at the module's own 64-channel width; unlike the main 48-block trunk (with_single=True), this stack has no single-representation step at all -- PairFormerIteration's with_single constructor flag defaults to False and is never overridden by the template embedder's per-template call, so only the five pair-only sub-steps below run and no single_act is passed in or returned
     scale: token_pair
     repeats: 2
     evidence:
@@ -1754,14 +1754,17 @@ modules:
     label: Template Pair Transition
     kind: feed_forward
     mechanisms: [layer_normalization, swiglu, residual_update]
-    role: apply a pointwise 4x SwiGLU transition and add its 64-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights), run here as the final step of the template embedder's own pair-only pair-stack, whose output is this representative template's fully refined state
+    role: apply a pointwise 2x SwiGLU transition and add its 64-channel projection back to each pair entry; the same Transition mechanism the Pairformer's own pair_transition uses (own parameters, not shared weights) but with its intermediate-channel factor overridden from the default 4x to 2x for this stack, run here as the final step of the template embedder's own pair-only pair-stack, whose output is this representative template's fully refined state
     scale: token_pair
     evidence:
-      status: confirmed_from_paper
+      status: confirmed_from_code
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition); Algorithm 11 (Transition definition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6) and the MSA module's own msa_pair_transition
+          locator: Supplementary Algorithm 16 line 9 ({v_ij} += PairformerStack({v_ij}, N_block)); Algorithm 17 line 6 (Transition); Algorithm 11 (Transition definition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6) and the MSA module's own msa_pair_transition; the algorithm box itself does not state an intermediate-channel factor
+        - source_ref: af3_template_code
+          role: implementation_evidence
+          locator: "template_modules.py TemplateEmbedding.Config (template_stack = PairFormerIteration.Config(num_layer=2, pair_transition=TransitionBlock.Config(num_intermediate_factor=2))) -- overrides TransitionBlock.Config's num_intermediate_factor default of 4 (modules.py) to 2 for this stack's transition only, the one place in the architecture this factor is not 4"
 
 relations:
   - id: input_pair_state_initializes_block_pair_state

@@ -814,7 +814,7 @@ boards:
     - id: value_template_module_pair_output
       ref: value_sites.template_module_pair_output
       label: template contribution
-      notation: z
+      notation: u_{ij}
       prominence: context
       treatment: compact
       density: compact
@@ -887,7 +887,7 @@ boards:
       connection:
         title: Pair state enters the block
         role: block-input pair state
-        inside: The pair representation arrives here from the Template Module's own pooled, cross-template contribution (z_init plus every template's evidence), not straight from the input projection; the Pairformer only ever sees what this module returns.
+        inside: The pair representation arrives here after the Template Module's own pooled, cross-template contribution has been added into it -- what msa_module_pair_state_read now holds is z_init plus every template's evidence, not straight from the input projection; the Pairformer only ever sees what this module returns.
     - match:
         relation_ref: relations.outer_product_mean_contribution_updates_msa_module_pair_state
       label: '+ Δz_comm'
@@ -1299,7 +1299,7 @@ boards:
 
   - id: template_module_detail
     title: The Template Module
-    summary: Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, a pairwise unit vector, and each token's template residue type) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate, then outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.
+    summary: Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, and a pairwise unit vector) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate; each token's template residue type is concatenated on afterward and is not itself gated, so it reaches every pair, cross-chain included. The result is outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.
     subject_ref: modules.template_module
     expansion_depth: 1
     parent: pairformer_overview
@@ -1498,7 +1498,7 @@ boards:
 
   - id: template_pair_track
     title: "Template Pair Stack: Five Ordered Residual Updates"
-    summary: The same five-step pair-stack mechanism as the Pairformer's own pair track and the MSA module's own pair-stack (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a 4x SwiGLU transition), with its own parameters, run here N_block=2 times at the template embedder's own narrower 64-channel width. Unlike both the 48-block trunk and the MSA module's pair-stack, this variant has no single-representation step at all -- PairFormerIteration's with_single flag is left at its constructor default of False here, so only these five pair-only sub-steps run.
+    summary: The same five-step pair-stack mechanism as the Pairformer's own pair track and the MSA module's own pair-stack (outgoing triangle multiplication, incoming triangle multiplication, starting-node attention, ending-node attention, a transition), with its own parameters, run here N_block=2 times at the template embedder's own narrower 64-channel width -- but with one difference from those other two, this stack's transition is a 2x SwiGLU transition, not the 4x used everywhere else. Unlike the 48-block trunk, this variant has no single-representation step at all -- PairFormerIteration's with_single flag is left at its constructor default of False here, so only these five pair-only sub-steps run.
     parent: template_module_detail
     subject_ref: modules.template_pair_update_stage
     expansion_depth: 1
@@ -1639,7 +1639,7 @@ boards:
         connection:
           title: Pair transition update
           role: pointwise pair feed-forward
-          inside: LayerNorm and a 4x SwiGLU hidden projection produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation.
+          inside: LayerNorm and a 2x SwiGLU hidden projection (64 to 128 channels, half the 4x expansion used elsewhere) produce a 64-channel delta added to each pair entry; the result is this representative template's fully refined state, read back by conditioning for cross-template accumulation.
 
   - id: template_pair_conditioning_detail
     title: "Template Pair Conditioning: Outer Sum In, Cross-Template Pooling Out"
