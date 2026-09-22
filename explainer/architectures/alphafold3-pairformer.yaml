@@ -751,6 +751,61 @@ representations:
         - source_ref: af3_template_code
           role: implementation_evidence
           locator: "template_modules.py line 113 (TemplateEmbedding.Config.num_channels: int = 64) -- confirms this width is a fixed, narrower channel count distinct from the trunk's c_z=128 pair_state, not a notational shorthand"
+  - id: noise_level
+    scale: structure
+    semantic_role: the raw scalar diffusion noise level (t_hat) for the current denoising step, one global value shared identically by every token and token pair, not itself trunk-derived
+    shape: scalar
+    glyph: scalar
+    carries:
+      - current diffusion step's noise magnitude
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 20 signature (DiffusionModule({x_l^noisy}, t_hat, ...)); Supplementary Algorithm 21 signature (DiffusionConditioning(t_hat, ...)) -- t_hat is passed by reference into DiffusionConditioning unchanged, this value site is that raw scalar before any log-compression
+  - id: fourier_time_embedding
+    scale: structure
+    semantic_role: FourierEmbedding's own raw output -- a c=256 bank of frozen random cosine features evaluated at the log-compressed noise level, one global vector shared by every token, not yet projected into the single-conditioning channel width
+    shape: "256"
+    glyph: vector
+    carries:
+      - frozen random-frequency cosine features of the current (log-compressed) noise level
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 22 line 2 (return cos(2*pi*(t_hat*w + b))); Supplementary Algorithm 21 line 8 (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256), c=256)
+  - id: diffusion_pair_conditioning
+    scale: token_pair
+    semantic_role: the pair representation built and refined inside DiffusionConditioning by fusing the trunk pair state with RelativePositionEncoding's freshly recomputed output -- shares pair_state's 128-channel width but is a genuinely distinct tensor produced fresh by this module, not the trunk's own pair_state carried forward
+    shape: "N_token x N_token x 128"
+    glyph: pair
+    carries:
+      - trunk pairwise context fused with a fresh relative-position prior
+      - attention-logit bias signal for AttentionPairBias throughout DiffusionTransformer
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 1-5 (pair conditioning branch; c_z=128 per the algorithm's own signature)
+  - id: diffusion_single_conditioning
+    scale: token
+    semantic_role: the single representation built and refined inside DiffusionConditioning by fusing the trunk single state with the raw, unprocessed s_inputs embedding and an additively-injected Fourier time embedding -- shares single_state's 384-channel width but is a genuinely distinct tensor produced fresh by this module, not the trunk's own single_state carried forward
+    shape: "N_token x 384"
+    glyph: single
+    carries:
+      - trunk single context fused with the raw input embedding
+      - additively-injected noise-level signal via the projected Fourier time embedding
+      - activation-scaling signal for Adaptive LayerNorm throughout DiffusionTransformer
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 6-12 (single conditioning branch; c_s=384 per the algorithm's own signature)
 
 value_sites:
   - id: single_state_input
@@ -1357,6 +1412,77 @@ value_sites:
         - source_ref: af3_template_code
           role: implementation_evidence
           locator: "template_modules.py lines 198-204 (embedding = summed_template_embeddings / (1e-7 + num_templates); embedding = jax.nn.relu(embedding); embedding = hm.Linear(query_num_channels, initializer='relu', name='output_linear')(embedding); assert embedding.shape == (num_residues, num_residues, query_num_channels)) -- confirms the final LinearNoBias(ReLU(...)) projection widens from the module's own 64-channel width to query_num_channels, which equals the trunk's c_z=128, matching representations.pair_state; the paper's own Algorithm 16 line 13 shape annotation (u_ij in R^c, c=64) does not show this widening explicitly"
+  - id: noise_level
+    representation_ref: representations.noise_level
+    scope_ref: architecture
+    boundary: input
+    role: raw_noise_level_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 signature (DiffusionConditioning(t_hat, ...)) -- t_hat, the current denoising step's noise level, fixed by this plan as this exact id
+  - id: fourier_time_embedding
+    representation_ref: representations.fourier_time_embedding
+    scope_ref: modules.fourier_embedding
+    role: frozen_random_cosine_features
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 22 line 2 (return cos(2*pi*(t_hat*w + b))) -- w, b are drawn once before training (line 1) and never updated by gradient descent
+  - id: diffusion_pair_conditioning_projected
+    representation_ref: representations.diffusion_pair_conditioning
+    scope_ref: modules.diffusion_conditioning
+    role: concatenated_and_projected_pair_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 1-2 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})]); z_ij <- LinearNoBias(LayerNorm(z_ij)), z_ij in R^c_z) -- the input to the two-round Transition refinement loop at lines 3-5
+  - id: diffusion_conditioned_pair
+    representation_ref: representations.diffusion_pair_conditioning
+    scope_ref: architecture
+    role: final_diffusion_pair_conditioning_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 3-5, 13 (for all b in [1,2] do z_ij += Transition(z_ij, n=2); return {s_i}, {z_ij}) -- the pair branch's final returned tensor, ready to bias AttentionPairBias logits throughout DiffusionTransformer; not yet consumed by any relation as of this task
+  - id: diffusion_single_conditioning_projected
+    representation_ref: representations.diffusion_single_conditioning
+    scope_ref: modules.diffusion_conditioning
+    role: concatenated_and_projected_single_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 6-7 (s_i = concat([s_i^trunk, s_i^inputs]); s_i <- LinearNoBias(LayerNorm(s_i)), s_i in R^c_s) -- s_i^inputs enters here in its raw, unprocessed form, distinct from any trunk-refined single state
+  - id: diffusion_single_conditioning_fourier_injected
+    representation_ref: representations.diffusion_single_conditioning
+    scope_ref: modules.diffusion_conditioning
+    role: fourier_time_embedding_additively_injected
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the Fourier time embedding gets its own separate LayerNorm+LinearNoBias projection into c_s and is added directly into the already-projected s_i, distinct from line 6's concatenation; this is the input to the two-round Transition refinement loop at lines 10-12
+  - id: diffusion_conditioned_single
+    representation_ref: representations.diffusion_single_conditioning
+    scope_ref: architecture
+    role: final_diffusion_single_conditioning_output
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 10-13 (for all b in [1,2] do s_i += Transition(s_i, n=2); return {s_i}, {z_ij}) -- the single branch's final returned tensor, ready to drive Adaptive LayerNorm scale/shift throughout DiffusionTransformer; not yet consumed by any relation as of this task
 
 modules:
   - id: pairformer_stack
@@ -1979,6 +2105,38 @@ modules:
         - source_ref: af3_template_code
           role: implementation_evidence
           locator: "template_modules.py TemplateEmbedding.Config (template_stack = PairFormerIteration.Config(num_layer=2, pair_transition=TransitionBlock.Config(num_intermediate_factor=2))) -- overrides TransitionBlock.Config's num_intermediate_factor default of 4 (modules.py) to 2 for this stack's transition only, the one place in the architecture this factor is not 4"
+  - id: diffusion_conditioning
+    parent_ref: architecture
+    decomposition:
+      status: partial
+      reason: Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being "used inside" this module's pair branch.
+    label: Diffusion Conditioning
+    kind: operator
+    mechanisms: [feature_concatenation, layer_normalization, linear_projection, additive_conditioning, swiglu, residual_update]
+    role: inject trunk knowledge and the current noise level into two separate conditioning tensors through two structurally parallel branches, each concatenating a fresh signal onto a trunk feature, projecting down with LayerNorm+LinearNoBias, then refining across two rounds of Transition (Algorithm 11, the same SwiGLU block used throughout this architecture). Pair conditioning concatenates the trunk pair state with a freshly recomputed RelativePositionEncoding output (RelativePositionEncoding has no access to z_init inside the diffusion module, so it reruns from raw per-token identifiers rather than reusing the trunk's cached copy) and, once refined, biases AttentionPairBias logits throughout DiffusionTransformer -- influencing what attends to what. Single conditioning concatenates the trunk single state with the raw, unprocessed s_inputs embedding, projects down the same way, then additively injects a separately-projected Fourier time embedding of the current noise level (its own LayerNorm+LinearNoBias projection into c_s, added via "+=", not concatenated in alongside s_trunk/s_inputs at line 6) before its own two Transition rounds; once refined, it drives Adaptive LayerNorm's per-token, per-noise-level scale and shift throughout DiffusionTransformer -- influencing how strongly the network trusts its current estimate. Early denoising steps (high noise) need coarser, more tolerant normalization than late steps (low noise, fine detail)
+    scale: token_and_token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 (DiffusionConditioning), full algorithm box (c_z=128, c_s=384 per the algorithm's own signature); Section 3.7.1
+  - id: fourier_embedding
+    parent_ref: architecture
+    decomposition:
+      status: leaf
+    label: Fourier Embedding
+    kind: operator
+    mechanisms: [frozen_random_projection, cosine_feature_expansion]
+    role: turn the current, log-compressed noise-level scalar into a rich c=256-dim vector via a bank of random cosine features -- weights and phases (w, b) are drawn once from a standard normal distribution before training and never touch the optimizer again, the "random Fourier features" trick (a fixed random projection through enough frequencies approximates a stationary kernel well enough in expectation that the network only needs to learn to recombine a large fixed basis, not learn which frequencies matter). Called with argument 1/4 * log(t_hat/sigma_data), sigma_data=16 -- the log compresses the noise schedule's >5-order-of-magnitude range (s_max=160 to s_min=4e-4) into something the fixed frequency bank can resolve uniformly, so resolution is not wasted at the high-noise end at the expense of the fine, late-stage noise distinctions that matter most for accuracy
+    scale: structure
+    frozen: true
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 22 (FourierEmbedding), full algorithm box (w, b ~ N(0, I_c), sampled once before training; return cos(2*pi*(t_hat*w + b))); Supplementary Algorithm 21 line 8, call site (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256)); Supplementary Algorithm 20 signature (sigma_data=16)
 
 relations:
   - id: input_pair_state_initializes_block_pair_state
@@ -2995,6 +3153,150 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's own returned contribution lands in z_ij before the MSA module reads its own entry state, taking over the role relations.z_init_initializes_template_module_pair_state's predecessor relation used to play for msa_module directly before this task retargeted it
+  - id: pair_state_output_enters_diffusion_conditioning
+    from: value_sites.pair_state_output
+    to: modules.diffusion_conditioning
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: provide_trunk_pair_for_pair_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- z_trunk is the trunk's own final pair output
+  - id: relative_position_encoding_output_enters_diffusion_conditioning
+    from: value_sites.relative_position_encoding_output
+    to: modules.diffusion_conditioning
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: provide_relative_position_encoding_for_pair_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- this call has no access to z_init and needs its own fresh copy of the static positional prior, distinct from the copy that seeded z_init at Algorithm 1 line 4
+  - id: single_state_output_enters_diffusion_conditioning
+    from: value_sites.single_state_output
+    to: modules.diffusion_conditioning
+    kind: data_flow
+    carries: [representations.single_state]
+    operation: provide_trunk_single_for_single_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 6 (s_i = concat([s_i^trunk, s_i^inputs])) -- s_trunk is the trunk's own final single output
+  - id: s_inputs_enters_diffusion_conditioning
+    from: value_sites.s_inputs
+    to: modules.diffusion_conditioning
+    kind: data_flow
+    carries: [representations.s_inputs]
+    operation: provide_raw_input_embedding_for_single_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 6 (s_i = concat([s_i^trunk, s_i^inputs])) -- s_i^inputs enters here in its raw, unprocessed form, the same value read independently by value_sites.z_init's outer-sum projection, not any trunk-refined version of it
+  - id: diffusion_conditioning_produces_pair_conditioning_projected
+    from: modules.diffusion_conditioning
+    to: value_sites.diffusion_pair_conditioning_projected
+    kind: data_flow
+    carries: [representations.diffusion_pair_conditioning]
+    operation: concatenate_and_project_pair_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 1-2 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})]); z_ij <- LinearNoBias(LayerNorm(z_ij)), z_ij in R^c_z)
+  - id: pair_conditioning_refined_into_diffusion_conditioned_pair
+    from: value_sites.diffusion_pair_conditioning_projected
+    to: value_sites.diffusion_conditioned_pair
+    kind: state_update
+    carries: [representations.diffusion_pair_conditioning]
+    operation: refine_pair_conditioning_via_two_transition_rounds
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 3-5 (for all b in [1,2] do z_ij += Transition(z_ij, n=2)) -- two rounds of residual SwiGLU refinement, not separately modeled per-iteration, the same granularity already used for this architecture's other repeated Transition applications
+  - id: diffusion_conditioning_produces_single_conditioning_projected
+    from: modules.diffusion_conditioning
+    to: value_sites.diffusion_single_conditioning_projected
+    kind: data_flow
+    carries: [representations.diffusion_single_conditioning]
+    operation: concatenate_and_project_single_conditioning
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 6-7 (s_i = concat([s_i^trunk, s_i^inputs]); s_i <- LinearNoBias(LayerNorm(s_i)), s_i in R^c_s)
+  - id: noise_level_enters_fourier_embedding
+    from: value_sites.noise_level
+    to: modules.fourier_embedding
+    kind: data_flow
+    carries: [representations.noise_level]
+    operation: compress_and_provide_noise_level_for_fourier_embedding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 8 (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256)) -- the log-compression by 1/4 * log(t_hat/sigma_data), sigma_data=16 per Algorithm 20's signature, happens before the call, not inside FourierEmbedding itself
+  - id: fourier_embedding_produces_fourier_time_embedding
+    from: modules.fourier_embedding
+    to: value_sites.fourier_time_embedding
+    kind: data_flow
+    carries: [representations.fourier_time_embedding]
+    operation: compute_frozen_random_cosine_features
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 22 (FourierEmbedding), full algorithm box
+  - id: single_conditioning_projected_carries_into_fourier_injection
+    from: value_sites.diffusion_single_conditioning_projected
+    to: value_sites.diffusion_single_conditioning_fourier_injected
+    kind: state_update
+    carries: [representations.diffusion_single_conditioning]
+    operation: carry_forward_projected_single_conditioning_as_fourier_injection_base
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the "+=" left-hand side is the same s_i value_sites.diffusion_single_conditioning_projected already holds
+  - id: fourier_time_embedding_additively_injected_into_single_conditioning
+    from: value_sites.fourier_time_embedding
+    to: value_sites.diffusion_single_conditioning_fourier_injected
+    kind: state_update
+    carries: [representations.fourier_time_embedding]
+    operation: project_and_additively_inject_fourier_time_embedding
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the Fourier embedding gets its own separate LayerNorm+LinearNoBias projection into c_s, distinct from line 7's projection, and is added ("+=") into the already-projected s_i rather than concatenated in alongside s_trunk/s_inputs at line 6
+  - id: single_conditioning_refined_into_diffusion_conditioned_single
+    from: value_sites.diffusion_single_conditioning_fourier_injected
+    to: value_sites.diffusion_conditioned_single
+    kind: state_update
+    carries: [representations.diffusion_single_conditioning]
+    operation: refine_single_conditioning_via_two_transition_rounds
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 21 lines 10-12 (for all b in [1,2] do s_i += Transition(s_i, n=2)) -- two rounds of residual SwiGLU refinement, not separately modeled per-iteration, the same granularity already used for this architecture's other repeated Transition applications
 
 claims:
   - id: pairformer_has_no_msa_state
