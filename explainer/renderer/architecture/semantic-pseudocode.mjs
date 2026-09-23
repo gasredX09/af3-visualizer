@@ -178,6 +178,40 @@ export function semanticScopeForBoard({ program = {}, board = {}, rootBoardId = 
   return parentRef ? scopes.find((scope) => refFor(scope) === parentRef) || null : null;
 }
 
+/** Select authored program lines for this board without treating shared tensors as calls. */
+export function semanticProgramTraceForBoard({ manifest = {}, board = {} } = {}) {
+  const candidates = Object.values(manifest.pseudocode || {}).flatMap((program) => {
+    const symbolsById = new Map(values(program.symbols).map((symbol) => [symbol.id, symbol]));
+    const activeScope = semanticScopeForBoard({
+      program,
+      board,
+      rootBoardId: manifest.boards?.rootBoard,
+    });
+    return values(program.lines).map((statement) => ({
+      statement,
+      symbolsById,
+      program,
+      activeScope,
+    }));
+  });
+  const scoped = candidates.filter(({ statement, activeScope }) => {
+    if (!activeScope) return false;
+    const activeRef = activeScope.ref || `scopes.${activeScope.id}`;
+    return (statement.scopeRef || statement.scope_ref) === activeRef;
+  });
+  const boardRefs = new Set([
+    board.subject_ref || board.subjectRef,
+    ...values(board.nodes)
+      .filter((node) => !node.elide && node.prominence !== "hidden" && node.treatment !== "hidden")
+      .map(canonicalNodeRef),
+  ].filter(Boolean));
+  const direct = scoped.length ? [] : candidates.filter(({ statement, activeScope }) =>
+    !activeScope && semanticRefsForStatement(statement).some((ref) => boardRefs.has(ref)));
+  const fallback = board.id === manifest.boards?.rootBoard ? candidates : [];
+  const statements = scoped.length ? scoped : direct.length ? direct : fallback;
+  return { statements, scope: statements[0]?.activeScope || null };
+}
+
 function indexPush(index, ref, nodeId) {
   if (!ref || !nodeId) return;
   const matches = index.get(ref) || [];

@@ -82,9 +82,9 @@ import {
   createSemanticBoardResolver,
   semanticCodeSegments,
   semanticEdgeForRefs,
+  semanticProgramTraceForBoard,
   semanticRefsForBinding,
   semanticRefsForStatement,
-  semanticScopeForBoard,
   semanticStatementBindings,
   semanticStatementTextParts,
   semanticTexFallbackParts,
@@ -903,13 +903,6 @@ function semanticBlockInstanceRef() {
   return direct ? untypedRef(direct, "block_instances") : null;
 }
 
-function semanticProgramContexts() {
-  return Object.values(manifest.pseudocode || {}).map((program) => ({
-    program,
-    symbolsById: new Map((program.symbols || []).map((symbol) => [symbol.id, symbol])),
-  }));
-}
-
 function semanticScopeSubtitle(scope) {
   if (!scope) return null;
   const kind = readableReuse(scope.kind || "scope");
@@ -954,63 +947,15 @@ function semanticTraceForCurrentContext() {
     };
   }
 
-  const contexts = semanticProgramContexts();
-  const candidates = contexts.flatMap(({ program, symbolsById }) => {
-    const activeScope = semanticScopeForBoard({
-      program,
-      board: currentBoard(),
-      rootBoardId: manifest.boards.rootBoard,
-    });
-    return (program.lines || []).map((statement) => ({
-      statement,
-      symbolsById,
-      program,
-      activeScope,
-    }));
+  const { statements, scope } = semanticProgramTraceForBoard({
+    manifest,
+    board: currentBoard(),
   });
-  const scopedCandidates = candidates.filter(({ statement, activeScope }) => {
-    if (!activeScope) return true;
-    const activeRef = activeScope.ref || `scopes.${activeScope.id}`;
-    return (statement.scopeRef || statement.scope_ref) === activeRef;
-  });
-  const activeScopes = scopedCandidates.map(({ activeScope }) => activeScope).filter(Boolean);
-  const scoped = activeScopes.length ? scopedCandidates : [];
-  const boardRefs = new Set([
-    currentBoard().subject_ref || currentBoard().subjectRef,
-    ...visibleNodes(currentBoard()).map(canonicalNodeRef),
-  ].filter(Boolean));
-  const unscopedCandidates = candidates.filter(({ activeScope }) => !activeScope);
-  const boardFactMatches = !scoped.length
-    ? unscopedCandidates.filter(({ statement }) =>
-      semanticRefsForStatement(statement).some((ref) => boardRefs.has(ref)),
-    )
-    : [];
-  const projectedMatches = !scoped.length && !boardFactMatches.length
-    ? unscopedCandidates.filter(({ statement, symbolsById }) => {
-      const refs = [
-        ...semanticRefsForStatement(statement),
-        ...semanticStatementBindings(statement).flatMap((binding) => (
-          semanticRefsForBinding(binding, symbolsById)
-        )),
-      ];
-      const resolved = semanticTraceResolver.resolve(refs);
-      return resolved.nodeIds.length > 0;
-    })
-    : [];
-  const fallback = currentBoard().id === manifest.boards.rootBoard
-    ? candidates
-    : [];
-  const statements = scoped.length
-    ? scoped
-    : boardFactMatches.length
-      ? boardFactMatches
-      : projectedMatches.length
-        ? projectedMatches
-        : fallback;
-  const scope = statements[0]?.activeScope || activeScopes[0] || null;
   return {
     title: scope?.label || statements[0]?.program?.title || "Architecture trace",
-    subtitle: semanticScopeSubtitle(scope) || "Statements visible at this board level",
+    subtitle: semanticScopeSubtitle(scope) || (statements.length
+      ? "Statements visible at this board level"
+      : "No statements mapped to this board"),
     statements,
   };
 }

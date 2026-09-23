@@ -5,6 +5,7 @@ import {
   createSemanticBoardResolver,
   semanticCodeSegments,
   semanticEdgeForRefs,
+  semanticProgramTraceForBoard,
   semanticRefsForBinding,
   semanticRefsForNode,
   semanticScopeForBoard,
@@ -12,6 +13,7 @@ import {
   semanticTexFallbackParts,
   semanticTexForBinding,
 } from "../renderer/architecture/semantic-pseudocode.mjs";
+import { manifest as alphafold3Manifest } from "../renderer/architecture/manifest-alphafold3.js";
 import { manifest as genie3Manifest } from "../renderer/architecture/manifest-genie3.js";
 
 const board = {
@@ -266,6 +268,30 @@ test("Genie 3 boards select one semantic scope without leaking child statements"
     board: unscoped,
     rootBoardId: genie3Manifest.boards.rootBoard,
   }), null);
+});
+
+test("shared trunk outputs do not pull Pairformer code onto unrelated AF3 boards", () => {
+  for (const boardId of ["msa_module_detail", "diffusion_module_detail", "diffusion_conditioning_detail"]) {
+    const board = alphafold3Manifest.boards.items.find((candidate) => candidate.id === boardId);
+    assert(board, boardId);
+    assert.deepEqual(
+      semanticProgramTraceForBoard({ manifest: alphafold3Manifest, board }).statements,
+      [],
+      boardId,
+    );
+  }
+
+  const pairformer = alphafold3Manifest.boards.items.find((candidate) => candidate.id === "pairformer_block");
+  const pairformerTrace = semanticProgramTraceForBoard({ manifest: alphafold3Manifest, board: pairformer });
+  assert(pairformerTrace.statements.length > 0);
+  assert(pairformerTrace.statements.every(({ statement }) => statement.scopeRef === "scopes.stack"));
+
+  const latent = genie3Manifest.boards.items.find((candidate) => candidate.id === "latent_transformer");
+  assert.deepEqual(
+    semanticProgramTraceForBoard({ manifest: genie3Manifest, board: latent }).statements
+      .map(({ statement }) => statement.id),
+    ["latent_transform"],
+  );
 });
 
 test("relation-backed statements resolve to their visible execution edge", () => {
