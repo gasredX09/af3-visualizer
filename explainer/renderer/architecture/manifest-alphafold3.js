@@ -3,10 +3,12 @@ export const manifest = {
   "build": {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
-      "references/bibliography.yaml": "d5e315f0a115362ffe834d79d83c3880b315f95fecf06f1d5f56372aecec555f",
-      "architectures/alphafold3-pairformer.yaml": "583cafc7345aa5b1bf375e9b05ff087109ea7b7894fb956ea3bb3ccdee14ecf2",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "d56f0ff768298b78748c074363385c29a501302d37fa3f361123bc47ee38f6ab",
-      "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27"
+      "references/bibliography.yaml": "8ea36a3baf67328b8505219a53ff89fa20ecba3fdff75bdf63142d8fbcf2cea6",
+      "architectures/alphafold3-pairformer.yaml": "114956aecbd0d04cb823fd5d5d85dc74be683c9e0b5b11bc0c1f8bf26c67ebc7",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "5854fca85383bf23dfff17c2821d361f6078633169a9a5d588bf539acf6bd75c",
+      "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27",
+      "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
+      "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
     }
   },
   "architecture": {
@@ -18,7 +20,41 @@ export const manifest = {
     "taskModes": [
       "prediction"
     ],
-    "referenceConfiguration": null,
+    "referenceConfiguration": {
+      "diffusion_token_channels": 768,
+      "diffusion_token_transformer_blocks": 24,
+      "diffusion_token_transformer_heads": 16,
+      "diffusion_token_transformer_head_width": 48,
+      "diffusion_token_transition_hidden_width": 1536,
+      "atom_channels": 128,
+      "atom_pair_channels": 16,
+      "atom_transformer_blocks": 3,
+      "atom_transformer_heads": 4,
+      "atom_transformer_head_width": 32,
+      "atom_transition_hidden_width": 256,
+      "sequence_local_attention_queries": 32,
+      "sequence_local_attention_keys": 128,
+      "evidence": {
+        "status": "confirmed_from_code",
+        "refs": [
+          {
+            "source_ref": "af3_2024",
+            "role": "paper_evidence",
+            "locator": "Supplementary Algorithm 20 signature (c_atom=128, c_atompair=16, c_token=768); Algorithm 20 line 5 (DiffusionTransformer with N_block=24, N_head=16); Algorithm 7 signature (AtomTransformer with N_block=3, N_queries=32, N_keys=128); Algorithm 5 line 15 and Algorithm 6 line 2 (both atom-level calls use N_block=3, N_head=4); Algorithm 24 header (c = c_a / N_head, giving 48 at token level and 32 at atom level); Algorithm 25 signature (expansion factor n=2, giving 1536 and 256)"
+          },
+          {
+            "source_ref": "af3_self_attention_code",
+            "role": "configuration_evidence",
+            "locator": "diffusion_transformer.py Transformer.Config (num_blocks=24, num_intermediate_factor=2), SelfAttentionConfig (num_head=16), CrossAttentionConfig (num_head=4); key_dim defaults to the activation width and is then divided by the head count, which is where the per-head widths come from"
+          },
+          {
+            "source_ref": "af3_atom_cross_attention_code",
+            "role": "configuration_evidence",
+            "locator": "atom_cross_attention.py AtomCrossAttEncoderConfig (per_token_channels=768, per_atom_channels=128, per_atom_pair_channels=16, atom_transformer num_blocks=3 and num_intermediate_factor=2) and AtomCrossAttDecoderConfig (per_atom_channels=128, same atom_transformer settings)"
+          }
+        ]
+      }
+    },
     "sourceYaml": "../../architectures/alphafold3-pairformer.yaml",
     "sources": [
       {
@@ -68,14 +104,17 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 6,
+          "immediateModuleCount": 9,
           "immediateModuleRefs": [
             "modules.pairformer_stack",
             "modules.input_feature_embedder",
             "modules.single_state_input_projection",
             "modules.pair_state_input_projection",
+            "modules.relative_position_encoding",
             "modules.msa_module",
-            "modules.template_module"
+            "modules.template_module",
+            "modules.diffusion_module",
+            "modules.fourier_embedding"
           ]
         },
         "modules.pairformer_stack": {
@@ -209,6 +248,15 @@ export const manifest = {
         },
         "modules.pair_state_input_projection": {
           "status": "leaf",
+          "depth": 1,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.relative_position_encoding": {
+          "status": "partial",
+          "reason": "Real internal structure (the four conditionally-defined bucketed/boolean signals -- residue offset, token offset, same-entity, and chain offset -- and the same-chain/same-residue gates each depends on) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean.",
           "depth": 1,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
@@ -391,25 +439,126 @@ export const manifest = {
           "immediateModuleRefs": [
 
           ]
+        },
+        "modules.diffusion_module": {
+          "status": "complete",
+          "reason": "Every real sub-step is either a named child module or, for the two single-line housekeeping steps with no internal structure of their own (line 2's position rescale and line 8's output blend), an architecture-scope value-site relation rather than a further child -- the same treatment already given to modules.pairformer_stack's own scale-transition relations. Nothing is left unmodeled at this level.",
+          "depth": 1,
+          "immediateModuleCount": 5,
+          "immediateModuleRefs": [
+            "modules.diffusion_conditioning",
+            "modules.sequence_local_attention_mask",
+            "modules.atom_attention_encoder_conditioned",
+            "modules.diffusion_transformer_token_level",
+            "modules.atom_attention_decoder"
+          ]
+        },
+        "modules.diffusion_conditioning": {
+          "status": "partial",
+          "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being \"used inside\" this module's pair branch.",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.fourier_embedding": {
+          "status": "leaf",
+          "depth": 1,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.sequence_local_attention_mask": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.atom_attention_encoder_conditioned": {
+          "status": "partial",
+          "reason": "The per-atom embedding, the two trunk broadcasts, the noisy-position injection, and the mean-pooling to tokens are modeled at value-site granularity, matching the depth already given to modules.diffusion_conditioning and modules.relative_position_encoding. Only the AtomTransformer call at Algorithm 5 line 15 gets its own child module, because that call is where the architecture's shared attention and transition blocks are actually instantiated and therefore needs a subject its block_instances can bind ports against.",
+          "depth": 2,
+          "immediateModuleCount": 1,
+          "immediateModuleRefs": [
+            "modules.atom_encoder_atom_transformer"
+          ]
+        },
+        "modules.atom_encoder_atom_transformer": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.diffusion_transformer_token_level": {
+          "status": "complete",
+          "depth": 2,
+          "immediateModuleCount": 2,
+          "immediateModuleRefs": [
+            "modules.token_attention_pair_bias",
+            "modules.token_conditioned_transition"
+          ]
+        },
+        "modules.token_attention_pair_bias": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.token_conditioned_transition": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.atom_attention_decoder": {
+          "status": "partial",
+          "reason": "The broadcast plus skip addition and the final projection to a 3D update are modeled at value-site granularity, matching the treatment of modules.atom_attention_encoder_conditioned. Only the AtomTransformer call at Algorithm 6 line 2 gets its own child module, because that call is where the shared attention and transition blocks are instantiated and therefore needs a subject its block_instances can bind ports against.",
+          "depth": 2,
+          "immediateModuleCount": 1,
+          "immediateModuleRefs": [
+            "modules.atom_decoder_atom_transformer"
+          ]
+        },
+        "modules.atom_decoder_atom_transformer": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
         }
       },
       "summary": {
-        "scopeCount": 37,
-        "expandedScopeCount": 9,
-        "completeExpandedScopeCount": 9,
-        "partialScopeCount": 3,
-        "leafFrontierCount": 24,
+        "scopeCount": 49,
+        "expandedScopeCount": 13,
+        "completeExpandedScopeCount": 11,
+        "partialScopeCount": 7,
+        "leafFrontierCount": 30,
         "opaqueFrontierCount": 1,
-        "partialFrontierCount": 3,
+        "partialFrontierCount": 5,
         "maximumAuthoredDepth": 3
       },
       "opaqueFrontierRefs": [
         "modules.atom_attention_encoder_bare"
       ],
       "partialScopeRefs": [
+        "modules.relative_position_encoding",
         "modules.outer_product_mean",
         "modules.msa_pair_weighted_averaging",
-        "modules.template_pair_conditioning"
+        "modules.template_pair_conditioning",
+        "modules.diffusion_conditioning",
+        "modules.atom_attention_encoder_conditioned",
+        "modules.atom_attention_decoder"
       ]
     },
     "modules": [
@@ -863,6 +1012,35 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this module)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "partial",
+          "reason": "Real internal structure (the four conditionally-defined bucketed/boolean signals -- residue offset, token offset, same-entity, and chain offset -- and the same-chain/same-residue gates each depends on) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean."
+        },
+        "label": "Relative Position Encoding",
+        "kind": "operator",
+        "mechanisms": [
+          "offset_clipping",
+          "one_hot_encoding",
+          "conditional_masking",
+          "concatenation",
+          "linear_projection"
+        ],
+        "role": "from five raw per-token identifiers (asym_id, entity_id, residue_index, sym_id, token_index), build four conditionally-defined relative-position signals per token pair -- a residue-index offset one-hot bucketed and clipped to r_max=32, valid only within the same chain; a finer token-index offset at the same clipping, valid only within the same chain and same residue (needed because a modified residue or ligand is tokenized per-atom, so several tokens can share one residue_index); a raw same-entity boolean, left unbucketed since there is no distance to discretize; and a chain-copy-number offset one-hot bucketed and clipped to s_max=2, valid only across different chains -- then concatenate all four and linearly project them once into a 128-channel (c_z) additive pair bias. AF3 uses this one-hot-bucket-and-project approach instead of rotary positional encodings because tokens carry several simultaneous, discontinuous notions of relative position (offset within a chain, offset within a residue, which chain/entity) that a single smooth rotation cannot represent",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 (RelativePositionEncoding); Section 3.1.2 (r_max=32, s_max=2) -- this exact algorithm is invoked twice in AF3, seeding z_init (Algorithm 1 line 4) and again inside DiffusionConditioning (Algorithm 21 line 1); only this one shared module is modeled here, feeding value_sites.relative_position_encoding_output"
             }
           ]
         }
@@ -1482,10 +1660,3541 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "diffusion_module",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "complete",
+          "reason": "Every real sub-step is either a named child module or, for the two single-line housekeeping steps with no internal structure of their own (line 2's position rescale and line 8's output blend), an architecture-scope value-site relation rather than a further child -- the same treatment already given to modules.pairformer_stack's own scale-transition relations. Nothing is left unmodeled at this level."
+        },
+        "label": "Diffusion Module",
+        "kind": "denoiser",
+        "mechanisms": [
+          "noise_level_conditioning",
+          "position_rescaling",
+          "atom_token_atom_bottleneck",
+          "token_bottleneck_residual_injection",
+          "posterior_mean_output_blending"
+        ],
+        "role": "Algorithm 20's own top-level orchestration for one denoising step, the single routine SampleDiffusion (Algorithm 18 line 8) calls at every step of the ~200-step sampling trajectory (only one representative call is modeled here, matching the treatment already given to the Pairformer's 48 blocks and the token-level transformer's 24). It conditions the trunk's single and pair state on the current noise level (child modules.diffusion_conditioning); rescales the raw noisy input positions to a dimensionless, roughly unit-variance space before the atom encoder ever sees them (line 2 -- relations.noisy_positions_scaled_to_unit_variance, from value_sites.noisy_atom_positions to value_sites.scaled_noisy_atom_positions, modeled as this module's own value-site relation rather than the encoder's, since Algorithm 20 performs it before the encoder is called); encodes atoms and mean-pools them to a per-token activation (child modules.atom_attention_encoder_conditioned, sharing child modules.sequence_local_attention_mask's locality mask with the decoder); injects the fully-conditioned single vector once, additively, at the token bottleneck's entrance, a one-time residual injection distinct from the Adaptive LayerNorm modulation happening inside every one of the 24 blocks that follow (line 4 -- relations.encoder_token_output_enters_token_bottleneck and relations.conditioned_single_injected_into_token_activation, both already wired into value_sites.diffusion_token_activation_conditioned); refines the pooled activation through 24 blocks of full token-level self-attention (child modules.diffusion_transformer_token_level); decodes the token-level update back down to a per-atom position update (child modules.atom_attention_decoder); and finally blends that update with the original, unrescaled noisy input through a noise-level-weighted posterior-mean formula to produce this module's own denoised coordinates (line 8 -- relations.noisy_positions_weighted_into_denoised_output and relations.position_update_weighted_into_denoised_output, both feeding value_sites.denoised_atom_positions). At high noise the blend trusts the network's prediction; at low noise it trusts the input, which is already nearly correct",
+        "scale": "atom_and_token",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 (DiffusionModule), full algorithm box and signature (sigma_data=16, c_atom=128, c_atompair=16, c_token=768); Algorithm 18 line 8, the sampler's call site"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__, the single function implementing the whole algorithm box end to end"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_conditioning",
+        "parent_ref": "modules.diffusion_module",
+        "decomposition": {
+          "status": "partial",
+          "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being \"used inside\" this module's pair branch."
+        },
+        "label": "Diffusion Conditioning",
+        "kind": "operator",
+        "mechanisms": [
+          "feature_concatenation",
+          "layer_normalization",
+          "linear_projection",
+          "additive_conditioning",
+          "swiglu",
+          "residual_update"
+        ],
+        "role": "inject trunk knowledge and the current noise level into two separate conditioning tensors through two structurally parallel branches, each concatenating a fresh signal onto a trunk feature, projecting down with LayerNorm+LinearNoBias, then refining across two rounds of Transition (Algorithm 11, the same SwiGLU block used throughout this architecture). Pair conditioning concatenates the trunk pair state with a freshly recomputed RelativePositionEncoding output (RelativePositionEncoding has no access to z_init inside the diffusion module, so it reruns from raw per-token identifiers rather than reusing the trunk's cached copy) and, once refined, biases AttentionPairBias logits throughout DiffusionTransformer -- influencing what attends to what. Single conditioning concatenates the trunk single state with the raw, unprocessed s_inputs embedding, projects down the same way, then additively injects a separately-projected Fourier time embedding of the current noise level (its own LayerNorm+LinearNoBias projection into c_s, added via \"+=\", not concatenated in alongside s_trunk/s_inputs at line 6) before its own two Transition rounds; once refined, it drives Adaptive LayerNorm's per-token, per-noise-level scale and shift throughout DiffusionTransformer -- influencing how strongly the network trusts its current estimate. Early denoising steps (high noise) need coarser, more tolerant normalization than late steps (low noise, fine detail)",
+        "scale": "token_and_token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 (DiffusionConditioning), full algorithm box (c_z=128, c_s=384 per the algorithm's own signature); Section 3.7.1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fourier_embedding",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Fourier Embedding",
+        "kind": "operator",
+        "mechanisms": [
+          "frozen_random_projection",
+          "cosine_feature_expansion"
+        ],
+        "role": "turn the current, log-compressed noise-level scalar into a rich c=256-dim vector via a bank of random cosine features -- weights and phases (w, b) are drawn once from a standard normal distribution before training and never touch the optimizer again, the \"random Fourier features\" trick (a fixed random projection through enough frequencies approximates a stationary kernel well enough in expectation that the network only needs to learn to recombine a large fixed basis, not learn which frequencies matter). Called with argument 1/4 * log(t_hat/sigma_data), sigma_data=16 -- the log compresses the noise schedule's >5-order-of-magnitude range (s_max=160 to s_min=4e-4) into something the fixed frequency bank can resolve uniformly, so resolution is not wasted at the high-noise end at the expense of the fine, late-stage noise distinctions that matter most for accuracy",
+        "scale": "structure",
+        "frozen": true,
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 22 (FourierEmbedding), full algorithm box (w, b ~ N(0, I_c), sampled once before training; return cos(2*pi*(t_hat*w + b))); Supplementary Algorithm 21 line 8, call site (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256)); Supplementary Algorithm 20 signature (sigma_data=16)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sequence_local_attention_mask",
+        "parent_ref": "modules.diffusion_module",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Sequence-Local Attention Mask",
+        "kind": "operator",
+        "mechanisms": [
+          "sequence_local_window_masking"
+        ],
+        "role": "build the additive block-diagonal mask that restricts atom attention to a local neighbourhood. Subset centres are spaced exactly N_queries=32 apart (15.5, 47.5, 79.5 and so on); an atom pair is allowed when some centre has the query atom inside its plus or minus 16 query half-window and the key atom inside its much wider plus or minus 64 key half-window, so each band's queries see a 128-atom key neighbourhood and realized key windows overlap between neighbouring bands. Disallowed pairs get an effectively infinite negative additive logit offset, zeroed after softmax. This is the whole content of AtomTransformer, which is otherwise the identical DiffusionTransformer routine the token level calls; the mask is what makes atom-level attention tractable at tens of thousands of atoms",
+        "scale": "atom_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 7 line 1 and signature (N_queries=32, N_keys=128, S_subset_centres = {15.5, 47.5, 79.5, ...}); Supplementary Fig. 1 (rectangular blocks along the diagonal)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_conditioned",
+        "parent_ref": "modules.diffusion_module",
+        "decomposition": {
+          "status": "partial",
+          "reason": "The per-atom embedding, the two trunk broadcasts, the noisy-position injection, and the mean-pooling to tokens are modeled at value-site granularity, matching the depth already given to modules.diffusion_conditioning and modules.relative_position_encoding. Only the AtomTransformer call at Algorithm 5 line 15 gets its own child module, because that call is where the architecture's shared attention and transition blocks are actually instantiated and therefore needs a subject its block_instances can bind ports against."
+        },
+        "label": "Atom Attention Encoder (conditioned mode)",
+        "kind": "encoder",
+        "mechanisms": [
+          "per_atom_metadata_embedding",
+          "trunk_context_broadcast",
+          "noisy_position_injection",
+          "sequence_local_atom_attention",
+          "per_atom_to_per_token_mean_pooling"
+        ],
+        "role": "the same AtomAttentionEncoder routine modules.atom_attention_encoder_bare calls, invoked here with all three of its optional arguments populated, which turns a one-time chemistry summarizer into a per-denoising-step position-correction encoder. Every atom is broadcast a projected copy of its parent token's trunk single representation, every atom pair is broadcast its two parent tokens' entry in the conditioned pair tensor, and the atom's own scaled noisy position is projected directly into its query. Sequence-local attention then runs over the resulting per-atom tensors, the result is mean-pooled into one vector per token, and the three atom-resolution tensors are saved for the decoder rather than recomputed there. Note the asymmetry in what it is handed (Algorithm 20 line 3), raw trunk single but already-conditioned pair",
+        "scale": "atom",
+        "repeats": 1,
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 (AtomAttentionEncoder), called from Supplementary Algorithm 20 line 3 with {r_l^noisy}, {s_i^trunk}, and {z_ij} all provided, so lines 8-12 run"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_encoder, whose trunk_single_cond and trunk_pair_cond arguments are the same two optional conditioning inputs, and which returns token_act alongside the skip_connection, queries_single_cond, and pair_cond tensors the decoder consumes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_encoder_atom_transformer",
+        "parent_ref": "modules.atom_attention_encoder_conditioned",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Atom Transformer (encoder pass)",
+        "kind": "attention",
+        "mechanisms": [
+          "attention_with_pair_bias",
+          "conditioned_transition",
+          "sequence_local_masking"
+        ],
+        "role": "the encoder's AtomTransformer call, which is the identical DiffusionTransformer routine the token level runs, wearing the sequence-local mask. Three blocks, four heads, each block one AttentionPairBias branch and one ConditionedTransitionBlock branch reading the same input and summed. Conditioning is per atom here (each atom's own c_l) rather than per token, so every block activates the full Adaptive LayerNorm and AdaLN-Zero machinery",
+        "scale": "atom",
+        "repeats": 3,
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15 ({q_l} = AtomTransformer({q_l}, {c_l}, {p_lm}, N_block=3, N_head=4)); Algorithm 7 line 2, which forwards straight to DiffusionTransformer (Algorithm 23) with the locality mask in the beta slot"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_encoder, which instantiates diffusion_transformer.CrossAttTransformer with AtomCrossAttEncoderConfig.atom_transformer (num_blocks=3, num_intermediate_factor=2) and CrossAttentionConfig.num_head=4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_transformer_token_level",
+        "parent_ref": "modules.diffusion_module",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Diffusion Transformer (token level)",
+        "kind": "refiner",
+        "mechanisms": [
+          "attention_with_pair_bias",
+          "conditioned_transition",
+          "parallel_residual_block"
+        ],
+        "role": "the only genuinely quadratic stage of the diffusion module, and the reason the atom-token-atom bottleneck exists at all. Twenty-four blocks of full self-attention over tokens, sixteen heads, with no locality mask (the beta slot is zero here, leaving the conditioned pair tensor as the only source of attention bias). Each block runs an AttentionPairBias branch and a ConditionedTransitionBlock branch off the same input and sums them. This is the same routine both atom-level passes call; only the mask, the block count, and the head count differ",
+        "scale": "token",
+        "repeats": 24,
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 5 ({a_i} <- DiffusionTransformer({a_i}, {s_i}, {z_ij}, beta_ij=0, N_block=24, N_head=16)); Algorithm 23 (DiffusionTransformer)"
+            },
+            {
+              "source_ref": "af3_self_attention_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_transformer.py Transformer.__call__ and Transformer.Config (num_blocks=24, attention.num_head=16), called from diffusion_head.py with pair_cond set and no locality mask"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_attention_pair_bias",
+        "parent_ref": "modules.diffusion_transformer_token_level",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Attention with Pair Bias (token level)",
+        "kind": "attention",
+        "mechanisms": [
+          "adaptive_layer_normalization",
+          "pair_logit_bias",
+          "gated_attention",
+          "adaln_zero_output_gate"
+        ],
+        "role": "one block's attention branch. Adaptive LayerNorm reparametrizes the activation from the conditioned single vector, the conditioned pair tensor is projected into a per-head additive logit bias, attention runs over all tokens, and the projected result passes through an AdaLN-Zero gate that starts near closed. This is the same routine the Pairformer calls at Algorithm 17 line 7, there with no conditioning signal at all",
+        "scale": "token",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2; Algorithm 24 (AttentionPairBias), full algorithm box, taken with {s_i} not None so lines 1-2 and 12-13 are active"
+            },
+            {
+              "source_ref": "af3_self_attention_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_transformer.py self_attention, called with single_cond not None, plus adaptive_layernorm and adaptive_zero_init"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_conditioned_transition",
+        "parent_ref": "modules.diffusion_transformer_token_level",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Conditioned Transition Block (token level)",
+        "kind": "feed_forward",
+        "mechanisms": [
+          "adaptive_layer_normalization",
+          "swiglu",
+          "adaln_zero_output_gate"
+        ],
+        "role": "one block's transition branch, and the detail that makes the block parallel rather than sequential. It reads the block's original input, not the attention branch's output, so both branches see the same activation and the block's only residual connection is the sum of the two. Structurally it is the Pairformer's own SwiGLU Transition with Adaptive LayerNorm in front and an AdaLN-Zero gate behind, at half the expansion factor (n=2 rather than 4), a direct compute trade for a block that runs up to 200 times per structure at inference",
+        "scale": "token",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3; Algorithm 25 (ConditionedTransitionBlock), full algorithm box, whose default expansion factor n=2 is half Algorithm 11's n=4"
+            },
+            {
+              "source_ref": "af3_self_attention_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_transformer.py transition_block with single_cond not None and Transformer.Config.num_intermediate_factor=2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_decoder",
+        "parent_ref": "modules.diffusion_module",
+        "decomposition": {
+          "status": "partial",
+          "reason": "The broadcast plus skip addition and the final projection to a 3D update are modeled at value-site granularity, matching the treatment of modules.atom_attention_encoder_conditioned. Only the AtomTransformer call at Algorithm 6 line 2 gets its own child module, because that call is where the shared attention and transition blocks are instantiated and therefore needs a subject its block_instances can bind ports against."
+        },
+        "label": "Atom Attention Decoder",
+        "kind": "decoder",
+        "mechanisms": [
+          "token_to_atom_broadcast",
+          "skip_connection",
+          "sequence_local_atom_attention",
+          "linear_projection"
+        ],
+        "role": "the deliberate mirror image of the conditioned encoder, closing the atom-token-atom bottleneck. Every atom picks up its parent token's now-updated activation through a linear projection and adds it to its own saved query skip tensor, so no atom reconstructs fine-grained context from the coarse token update alone. Sequence-local attention then runs again on the saved conditioning and pair skip tensors rather than recomputed ones (atom identity, reference geometry, and the trunk broadcast do not change within one denoising step), letting atoms in a local neighbourhood harmonize the broadcast update with their own fine context. A LayerNorm and a linear projection down to three channels give the per-atom position update",
+        "scale": "atom",
+        "repeats": 1,
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 (AtomAttentionDecoder), full algorithm box, called from Algorithm 20 line 7"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_decoder, which projects token_act down to per_atom_channels, broadcasts it, adds enc.skip_connection, reruns CrossAttTransformer on enc.queries_single_cond and enc.pair_cond, then applies LayerNorm and a linear layer to 3 outputs"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_decoder_atom_transformer",
+        "parent_ref": "modules.atom_attention_decoder",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Atom Transformer (decoder pass)",
+        "kind": "attention",
+        "mechanisms": [
+          "attention_with_pair_bias",
+          "conditioned_transition",
+          "sequence_local_masking"
+        ],
+        "role": "the decoder's AtomTransformer call, identical in shape to the encoder's (three blocks, four heads, the same sequence-local mask) but conditioned on the encoder's saved skip tensors rather than on anything recomputed here. Separate parameters from the encoder pass; the reuse is of the routine, not of the weights",
+        "scale": "atom",
+        "repeats": 3,
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 ({q_l} = AtomTransformer({q_l}, {c_l^skip}, {p_lm^skip}, N_block=3, N_head=4)); Algorithm 7 line 2 forwarding to Algorithm 23"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_decoder, which instantiates a second diffusion_transformer.CrossAttTransformer named atom_transformer_decoder with AtomCrossAttDecoderConfig.atom_transformer (num_blocks=3, num_intermediate_factor=2) and CrossAttentionConfig.num_head=4"
+            }
+          ]
+        }
       }
     ],
     "blockInstances": [
-
+      {
+        "id": "token_level_attention_pair_bias",
+        "standardBlockId": "attention_pair_bias",
+        "standardBlockRef": "standard_blocks/attention-pair-bias.yaml",
+        "standardBlockName": "Attention with Pair Bias",
+        "subjectRef": "modules.token_attention_pair_bias",
+        "variant": "adaln_conditioned",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "variantDescription": "The caller supplies a conditioning signal, so the pre-attention normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+        "useScope": "whole_module",
+        "conformance": "exact",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2 called from Algorithm 20 line 5 with beta_ij=0 and N_head=16, so the additive mask slot stays empty and the conditioned pair tensor is the only source of attention bias"
+            },
+            {
+              "source_ref": "af3_self_attention_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_transformer.py self_attention with single_cond supplied and pair_logits precomputed from pair_cond, exactly the conditioned variant of this template"
+            }
+          ]
+        },
+        "shapeParameters": {
+          "h": 16,
+          "c": 48,
+          "n": "N_token",
+          "c_a": 768,
+          "c_s": 384,
+          "c_z": 128
+        },
+        "shapeParameterSources": {
+          "h": {
+            "kind": "configuration",
+            "ref": "reference_configuration.diffusion_token_transformer_heads"
+          },
+          "c": {
+            "kind": "configuration",
+            "ref": "reference_configuration.diffusion_token_transformer_head_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.diffusion_single_conditioning"
+          },
+          "c_z": {
+            "kind": "boundary",
+            "portRef": "ports.pair_context",
+            "representationRef": "representations.diffusion_pair_conditioning"
+          }
+        },
+        "portBindings": [
+          {
+            "portRef": "ports.single_state",
+            "relationRefs": [
+              "relations.token_block_activation_enters_attention_branch"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.token_block_activation_enters_attention_branch",
+                "from": "value_sites.diffusion_token_block_input",
+                "to": "modules.token_attention_pair_bias",
+                "kind": "data_flow",
+                "operation": "attend_over_all_tokens",
+                "carries": [
+                  "representations.diffusion_token_activation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.conditioning_signal",
+            "relationRefs": [
+              "relations.conditioned_single_drives_token_attention_adaln"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.conditioned_single_drives_token_attention_adaln",
+                "from": "value_sites.diffusion_conditioned_single",
+                "to": "modules.token_attention_pair_bias",
+                "kind": "conditioning",
+                "operation": "drive_adaptive_layer_norm_and_output_gate",
+                "carries": [
+                  "representations.diffusion_single_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.pair_context",
+            "relationRefs": [
+              "relations.conditioned_pair_biases_token_attention"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.conditioned_pair_biases_token_attention",
+                "from": "value_sites.diffusion_conditioned_pair",
+                "to": "modules.token_attention_pair_bias",
+                "kind": "conditioning",
+                "operation": "bias_token_attention_logits",
+                "carries": [
+                  "representations.diffusion_pair_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.attention_output",
+            "relationRefs": [
+              "relations.token_attention_branch_produces_update"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.token_attention_branch_produces_update",
+                "from": "modules.token_attention_pair_bias",
+                "to": "value_sites.diffusion_token_attention_branch",
+                "kind": "data_flow",
+                "operation": "return_gated_attention_update",
+                "carries": [
+                  "representations.diffusion_token_activation"
+                ]
+              }
+            ]
+          }
+        ],
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.single_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_qkv",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_qkv",
+            "label": "Project per-head Q/K/V",
+            "operation": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.qkv"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "q",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 1
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 21
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 23,
+                    "end": 24
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 11,
+                    "end": 17
+                  },
+                  {
+                    "start": 40,
+                    "end": 46
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_pair_bias_term",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "operation": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "inputs": [
+              "ports.pair_context",
+              "ports.mask_bias"
+            ],
+            "outputs": [
+              "values.pair_bias"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "pair_bias",
+                "access": "write",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 9
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_context",
+                "access": "read",
+                "localRef": "ports.pair_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.pair_context",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.pair_context",
+                "occurrences": [
+                  {
+                    "start": 35,
+                    "end": 47
+                  }
+                ]
+              },
+              {
+                "lexeme": "mask_bias",
+                "access": "read",
+                "localRef": "ports.mask_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.mask_bias",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.mask_bias",
+                "occurrences": [
+                  {
+                    "start": 52,
+                    "end": 61
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_attention_logits",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.form_attention_logits",
+            "label": "Form biased attention logits",
+            "operation": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "inputs": [
+              "values.qkv",
+              "values.pair_bias"
+            ],
+            "outputs": [
+              "values.combined_logits"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "combined_logits",
+                "access": "write",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              },
+              {
+                "lexeme": "q",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 22,
+                    "end": 23
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 25,
+                    "end": 26
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_bias",
+                "access": "read",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 40,
+                    "end": 49
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "softmax_attention",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.softmax_attention",
+            "label": "Normalize over keys",
+            "operation": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "inputs": [
+              "values.combined_logits"
+            ],
+            "outputs": [
+              "values.attention_weights"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_weights",
+                "access": "write",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "combined_logits",
+                "access": "read",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 28,
+                    "end": 43
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_content_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_content_gate",
+            "label": "Project the content gate",
+            "operation": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.content_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "content_gate",
+                "access": "write",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 36,
+                    "end": 42
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "aggregate_gated_values",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "operation": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "inputs": [
+              "values.attention_weights",
+              "values.qkv",
+              "values.content_gate"
+            ],
+            "outputs": [
+              "values.attention_context"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_context",
+                "access": "write",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_weights",
+                "access": "read",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 48,
+                    "end": 65
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 67,
+                    "end": 68
+                  }
+                ]
+              },
+              {
+                "lexeme": "content_gate",
+                "access": "read",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 32
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_attention_update",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_attention_update",
+            "label": "Concatenate heads and project",
+            "operation": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "inputs": [
+              "values.attention_context"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_context",
+                "access": "read",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 45,
+                    "end": 62
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.attention_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_output",
+                "access": "write",
+                "localRef": "ports.attention_output",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.attention_output",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.attention_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 33,
+                    "end": 49
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 19,
+                    "end": 30
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "token_level_conditioned_transition",
+        "standardBlockId": "conditioned_transition_block",
+        "standardBlockRef": "standard_blocks/conditioned-transition-block.yaml",
+        "standardBlockName": "Conditioned Transition Block",
+        "subjectRef": "modules.token_conditioned_transition",
+        "variant": "adaln_conditioned_transition",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "variantDescription": "The caller supplies a conditioning signal, so the pre-block normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+        "useScope": "whole_module",
+        "conformance": "exact",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3 and Algorithm 25, whose expansion factor n=2 over a 768-channel activation gives the 1536-channel hidden width bound here"
+            },
+            {
+              "source_ref": "af3_self_attention_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_transformer.py transition_block with single_cond supplied and num_intermediate_factor=2"
+            }
+          ]
+        },
+        "shapeParameters": {
+          "c_hidden": 1536,
+          "n": "N_token",
+          "c_a": 768,
+          "c_s": 384
+        },
+        "shapeParameterSources": {
+          "c_hidden": {
+            "kind": "configuration",
+            "ref": "reference_configuration.diffusion_token_transition_hidden_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.diffusion_single_conditioning"
+          }
+        },
+        "portBindings": [
+          {
+            "portRef": "ports.single_state",
+            "relationRefs": [
+              "relations.token_block_activation_enters_transition_branch"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.token_block_activation_enters_transition_branch",
+                "from": "value_sites.diffusion_token_block_input",
+                "to": "modules.token_conditioned_transition",
+                "kind": "data_flow",
+                "operation": "transform_token_activation_pointwise",
+                "carries": [
+                  "representations.diffusion_token_activation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.conditioning_signal",
+            "relationRefs": [
+              "relations.conditioned_single_drives_token_transition_adaln"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.conditioned_single_drives_token_transition_adaln",
+                "from": "value_sites.diffusion_conditioned_single",
+                "to": "modules.token_conditioned_transition",
+                "kind": "conditioning",
+                "operation": "drive_adaptive_layer_norm_and_output_gate",
+                "carries": [
+                  "representations.diffusion_single_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.transition_output",
+            "relationRefs": [
+              "relations.token_transition_branch_produces_update"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.token_transition_branch_produces_update",
+                "from": "modules.token_conditioned_transition",
+                "to": "value_sites.diffusion_token_transition_branch",
+                "kind": "data_flow",
+                "operation": "return_gated_transition_update",
+                "carries": [
+                  "representations.diffusion_token_activation"
+                ]
+              }
+            ]
+          }
+        ],
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.single_state",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "swiglu_expansion",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.swiglu_expansion",
+            "label": "Gated expansion",
+            "operation": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.gated_hidden"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "gated_hidden",
+                "access": "write",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 40
+                  },
+                  {
+                    "start": 58,
+                    "end": 64
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_transition_update",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.project_transition_update",
+            "label": "Project back to the block width",
+            "operation": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "inputs": [
+              "values.gated_hidden"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "gated_hidden",
+                "access": "read",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 32,
+                    "end": 44
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.transition_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "transition_output",
+                "access": "write",
+                "localRef": "ports.transition_output",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.transition_output",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.transition_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 50
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_encoder_attention_pair_bias",
+        "standardBlockId": "attention_pair_bias",
+        "standardBlockRef": "standard_blocks/attention-pair-bias.yaml",
+        "standardBlockName": "Attention with Pair Bias",
+        "subjectRef": "modules.atom_encoder_atom_transformer",
+        "variant": "adaln_conditioned",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "variantDescription": "The caller supplies a conditioning signal, so the pre-attention normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "The same conditioned attention block as the token level, with three differences owned by the AtomTransformer wrapper around it. The additive mask slot that stays empty at token level carries the sequence-local block-diagonal mask here, which is what restricts each atom to a 128-atom neighbourhood. The head count drops from 16 to 4 and the surrounding block loop from 24 to 3. Conditioning is per atom (each atom's own c_l) rather than per token. The wrapper also owns the residual sum with the transition branch and the repetition itself; this instance covers one attention branch of one block.",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15 into Algorithm 7 (the locality mask in the beta slot) into Algorithm 23 line 2 into Algorithm 24; c_l is never None on this path, so the conditioned variant is always the one taken"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_encoder, which passes queries_single_cond as the conditioning and pair_act as the pair bias into CrossAttTransformer"
+            }
+          ]
+        },
+        "shapeParameters": {
+          "h": 4,
+          "c": 32,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128,
+          "c_z": 16
+        },
+        "shapeParameterSources": {
+          "h": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_heads"
+          },
+          "c": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_head_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          },
+          "c_z": {
+            "kind": "boundary",
+            "portRef": "ports.pair_context",
+            "representationRef": "representations.atom_pair_representation"
+          }
+        },
+        "portBindings": [
+          {
+            "portRef": "ports.single_state",
+            "relationRefs": [
+              "relations.atom_query_enters_encoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_query_enters_encoder_atom_transformer",
+                "from": "value_sites.atom_query_with_noisy_position",
+                "to": "modules.atom_encoder_atom_transformer",
+                "kind": "data_flow",
+                "operation": "attend_over_local_atom_neighbourhood",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.conditioning_signal",
+            "relationRefs": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_conditioning_drives_encoder_atom_transformer",
+                "from": "value_sites.atom_single_conditioning_trunk_broadcast",
+                "to": "modules.atom_encoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "drive_adaptive_layer_norm_per_atom",
+                "carries": [
+                  "representations.atom_single_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.pair_context",
+            "relationRefs": [
+              "relations.atom_pair_biases_encoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_pair_biases_encoder_atom_transformer",
+                "from": "value_sites.atom_pair_conditioning_refined",
+                "to": "modules.atom_encoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "bias_atom_attention_logits",
+                "carries": [
+                  "representations.atom_pair_representation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.mask_bias",
+            "relationRefs": [
+              "relations.locality_mask_restricts_encoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.locality_mask_restricts_encoder_atom_transformer",
+                "from": "value_sites.sequence_local_atom_attention_mask",
+                "to": "modules.atom_encoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "restrict_attention_to_local_atom_windows",
+                "carries": [
+                  "representations.sequence_local_attention_mask"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.attention_output",
+            "relationRefs": [
+              "relations.encoder_atom_transformer_produces_query"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.encoder_atom_transformer_produces_query",
+                "from": "modules.atom_encoder_atom_transformer",
+                "to": "value_sites.atom_query_after_encoder_transformer",
+                "kind": "data_flow",
+                "operation": "return_locally_attended_atom_query",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          }
+        ],
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.single_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_qkv",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_qkv",
+            "label": "Project per-head Q/K/V",
+            "operation": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.qkv"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "q",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 1
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 21
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 23,
+                    "end": 24
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 11,
+                    "end": 17
+                  },
+                  {
+                    "start": 40,
+                    "end": 46
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_pair_bias_term",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "operation": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "inputs": [
+              "ports.pair_context",
+              "ports.mask_bias"
+            ],
+            "outputs": [
+              "values.pair_bias"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "pair_bias",
+                "access": "write",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 9
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_context",
+                "access": "read",
+                "localRef": "ports.pair_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.pair_context",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.pair_context",
+                "occurrences": [
+                  {
+                    "start": 35,
+                    "end": 47
+                  }
+                ]
+              },
+              {
+                "lexeme": "mask_bias",
+                "access": "read",
+                "localRef": "ports.mask_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.mask_bias",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.mask_bias",
+                "occurrences": [
+                  {
+                    "start": 52,
+                    "end": 61
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_attention_logits",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.form_attention_logits",
+            "label": "Form biased attention logits",
+            "operation": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "inputs": [
+              "values.qkv",
+              "values.pair_bias"
+            ],
+            "outputs": [
+              "values.combined_logits"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "combined_logits",
+                "access": "write",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              },
+              {
+                "lexeme": "q",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 22,
+                    "end": 23
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 25,
+                    "end": 26
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_bias",
+                "access": "read",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 40,
+                    "end": 49
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "softmax_attention",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.softmax_attention",
+            "label": "Normalize over keys",
+            "operation": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "inputs": [
+              "values.combined_logits"
+            ],
+            "outputs": [
+              "values.attention_weights"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_weights",
+                "access": "write",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "combined_logits",
+                "access": "read",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 28,
+                    "end": 43
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_content_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_content_gate",
+            "label": "Project the content gate",
+            "operation": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.content_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "content_gate",
+                "access": "write",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 36,
+                    "end": 42
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "aggregate_gated_values",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "operation": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "inputs": [
+              "values.attention_weights",
+              "values.qkv",
+              "values.content_gate"
+            ],
+            "outputs": [
+              "values.attention_context"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_context",
+                "access": "write",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_weights",
+                "access": "read",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 48,
+                    "end": 65
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 67,
+                    "end": 68
+                  }
+                ]
+              },
+              {
+                "lexeme": "content_gate",
+                "access": "read",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 32
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_attention_update",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_attention_update",
+            "label": "Concatenate heads and project",
+            "operation": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "inputs": [
+              "values.attention_context"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_context",
+                "access": "read",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 45,
+                    "end": 62
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.attention_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_output",
+                "access": "write",
+                "localRef": "ports.attention_output",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.attention_output",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.attention_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 33,
+                    "end": 49
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 19,
+                    "end": 30
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_encoder_conditioned_transition",
+        "standardBlockId": "conditioned_transition_block",
+        "standardBlockRef": "standard_blocks/conditioned-transition-block.yaml",
+        "standardBlockName": "Conditioned Transition Block",
+        "subjectRef": "modules.atom_encoder_atom_transformer",
+        "variant": "adaln_conditioned_transition",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "variantDescription": "The caller supplies a conditioning signal, so the pre-block normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "The same conditioned transition block as the token level, conditioned per atom rather than per token and expanded over a 128-channel activation instead of a 768-channel one. The AtomTransformer wrapper owns the three-block loop and the residual sum with the attention branch; this instance covers one transition branch of one block. The transition branch takes no pair input and no mask, so the locality restriction that shapes the attention branch does not touch it.",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15 into Algorithm 7 into Algorithm 23 line 3 into Algorithm 25, with the expansion factor n=2 over 128 channels giving the 256-channel hidden width bound here"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py AtomCrossAttEncoderConfig.atom_transformer (num_intermediate_factor=2) feeding diffusion_transformer.transition_block with the per-atom conditioning supplied"
+            }
+          ]
+        },
+        "shapeParameters": {
+          "c_hidden": 256,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128
+        },
+        "shapeParameterSources": {
+          "c_hidden": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transition_hidden_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          }
+        },
+        "portBindings": [
+          {
+            "portRef": "ports.single_state",
+            "relationRefs": [
+              "relations.atom_query_enters_encoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_query_enters_encoder_atom_transformer",
+                "from": "value_sites.atom_query_with_noisy_position",
+                "to": "modules.atom_encoder_atom_transformer",
+                "kind": "data_flow",
+                "operation": "attend_over_local_atom_neighbourhood",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.conditioning_signal",
+            "relationRefs": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_conditioning_drives_encoder_atom_transformer",
+                "from": "value_sites.atom_single_conditioning_trunk_broadcast",
+                "to": "modules.atom_encoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "drive_adaptive_layer_norm_per_atom",
+                "carries": [
+                  "representations.atom_single_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.transition_output",
+            "relationRefs": [
+              "relations.encoder_atom_transformer_produces_query"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.encoder_atom_transformer_produces_query",
+                "from": "modules.atom_encoder_atom_transformer",
+                "to": "value_sites.atom_query_after_encoder_transformer",
+                "kind": "data_flow",
+                "operation": "return_locally_attended_atom_query",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          }
+        ],
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.single_state",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "swiglu_expansion",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.swiglu_expansion",
+            "label": "Gated expansion",
+            "operation": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.gated_hidden"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "gated_hidden",
+                "access": "write",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 40
+                  },
+                  {
+                    "start": 58,
+                    "end": 64
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_transition_update",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.project_transition_update",
+            "label": "Project back to the block width",
+            "operation": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "inputs": [
+              "values.gated_hidden"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "gated_hidden",
+                "access": "read",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 32,
+                    "end": 44
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.transition_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "transition_output",
+                "access": "write",
+                "localRef": "ports.transition_output",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.transition_output",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.transition_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 50
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_decoder_attention_pair_bias",
+        "standardBlockId": "attention_pair_bias",
+        "standardBlockRef": "standard_blocks/attention-pair-bias.yaml",
+        "standardBlockName": "Attention with Pair Bias",
+        "subjectRef": "modules.atom_decoder_atom_transformer",
+        "variant": "adaln_conditioned",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "variantDescription": "The caller supplies a conditioning signal, so the pre-attention normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "Shaped exactly like the encoder's atom-level instance (four heads, three blocks, the same sequence-local mask in the additive slot), but conditioned on the encoder's saved skip tensors rather than on anything this pass computes. The conditioning and pair inputs bound here are c_skip and p_skip, carried across the token bottleneck rather than rebuilt, which is what makes this a U-Net-style skip rather than a second encoder. Parameters are the decoder's own; the reuse is of the routine, not of the weights. The wrapper owns the three-block loop and the residual sum with the transition branch.",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 into Algorithm 7 into Algorithm 23 line 2 into Algorithm 24, with c_l^skip in the conditioning slot and p_lm^skip in the pair slot"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_decoder, which passes enc.queries_single_cond and enc.pair_cond straight from the encoder's returned output into its own CrossAttTransformer"
+            }
+          ]
+        },
+        "shapeParameters": {
+          "h": 4,
+          "c": 32,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128,
+          "c_z": 16
+        },
+        "shapeParameterSources": {
+          "h": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_heads"
+          },
+          "c": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_head_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          },
+          "c_z": {
+            "kind": "boundary",
+            "portRef": "ports.pair_context",
+            "representationRef": "representations.atom_pair_representation"
+          }
+        },
+        "portBindings": [
+          {
+            "portRef": "ports.single_state",
+            "relationRefs": [
+              "relations.atom_query_enters_decoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_query_enters_decoder_atom_transformer",
+                "from": "value_sites.atom_query_broadcast_with_skip",
+                "to": "modules.atom_decoder_atom_transformer",
+                "kind": "data_flow",
+                "operation": "reconcile_broadcast_update_locally",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.conditioning_signal",
+            "relationRefs": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.conditioning_skip_drives_decoder_atom_transformer",
+                "from": "value_sites.atom_attention_encoder_single_conditioning_skip",
+                "to": "modules.atom_decoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "drive_adaptive_layer_norm_from_saved_conditioning",
+                "carries": [
+                  "representations.atom_single_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.pair_context",
+            "relationRefs": [
+              "relations.pair_skip_biases_decoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.pair_skip_biases_decoder_atom_transformer",
+                "from": "value_sites.atom_attention_encoder_pair_skip",
+                "to": "modules.atom_decoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "bias_decoder_atom_attention_logits",
+                "carries": [
+                  "representations.atom_pair_representation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.mask_bias",
+            "relationRefs": [
+              "relations.locality_mask_restricts_decoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.locality_mask_restricts_decoder_atom_transformer",
+                "from": "value_sites.sequence_local_atom_attention_mask",
+                "to": "modules.atom_decoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "restrict_attention_to_local_atom_windows",
+                "carries": [
+                  "representations.sequence_local_attention_mask"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.attention_output",
+            "relationRefs": [
+              "relations.decoder_atom_transformer_produces_query"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.decoder_atom_transformer_produces_query",
+                "from": "modules.atom_decoder_atom_transformer",
+                "to": "value_sites.atom_query_after_decoder_transformer",
+                "kind": "data_flow",
+                "operation": "return_locally_reconciled_atom_query",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          }
+        ],
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.single_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_qkv",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_qkv",
+            "label": "Project per-head Q/K/V",
+            "operation": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.qkv"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "q",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 1
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 21
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 23,
+                    "end": 24
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 11,
+                    "end": 17
+                  },
+                  {
+                    "start": 40,
+                    "end": 46
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_pair_bias_term",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "operation": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "inputs": [
+              "ports.pair_context",
+              "ports.mask_bias"
+            ],
+            "outputs": [
+              "values.pair_bias"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "pair_bias",
+                "access": "write",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 9
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_context",
+                "access": "read",
+                "localRef": "ports.pair_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.pair_context",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.pair_context",
+                "occurrences": [
+                  {
+                    "start": 35,
+                    "end": 47
+                  }
+                ]
+              },
+              {
+                "lexeme": "mask_bias",
+                "access": "read",
+                "localRef": "ports.mask_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.mask_bias",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.mask_bias",
+                "occurrences": [
+                  {
+                    "start": 52,
+                    "end": 61
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_attention_logits",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.form_attention_logits",
+            "label": "Form biased attention logits",
+            "operation": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "inputs": [
+              "values.qkv",
+              "values.pair_bias"
+            ],
+            "outputs": [
+              "values.combined_logits"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "combined_logits",
+                "access": "write",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              },
+              {
+                "lexeme": "q",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 22,
+                    "end": 23
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 25,
+                    "end": 26
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_bias",
+                "access": "read",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 40,
+                    "end": 49
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "softmax_attention",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.softmax_attention",
+            "label": "Normalize over keys",
+            "operation": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "inputs": [
+              "values.combined_logits"
+            ],
+            "outputs": [
+              "values.attention_weights"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_weights",
+                "access": "write",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "combined_logits",
+                "access": "read",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 28,
+                    "end": 43
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_content_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_content_gate",
+            "label": "Project the content gate",
+            "operation": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.content_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "content_gate",
+                "access": "write",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 36,
+                    "end": 42
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "aggregate_gated_values",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "operation": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "inputs": [
+              "values.attention_weights",
+              "values.qkv",
+              "values.content_gate"
+            ],
+            "outputs": [
+              "values.attention_context"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_context",
+                "access": "write",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_weights",
+                "access": "read",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 48,
+                    "end": 65
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 67,
+                    "end": 68
+                  }
+                ]
+              },
+              {
+                "lexeme": "content_gate",
+                "access": "read",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 32
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_attention_update",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_attention_update",
+            "label": "Concatenate heads and project",
+            "operation": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "inputs": [
+              "values.attention_context"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_context",
+                "access": "read",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 45,
+                    "end": 62
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.attention_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_output",
+                "access": "write",
+                "localRef": "ports.attention_output",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.attention_output",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.attention_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 33,
+                    "end": 49
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 19,
+                    "end": 30
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_decoder_conditioned_transition",
+        "standardBlockId": "conditioned_transition_block",
+        "standardBlockRef": "standard_blocks/conditioned-transition-block.yaml",
+        "standardBlockName": "Conditioned Transition Block",
+        "subjectRef": "modules.atom_decoder_atom_transformer",
+        "variant": "adaln_conditioned_transition",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "variantDescription": "The caller supplies a conditioning signal, so the pre-block normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "Shaped exactly like the encoder's atom-level transition instance, expanded over the same 128-channel activation, but conditioned on the encoder's saved c_skip rather than on conditioning computed in this pass. The wrapper owns the three-block loop and the residual sum with the attention branch; this instance covers one transition branch of one block.",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 into Algorithm 7 into Algorithm 23 line 3 into Algorithm 25, with c_l^skip in the conditioning slot and the expansion factor n=2 over 128 channels"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py AtomCrossAttDecoderConfig.atom_transformer (num_intermediate_factor=2) feeding diffusion_transformer.transition_block with enc.queries_single_cond supplied as the conditioning"
+            }
+          ]
+        },
+        "shapeParameters": {
+          "c_hidden": 256,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128
+        },
+        "shapeParameterSources": {
+          "c_hidden": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transition_hidden_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          }
+        },
+        "portBindings": [
+          {
+            "portRef": "ports.single_state",
+            "relationRefs": [
+              "relations.atom_query_enters_decoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.atom_query_enters_decoder_atom_transformer",
+                "from": "value_sites.atom_query_broadcast_with_skip",
+                "to": "modules.atom_decoder_atom_transformer",
+                "kind": "data_flow",
+                "operation": "reconcile_broadcast_update_locally",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.conditioning_signal",
+            "relationRefs": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.conditioning_skip_drives_decoder_atom_transformer",
+                "from": "value_sites.atom_attention_encoder_single_conditioning_skip",
+                "to": "modules.atom_decoder_atom_transformer",
+                "kind": "conditioning",
+                "operation": "drive_adaptive_layer_norm_from_saved_conditioning",
+                "carries": [
+                  "representations.atom_single_conditioning"
+                ]
+              }
+            ]
+          },
+          {
+            "portRef": "ports.transition_output",
+            "relationRefs": [
+              "relations.decoder_atom_transformer_produces_query"
+            ],
+            "relations": [
+              {
+                "relationRef": "relations.decoder_atom_transformer_produces_query",
+                "from": "modules.atom_decoder_atom_transformer",
+                "to": "value_sites.atom_query_after_decoder_transformer",
+                "kind": "data_flow",
+                "operation": "return_locally_reconciled_atom_query",
+                "carries": [
+                  "representations.atom_single_representation"
+                ]
+              }
+            ]
+          }
+        ],
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.single_state",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "swiglu_expansion",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.swiglu_expansion",
+            "label": "Gated expansion",
+            "operation": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.gated_hidden"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "gated_hidden",
+                "access": "write",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 40
+                  },
+                  {
+                    "start": 58,
+                    "end": 64
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_transition_update",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.project_transition_update",
+            "label": "Project back to the block width",
+            "operation": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "inputs": [
+              "values.gated_hidden"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "gated_hidden",
+                "access": "read",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 32,
+                    "end": 44
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.transition_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "transition_output",
+                "access": "write",
+                "localRef": "ports.transition_output",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.transition_output",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.transition_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 50
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     ],
     "representations": [
       {
@@ -2099,7 +5808,167 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Table 5 asym_id [N_token] (\"Unique integer for each distinct chain\"); Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id) -- this same raw feature also feeds RelativePositionEncoding's unmodeled b_same_entity/a_rel_chain signals (see open_questions.relative_position_encoding_and_token_bonds_unmodeled), not modeled here"
+              "locator": "Supplementary Table 5 asym_id [N_token] (\"Unique integer for each distinct chain\"); Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id) -- RelativePositionEncoding's b_same_entity/a_rel_chain signals are now modeled by modules.relative_position_encoding (see relations.entity_id_enters_relative_position_encoding and relations.sym_id_enters_relative_position_encoding for their actual sourcing, distinct from this feature), not modeled here"
+            }
+          ]
+        }
+      },
+      {
+        "id": "entity_id",
+        "scale": "token",
+        "semantic_role": "raw per-token distinct-sequence identifier, shared by every physical copy of the same underlying sequence (e.g. all three chains of a homotrimer share one entity_id); used by RelativePositionEncoding to build the raw same-entity boolean signal, unrelated to physical chain identity",
+        "shape": "N_token",
+        "glyph": "vector",
+        "carries": [
+          "distinct-sequence id per token, shared across every physical copy of that sequence"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 entity_id [N_token] (\"Unique integer for each distinct sequence.\"); Supplementary Algorithm 3 line 3 (b_same_entity_ij = f_i^entity_id == f_j^entity_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "residue_index",
+        "scale": "token",
+        "semantic_role": "raw per-token residue number within the token's original input chain; used by RelativePositionEncoding as the residue-offset signal's raw input (differenced between two tokens and clipped) and, via equality, to gate the finer token-offset signal to same-residue pairs",
+        "shape": "N_token",
+        "glyph": "vector",
+        "carries": [
+          "residue position per token within its own input chain"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 residue_index [N_token] (\"Residue number in the token's original input chain.\"); Supplementary Algorithm 3 lines 2, 4 (b_same_residue_ij = f_i^residue_index == f_j^residue_index; d_residue_ij built from f_i^residue_index - f_j^residue_index)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sym_id",
+        "scale": "token",
+        "semantic_role": "raw per-token copy-number identifier among chains sharing one entity (e.g. sym_id=[0,1,2,0] if chains A, B, C share a sequence but D does not); used by RelativePositionEncoding as the chain-offset signal's raw input",
+        "shape": "N_token",
+        "glyph": "vector",
+        "carries": [
+          "copy-number id per token among chains of the same entity"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 sym_id [N_token] (\"Unique integer within chains of this sequence. E.g. if chains A, B and C share a sequence but D does not, their sym_ids would be [0, 1, 2, 0].\"); Supplementary Algorithm 3 line 8 (d_chain_ij built from f_i^sym_id - f_j^sym_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_index",
+        "scale": "token",
+        "semantic_role": "raw per-token monotonically increasing token position (does not restart at 1 for new chains); distinct from residue_index because a modified residue or ligand is tokenized per-atom, so several tokens can share one residue_index -- token_index is what RelativePositionEncoding's finer token-offset signal uses to order tokens within such a group",
+        "shape": "N_token",
+        "glyph": "vector",
+        "carries": [
+          "monotonically increasing token position per token"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 token_index [N_token] (\"Token number. Increases monotonically; does not restart at 1 for new chains.\"); Supplementary Algorithm 3 line 6 (d_token_ij built from f_i^token_index - f_j^token_index); Section 3.1.2 (\"we introduce a relative token encoding, applied to tokens within the same residue\")"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_residue_offset",
+        "scale": "token_pair",
+        "semantic_role": "RelativePositionEncoding's residue-index offset signal (a_rel_pos) -- the clipped, one-hot-encoded residue_index difference between two tokens, restricted to pairs in the same physical chain (b_same_chain, built from asym_id equality); cross-chain pairs fall into a dedicated catch-all bucket instead of a real offset. The original AlphaFold 2 single-chain relative position encoding",
+        "shape": "N_token x N_token x 66",
+        "glyph": "pair",
+        "carries": [
+          "one-hot bucketed residue-index offset per token pair, clipped to [0, 2*r_max] with r_max=32, plus one catch-all \"different chain\" bucket"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 1, 4-5 (b_same_chain_ij = f_i^asym_id == f_j^asym_id; d_residue_ij = clip(f_i^residue_index - f_j^residue_index + r_max, 0, 2*r_max) if b_same_chain_ij else 2*r_max+1; a_rel_pos_ij = one_hot(d_residue_ij, [0,...,2*r_max+1])); Section 3.1.2 (r_max=32)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_token_offset",
+        "scale": "token_pair",
+        "semantic_role": "RelativePositionEncoding's finer token-index offset signal (a_rel_token) -- the clipped, one-hot-encoded token_index difference between two tokens, only defined when both same-chain (b_same_chain) and same-residue (b_same_residue, built from residue_index equality) hold. Needed because a modified residue or ligand is tokenized per-atom, so several tokens can share one residue_index and a_rel_pos alone cannot order them; AF3's own addition over AlphaFold 2's encoding",
+        "shape": "N_token x N_token x 66",
+        "glyph": "pair",
+        "carries": [
+          "one-hot bucketed token-index offset per token pair, clipped to [0, 2*r_max] with r_max=32, plus one catch-all bucket for pairs not in the same chain and residue"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 1-2, 6-7 (b_same_chain_ij = f_i^asym_id == f_j^asym_id; b_same_residue_ij = f_i^residue_index == f_j^residue_index; d_token_ij = clip(f_i^token_index - f_j^token_index + r_max, 0, 2*r_max) if b_same_chain_ij and b_same_residue_ij else 2*r_max+1; a_rel_token_ij = one_hot(d_token_ij, [0,...,2*r_max+1])); Section 3.1.2 (r_max=32; \"we introduce a relative token encoding, applied to tokens within the same residue\")"
+            }
+          ]
+        }
+      },
+      {
+        "id": "same_entity_signal",
+        "scale": "token_pair",
+        "semantic_role": "RelativePositionEncoding's same-entity signal (b_same_entity) -- a raw boolean, not bucketed or one-hot, true when two tokens share one entity_id (same underlying sequence regardless of which physical chain copy either token belongs to). The only one of the four signals left unbucketed, since there is no distance to discretize",
+        "shape": "N_token x N_token x 1",
+        "glyph": "pair",
+        "carries": [
+          "same-entity boolean per token pair"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 3 (b_same_entity_ij = f_i^entity_id == f_j^entity_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_chain_offset",
+        "scale": "token_pair",
+        "semantic_role": "RelativePositionEncoding's chain-copy-number offset signal (a_rel_chain) -- the clipped, one-hot-encoded sym_id difference between two tokens, only defined for pairs not in the same physical chain (b_same_chain, built from asym_id equality), per the paper's literal Algorithm 3 line 8. Lets the network express \"different physical chains, but specifically the 1st and 3rd copies of the same repeated entity,\" directly relevant to homomer/symmetric-assembly geometry. The reference implementation instead gates this on entity_id_same, not b_same_chain -- see open_questions.relative_chain_offset_gate_paper_code_divergence",
+        "shape": "N_token x N_token x 6",
+        "glyph": "pair",
+        "carries": [
+          "one-hot bucketed sym_id offset per token pair, clipped to [0, 2*s_max] with s_max=2, plus one catch-all bucket for same-chain pairs"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 1, 8-9 (b_same_chain_ij = f_i^asym_id == f_j^asym_id; d_chain_ij = clip(f_i^sym_id - f_j^sym_id + s_max, 0, 2*s_max) if not b_same_chain_ij else 2*s_max+1; a_rel_chain_ij = one_hot(d_chain_ij, [0,...,2*s_max+1])); Section 3.1.2 (s_max=2)"
             }
           ]
         }
@@ -2149,6 +6018,285 @@ export const manifest = {
               "source_ref": "af3_template_code",
               "role": "implementation_evidence",
               "locator": "template_modules.py line 113 (TemplateEmbedding.Config.num_channels: int = 64) -- confirms this width is a fixed, narrower channel count distinct from the trunk's c_z=128 pair_state, not a notational shorthand"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noise_level",
+        "scale": "structure",
+        "semantic_role": "the raw scalar diffusion noise level (t_hat) for the current denoising step, one global value shared identically by every token and token pair, not itself trunk-derived",
+        "shape": "scalar",
+        "glyph": "scalar",
+        "carries": [
+          "current diffusion step's noise magnitude"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 signature (DiffusionModule({x_l^noisy}, t_hat, ...)); Supplementary Algorithm 21 signature (DiffusionConditioning(t_hat, ...)) -- t_hat is passed by reference into DiffusionConditioning unchanged, this value site is that raw scalar before any log-compression"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fourier_time_embedding",
+        "scale": "structure",
+        "semantic_role": "FourierEmbedding's own raw output -- a c=256 bank of frozen random cosine features evaluated at the log-compressed noise level, one global vector shared by every token, not yet projected into the single-conditioning channel width",
+        "shape": "256",
+        "glyph": "vector",
+        "carries": [
+          "frozen random-frequency cosine features of the current (log-compressed) noise level"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 22 line 2 (return cos(2*pi*(t_hat*w + b))); Supplementary Algorithm 21 line 8 (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256), c=256)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_pair_conditioning",
+        "scale": "token_pair",
+        "semantic_role": "the pair representation built and refined inside DiffusionConditioning by fusing the trunk pair state with RelativePositionEncoding's freshly recomputed output -- shares pair_state's 128-channel width but is a genuinely distinct tensor produced fresh by this module, not the trunk's own pair_state carried forward",
+        "shape": "N_token x N_token x 128",
+        "glyph": "pair",
+        "carries": [
+          "trunk pairwise context fused with a fresh relative-position prior",
+          "attention-logit bias signal for AttentionPairBias throughout DiffusionTransformer"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 1-5 (pair conditioning branch; c_z=128 per the algorithm's own signature)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_single_conditioning",
+        "scale": "token",
+        "semantic_role": "the single representation built and refined inside DiffusionConditioning by fusing the trunk single state with the raw, unprocessed s_inputs embedding and an additively-injected Fourier time embedding -- shares single_state's 384-channel width but is a genuinely distinct tensor produced fresh by this module, not the trunk's own single_state carried forward",
+        "shape": "N_token x 384",
+        "glyph": "single",
+        "carries": [
+          "trunk single context fused with the raw input embedding",
+          "additively-injected noise-level signal via the projected Fourier time embedding",
+          "activation-scaling signal for Adaptive LayerNorm throughout DiffusionTransformer"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 6-12 (single conditioning branch; c_s=384 per the algorithm's own signature)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noisy_atom_positions",
+        "scale": "atom",
+        "semantic_role": "the current noisy heavy-atom coordinates handed to the diffusion module at this denoising step, in angstroms, before the module rescales them",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "one 3D position per heavy atom at the current point in the denoising trajectory"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 signature (DiffusionModule({x_l^noisy}, t_hat, ...)); Algorithm 18 line 7 (the churned positions SampleDiffusion passes in at every sampling step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "scaled_noisy_atom_positions",
+        "scale": "atom",
+        "semantic_role": "the same noisy coordinates divided by sqrt(t_hat^2 + sigma_data^2), which makes them dimensionless and roughly unit variance at every noise level, so one set of weights sees inputs on the same numeric scale across the whole schedule",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "dimensionless per-atom position at roughly unit variance"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 2 (r_l^noisy = x_l^noisy / sqrt(t_hat^2 + sigma_data^2), r_l^noisy in R^3); sigma_data=16 per Algorithm 20's signature"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__ (act = positions_noisy * atom_mask; act = act / jnp.sqrt(noise_level**2 + SIGMA_DATA**2)), performed by the diffusion module before the atom encoder is called, not inside the encoder"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_single_representation",
+        "scale": "atom",
+        "semantic_role": "the per-atom activation track (q_l) that both atom-level transformer passes attend over, at the atom channel width c_atom=128; distinct from the per-atom conditioning that modulates it",
+        "shape": "N_atom x 128",
+        "glyph": "single",
+        "carries": [
+          "per-atom activation carrying reference-conformer chemistry",
+          "the atom's current noisy position, in the encoder pass",
+          "the broadcast token-level update, in the decoder pass"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 7, 11, 15 (q_l in R^c_atom, initialized from the atom conditioning, then carrying the projected noisy position into AtomTransformer); Algorithm 6 lines 1-2 (the decoder's own q_l); Algorithm 20 signature (c_atom=128)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_single_conditioning",
+        "scale": "atom",
+        "semantic_role": "the per-atom conditioning vector (c_l) built from reference-conformer metadata and, in conditioned mode, the parent token's trunk single representation; this is what drives Adaptive LayerNorm at atom resolution, one conditioning vector per atom rather than per token",
+        "shape": "N_atom x 128",
+        "glyph": "single",
+        "carries": [
+          "per-atom reference position, charge, element, and atom-name encoding",
+          "the parent token's raw trunk single representation, broadcast onto every atom of that token"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 1 (c_l = LinearNoBias(concat(ref_pos, ref_charge, ref_mask, ref_element, ref_atom_name_chars)), c_l in R^c_atom) and line 9 (c_l += LinearNoBias(LayerNorm(s_trunk_tok_idx(l)))); Algorithm 7 line 2, where c_l takes the s_i slot of DiffusionTransformer"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_pair_representation",
+        "scale": "atom_pair",
+        "semantic_role": "the per-atom-pair tensor (p_lm) at the narrow atom-pair width c_atompair=16, built from reference-conformer geometry and, in conditioned mode, the trunk's already-conditioned pair tensor read at the two atoms' parent tokens; it supplies the attention bias for both atom-level passes",
+        "shape": "N_atom x N_atom x 16",
+        "glyph": "pair",
+        "carries": [
+          "reference-conformer offsets and inverse-square-distance proximity between atom pairs, zeroed across separately generated conformers",
+          "the parent token pair's entry in the conditioned pair tensor",
+          "the two atoms' own conditioning vectors, folded in as an outer sum"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 2-6 (reference offsets, same-instance validity mask, inverse-square distances), line 10 (p_lm += LinearNoBias(LayerNorm(z_tok_idx(l) tok_idx(m)))), lines 13-14 (outer sum of the two atoms' conditioning, then a 3-layer ReLU MLP); Algorithm 20 signature (c_atompair=16)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sequence_local_attention_mask",
+        "scale": "atom_pair",
+        "semantic_role": "the additive sequence-local mask (beta_lm) that restricts atom attention to rectangular blocks along the diagonal, 0 on allowed atom pairs and -10^10 elsewhere; it is an additive logit term, not a separate masking mechanism, occupying the same slot the pair bias writes into",
+        "shape": "N_atom x N_atom",
+        "glyph": "pair",
+        "carries": [
+          "per-atom-pair additive logit offset that is either zero or effectively negative infinity"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 7 line 1 (beta_lm = 0 if |l - c| < N_queries/2 and |m - c| < N_keys/2 for some subset centre c, else -10^10), with N_queries=32, N_keys=128 and subset centres at 15.5, 47.5, 79.5 and so on; Algorithm 24 line 8, where beta enters the same additive term as the pair projection"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py, where the released implementation realizes the same restriction as an explicit queries/keys gather layout (batch.atom_cross_att.queries_to_keys) feeding CrossAttTransformer, rather than materializing a full N_atom x N_atom bias tensor"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_activation",
+        "scale": "token",
+        "semantic_role": "the per-token activation (a_i) inside the diffusion module at the token channel width c_token=768; produced by mean-pooling the atom encoder's output, refined by the token-level transformer, and read back down by the atom decoder. It is a per-denoising-step activation, distinct from the trunk's own single_state and from the diffusion conditioning tensors",
+        "shape": "N_token x 768",
+        "glyph": "single",
+        "carries": [
+          "per-token summary of the current noisy structure at atom resolution",
+          "the fully conditioned single vector, injected once as a residual at the token bottleneck's entrance"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 16 (a_i = mean over the token's atoms of relu(LinearNoBias(q_l)), a_i in R^c_token); Algorithm 20 lines 3-6 and signature (c_token=768), which is a wider c_token than the bare-mode call in Algorithm 2 line 1 (c_token=384)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_position_update",
+        "scale": "atom",
+        "semantic_role": "the atom decoder's returned per-atom position update (r_l^update), in the same dimensionless space as the scaled noisy positions rather than in angstroms; the diffusion module rescales and blends it with the noisy input to produce coordinates",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "per-atom 3D correction proposed by this denoising step"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))); Algorithm 20 line 8, where it is rescaled by sigma_data * t_hat / sqrt(sigma_data^2 + t_hat^2) and blended with the noisy input"
+            }
+          ]
+        }
+      },
+      {
+        "id": "denoised_atom_positions",
+        "scale": "atom",
+        "semantic_role": "the diffusion module's own returned per-atom coordinates for this denoising step, back in the same real-valued angstrom space as the raw noisy input rather than the dimensionless space the network operates in internally; a noise-level-weighted posterior-mean blend of the raw noisy input and the rescaled position update, not a clean structure prediction on its own",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "per-atom 3D denoised position estimate for the current noise level"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 8 (x_l^out = sigma_data^2/(sigma_data^2+t_hat^2) * x_l^noisy + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update) and line 9 (return {x_l^out}); consumed as {x_l^denoised} by Algorithm 18 line 8, the sampler's call site"
             }
           ]
         }
@@ -2520,7 +6668,6 @@ export const manifest = {
         "id": "single_state_output",
         "representation_ref": "representations.single_state",
         "scope_ref": "architecture",
-        "boundary": "output",
         "role": "component_output",
         "evidence": {
           "status": "confirmed_from_code",
@@ -2542,7 +6689,6 @@ export const manifest = {
         "id": "pair_state_output",
         "representation_ref": "representations.pair_state",
         "scope_ref": "architecture",
-        "boundary": "output",
         "role": "component_output",
         "evidence": {
           "status": "confirmed_from_code",
@@ -2709,6 +6855,154 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 16 line 4 (f_i^asym_id == f_j^asym_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "entity_id",
+        "representation_ref": "representations.entity_id",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_entity_id_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 3 (f_i^entity_id, f_j^entity_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "residue_index",
+        "representation_ref": "representations.residue_index",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_residue_index_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 2, 4 (f_i^residue_index, f_j^residue_index)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sym_id",
+        "representation_ref": "representations.sym_id",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_sym_id_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 8 (f_i^sym_id, f_j^sym_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_index",
+        "representation_ref": "representations.token_index",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_token_index_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 6 (f_i^token_index, f_j^token_index)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_residue_offset",
+        "representation_ref": "representations.relative_residue_offset",
+        "scope_ref": "modules.relative_position_encoding",
+        "role": "residue_offset_signal",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 1, 4-5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_token_offset",
+        "representation_ref": "representations.relative_token_offset",
+        "scope_ref": "modules.relative_position_encoding",
+        "role": "token_offset_signal",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 1-2, 6-7"
+            }
+          ]
+        }
+      },
+      {
+        "id": "same_entity_signal",
+        "representation_ref": "representations.same_entity_signal",
+        "scope_ref": "modules.relative_position_encoding",
+        "role": "same_entity_signal",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_chain_offset",
+        "representation_ref": "representations.relative_chain_offset",
+        "scope_ref": "modules.relative_position_encoding",
+        "role": "chain_offset_signal",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 1, 8-9"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_output",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "architecture",
+        "role": "projected_relative_position_bias",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 10 (p_ij = LinearNoBias(concat([a_rel_pos_ij, a_rel_token_ij, b_same_entity_ij, a_rel_chain_ij])), p_ij in R^c_z, c_z=128); Section 3.1.2 -- this exact algorithm runs twice in AF3 (seeding z_init via Algorithm 1 line 4, and again inside DiffusionConditioning via Algorithm 21 line 1, which has no access to z_init and needs its own fresh copy of this static positional prior); this value site is the module's single shared output, ready to be consumed by either call site"
             }
           ]
         }
@@ -3133,6 +7427,521 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "noise_level",
+        "representation_ref": "representations.noise_level",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_noise_level_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 signature (DiffusionConditioning(t_hat, ...)) -- t_hat, the current denoising step's noise level, fixed by this plan as this exact id"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fourier_time_embedding",
+        "representation_ref": "representations.fourier_time_embedding",
+        "scope_ref": "modules.fourier_embedding",
+        "role": "frozen_random_cosine_features",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 22 line 2 (return cos(2*pi*(t_hat*w + b))) -- w, b are drawn once before training (line 1) and never updated by gradient descent"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_pair_conditioning_projected",
+        "representation_ref": "representations.diffusion_pair_conditioning",
+        "scope_ref": "modules.diffusion_conditioning",
+        "role": "concatenated_and_projected_pair_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 1-2 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})]); z_ij <- LinearNoBias(LayerNorm(z_ij)), z_ij in R^c_z) -- the input to the two-round Transition refinement loop at lines 3-5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_conditioned_pair",
+        "representation_ref": "representations.diffusion_pair_conditioning",
+        "scope_ref": "architecture",
+        "role": "final_diffusion_pair_conditioning_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 3-5, 13 (for all b in [1,2] do z_ij += Transition(z_ij, n=2); return {s_i}, {z_ij}) -- the pair branch's final returned tensor, which biases AttentionPairBias logits at every block of the token-level DiffusionTransformer and is also the pair tensor broadcast onto atom pairs inside the atom attention encoder at Algorithm 20 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_single_conditioning_projected",
+        "representation_ref": "representations.diffusion_single_conditioning",
+        "scope_ref": "modules.diffusion_conditioning",
+        "role": "concatenated_and_projected_single_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 6-7 (s_i = concat([s_i^trunk, s_i^inputs]); s_i <- LinearNoBias(LayerNorm(s_i)), s_i in R^c_s) -- s_i^inputs enters here in its raw, unprocessed form, distinct from any trunk-refined single state"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_single_conditioning_fourier_injected",
+        "representation_ref": "representations.diffusion_single_conditioning",
+        "scope_ref": "modules.diffusion_conditioning",
+        "role": "fourier_time_embedding_additively_injected",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the Fourier time embedding gets its own separate LayerNorm+LinearNoBias projection into c_s and is added directly into the already-projected s_i, distinct from line 6's concatenation; this is the input to the two-round Transition refinement loop at lines 10-12"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_conditioned_single",
+        "representation_ref": "representations.diffusion_single_conditioning",
+        "scope_ref": "architecture",
+        "role": "final_diffusion_single_conditioning_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 10-13 (for all b in [1,2] do s_i += Transition(s_i, n=2); return {s_i}, {z_ij}) -- the single branch's final returned tensor, which drives Adaptive LayerNorm scale/shift at every block of the token-level DiffusionTransformer and is also injected once additively at Algorithm 20 line 4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noisy_atom_positions",
+        "representation_ref": "representations.noisy_atom_positions",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_noisy_atom_positions_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 signature ({x_l^noisy} passed into DiffusionModule), the raw per-atom coordinates this denoising step starts from, fixed by this plan as this exact id"
+            }
+          ]
+        }
+      },
+      {
+        "id": "scaled_noisy_atom_positions",
+        "representation_ref": "representations.scaled_noisy_atom_positions",
+        "scope_ref": "architecture",
+        "role": "dimensionless_scaled_noisy_positions",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 2 (r_l^noisy = x_l^noisy / sqrt(t_hat^2 + sigma_data^2)), the form in which the atom attention encoder actually receives the positions; the scaling is DiffusionModule's own line, performed before the encoder call"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_single_conditioning_base",
+        "representation_ref": "representations.atom_single_conditioning",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "per_atom_reference_metadata_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 1 (c_l = LinearNoBias(concat(ref_pos, ref_charge, ref_mask, ref_element, ref_atom_name_chars))), the atom conditioning as it stands before any trunk information is added"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_single_conditioning_trunk_broadcast",
+        "representation_ref": "representations.atom_single_conditioning",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "trunk_single_broadcast_atom_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 9 (c_l += LinearNoBias(LayerNorm(s_trunk_tok_idx(l)))), where every atom inherits a projected copy of its parent token's raw trunk single representation; this is the conditioning the atom transformer actually receives"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_pair_reference_geometry",
+        "representation_ref": "representations.atom_pair_representation",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "reference_conformer_atom_pair_geometry",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 2-6 (offsets between reference positions, the same-instance validity mask v_lm, and the inverse-square-distance proximity feature, each zeroed where v_lm marks the two atoms as belonging to separately generated conformers)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_pair_trunk_broadcast",
+        "representation_ref": "representations.atom_pair_representation",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "conditioned_pair_broadcast_atom_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 10 (p_lm += LinearNoBias(LayerNorm(z_tok_idx(l) tok_idx(m)))), where z is the conditioned pair tensor DiffusionConditioning just produced, not the trunk's own pair output; see relations.conditioned_pair_broadcasts_onto_atom_pairs"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_pair_conditioning_refined",
+        "representation_ref": "representations.atom_pair_representation",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "atom_pair_after_conditioning_fold_and_mlp",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 13-14 (p_lm += LinearNoBias(relu(c_l)) + LinearNoBias(relu(c_m)), then a 3-layer ReLU MLP), the same outer-sum-of-two-projections pattern used to build z_init; in conditioned mode the c_l folded in here already carries the trunk broadcast from line 9"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_initial",
+        "representation_ref": "representations.atom_single_representation",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "atom_query_initialized_from_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 7 (q_l = c_l), which the algorithm box places before line 9's trunk broadcast, so the copy taken here is of the reference-metadata conditioning only; see open_questions.atom_encoder_query_initialization_order_paper_code_divergence"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_with_noisy_position",
+        "representation_ref": "representations.atom_single_representation",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "atom_query_with_projected_noisy_position",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 11 (q_l += LinearNoBias(r_l)), the line that turns the query into a real denoising signal by encoding both what the atom should look like and where it currently sits"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_after_encoder_transformer",
+        "representation_ref": "representations.atom_single_representation",
+        "scope_ref": "modules.atom_attention_encoder_conditioned",
+        "role": "atom_query_after_encoder_atom_transformer",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15 ({q_l} = AtomTransformer({q_l}, {c_l}, {p_lm}, N_block=3, N_head=4)), the per-atom activation as it stands after sequence-local attention and before mean-pooling to tokens"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_token_output",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "architecture",
+        "role": "mean_pooled_per_token_atom_encoding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 16 (a_i = mean over the atoms of token i of relu(LinearNoBias(q_l))), the encoder's aggregated per-token output and the tensor the token-level transformer works on, fixed by this plan as this exact id"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_query_skip",
+        "representation_ref": "representations.atom_single_representation",
+        "scope_ref": "architecture",
+        "role": "encoder_query_skip_tensor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 17 (q_l^skip = q_l), discarded by the bare-mode call in Algorithm 2 line 1 and used here as the decoder's starting point rather than recomputing per-atom detail"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_single_conditioning_skip",
+        "representation_ref": "representations.atom_single_conditioning",
+        "scope_ref": "architecture",
+        "role": "encoder_single_conditioning_skip_tensor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 17 (c_l^skip = c_l), reused unchanged by the decoder at Algorithm 6 line 2; atom identity and the trunk broadcast do not change within one denoising step, so nothing here is recomputed"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_encoder_pair_skip",
+        "representation_ref": "representations.atom_pair_representation",
+        "scope_ref": "architecture",
+        "role": "encoder_pair_skip_tensor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 17 (p_lm^skip = p_lm), reused unchanged as the decoder's pair bias at Algorithm 6 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sequence_local_atom_attention_mask",
+        "representation_ref": "representations.sequence_local_attention_mask",
+        "scope_ref": "architecture",
+        "role": "sequence_local_attention_mask_term",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 7 line 1, computed identically for every AtomTransformer call and modeled here as one shared value site because it depends only on flat atom indexing and the fixed window sizes, not on any activation"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_activation_conditioned",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "architecture",
+        "role": "token_activation_after_additive_conditioning_injection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 4 (a_i += LinearNoBias(LayerNorm(s_i))), a one-time additive injection of the fully conditioned single vector at the token bottleneck's entrance; separate from, and in addition to, the Adaptive LayerNorm modulation that then happens inside every one of the 24 blocks"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_block_input",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "modules.diffusion_transformer_token_level",
+        "role": "diffusion_transformer_block_activation_read",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 lines 1-3, the activation as one block reads it; both branches of the block read this same value independently"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_attention_branch",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "modules.diffusion_transformer_token_level",
+        "role": "attention_branch_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2 (b_i = AttentionPairBias(a_i, s_i, z_ij, beta_ij, N_head)), the attention branch's returned update with no residual of its own"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_transition_branch",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "modules.diffusion_transformer_token_level",
+        "role": "transition_branch_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3 (ConditionedTransitionBlock(a_i, s_i)), which reads the block's original input rather than the attention branch's output"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_block_output",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "modules.diffusion_transformer_token_level",
+        "role": "diffusion_transformer_block_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3 (a_i <- b_i + ConditionedTransitionBlock(a_i, s_i)), the block's single combined update; see open_questions.diffusion_transformer_block_residual_paper_code_divergence"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_token_activation_normalized",
+        "representation_ref": "representations.diffusion_token_activation",
+        "scope_ref": "architecture",
+        "role": "token_activation_after_output_layer_norm",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 6 (a_i <- LayerNorm(a_i)), applied to the 24-block stack's output before the atom decoder reads it"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_broadcast_with_skip",
+        "representation_ref": "representations.atom_single_representation",
+        "scope_ref": "modules.atom_attention_decoder",
+        "role": "broadcast_token_update_added_to_query_skip",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 1 (q_l = LinearNoBias(a_tok_idx(l)) + q_l^skip), where each atom picks up its parent token's updated activation and adds it to where that atom left off before the token bottleneck"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_after_decoder_transformer",
+        "representation_ref": "representations.atom_single_representation",
+        "scope_ref": "modules.atom_attention_decoder",
+        "role": "atom_query_after_decoder_atom_transformer",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 ({q_l} = AtomTransformer({q_l}, {c_l^skip}, {p_lm^skip}, N_block=3, N_head=4)), local reconciliation of the just-broadcast token update against each atom's own saved fine context"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_attention_decoder_position_update",
+        "representation_ref": "representations.atom_position_update",
+        "scope_ref": "architecture",
+        "role": "per_atom_position_update_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), the decoder's returned per-atom update, consumed by Algorithm 20 line 8's blending step, fixed by this plan as this exact id"
+            }
+          ]
+        }
+      },
+      {
+        "id": "denoised_atom_positions",
+        "representation_ref": "representations.denoised_atom_positions",
+        "scope_ref": "architecture",
+        "boundary": "output",
+        "role": "diffusion_module_denoised_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 9 (return {x_l^out}), the module's own returned coordinates for this denoising step; this architecture's new terminal output, fixed by this task as this exact id"
+            }
+          ]
+        }
       }
     ],
     "valueSiteInterfaces": {
@@ -3203,13 +8012,17 @@ export const manifest = {
 
         ],
         "outgoingRelationRefs": [
-          "relations.atom_reference_features_enter_atom_attention_encoder"
+          "relations.atom_reference_features_enter_atom_attention_encoder",
+          "relations.atom_reference_features_enter_conditioned_atom_encoder",
+          "relations.atom_layout_determines_locality_mask"
         ],
         "producerRefs": [
 
         ],
         "consumerRefs": [
-          "modules.atom_attention_encoder_bare"
+          "modules.atom_attention_encoder_bare",
+          "modules.atom_attention_encoder_conditioned",
+          "modules.sequence_local_attention_mask"
         ]
       },
       "restype_input": {
@@ -3261,7 +8074,8 @@ export const manifest = {
         "outgoingRelationRefs": [
           "relations.s_inputs_enters_single_state_projection",
           "relations.s_inputs_enters_pair_state_projection",
-          "relations.s_inputs_enters_msa_row_embedding"
+          "relations.s_inputs_enters_msa_row_embedding",
+          "relations.s_inputs_enters_diffusion_conditioning"
         ],
         "producerRefs": [
           "modules.input_feature_concatenation"
@@ -3269,7 +8083,8 @@ export const manifest = {
         "consumerRefs": [
           "modules.single_state_input_projection",
           "modules.pair_state_input_projection",
-          "modules.msa_row_embedding"
+          "modules.msa_row_embedding",
+          "modules.diffusion_conditioning"
         ]
       },
       "z_init": {
@@ -3441,13 +8256,15 @@ export const manifest = {
           "relations.final_single_block_state_becomes_output"
         ],
         "outgoingRelationRefs": [
-
+          "relations.single_state_output_enters_diffusion_conditioning",
+          "relations.raw_trunk_single_broadcasts_onto_atoms"
         ],
         "producerRefs": [
           "value_sites.single_after_transition"
         ],
         "consumerRefs": [
-
+          "modules.diffusion_conditioning",
+          "modules.atom_attention_encoder_conditioned"
         ]
       },
       "pair_state_output": {
@@ -3455,13 +8272,13 @@ export const manifest = {
           "relations.final_pair_block_state_becomes_output"
         ],
         "outgoingRelationRefs": [
-
+          "relations.pair_state_output_enters_diffusion_conditioning"
         ],
         "producerRefs": [
           "value_sites.pair_after_transition"
         ],
         "consumerRefs": [
-
+          "modules.diffusion_conditioning"
         ]
       },
       "msa_input": {
@@ -3581,13 +8398,141 @@ export const manifest = {
 
         ],
         "outgoingRelationRefs": [
+          "relations.asym_id_conditions_relative_position_encoding",
           "relations.asym_id_conditions_feature_construction"
         ],
         "producerRefs": [
 
         ],
         "consumerRefs": [
+          "modules.relative_position_encoding",
           "modules.template_pair_feature_construction"
+        ]
+      },
+      "entity_id": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.entity_id_enters_relative_position_encoding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.relative_position_encoding"
+        ]
+      },
+      "residue_index": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.residue_index_enters_relative_position_encoding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.relative_position_encoding"
+        ]
+      },
+      "sym_id": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.sym_id_enters_relative_position_encoding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.relative_position_encoding"
+        ]
+      },
+      "token_index": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.token_index_enters_relative_position_encoding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.relative_position_encoding"
+        ]
+      },
+      "relative_residue_offset": {
+        "incomingRelationRefs": [
+          "relations.relative_position_encoding_produces_residue_offset"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.relative_position_encoding"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "relative_token_offset": {
+        "incomingRelationRefs": [
+          "relations.relative_position_encoding_produces_token_offset"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.relative_position_encoding"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "same_entity_signal": {
+        "incomingRelationRefs": [
+          "relations.relative_position_encoding_produces_same_entity_signal"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.relative_position_encoding"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "relative_chain_offset": {
+        "incomingRelationRefs": [
+          "relations.relative_position_encoding_produces_chain_offset"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "modules.relative_position_encoding"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "relative_position_encoding_output": {
+        "incomingRelationRefs": [
+          "relations.relative_position_encoding_produces_output"
+        ],
+        "outgoingRelationRefs": [
+          "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+        ],
+        "producerRefs": [
+          "modules.relative_position_encoding"
+        ],
+        "consumerRefs": [
+          "modules.diffusion_conditioning"
         ]
       },
       "msa_activations": {
@@ -3958,6 +8903,486 @@ export const manifest = {
         ],
         "consumerRefs": [
           "value_sites.msa_module_pair_state_read"
+        ]
+      },
+      "noise_level": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.noise_level_enters_fourier_embedding"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "modules.fourier_embedding"
+        ]
+      },
+      "fourier_time_embedding": {
+        "incomingRelationRefs": [
+          "relations.fourier_embedding_produces_fourier_time_embedding"
+        ],
+        "outgoingRelationRefs": [
+          "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+        ],
+        "producerRefs": [
+          "modules.fourier_embedding"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_single_conditioning_fourier_injected"
+        ]
+      },
+      "diffusion_pair_conditioning_projected": {
+        "incomingRelationRefs": [
+          "relations.diffusion_conditioning_produces_pair_conditioning_projected"
+        ],
+        "outgoingRelationRefs": [
+          "relations.pair_conditioning_refined_into_diffusion_conditioned_pair"
+        ],
+        "producerRefs": [
+          "modules.diffusion_conditioning"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_conditioned_pair"
+        ]
+      },
+      "diffusion_conditioned_pair": {
+        "incomingRelationRefs": [
+          "relations.pair_conditioning_refined_into_diffusion_conditioned_pair"
+        ],
+        "outgoingRelationRefs": [
+          "relations.conditioned_pair_broadcasts_onto_atom_pairs",
+          "relations.conditioned_pair_biases_token_attention"
+        ],
+        "producerRefs": [
+          "value_sites.diffusion_pair_conditioning_projected"
+        ],
+        "consumerRefs": [
+          "modules.atom_attention_encoder_conditioned",
+          "modules.token_attention_pair_bias"
+        ]
+      },
+      "diffusion_single_conditioning_projected": {
+        "incomingRelationRefs": [
+          "relations.diffusion_conditioning_produces_single_conditioning_projected"
+        ],
+        "outgoingRelationRefs": [
+          "relations.single_conditioning_projected_carries_into_fourier_injection"
+        ],
+        "producerRefs": [
+          "modules.diffusion_conditioning"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_single_conditioning_fourier_injected"
+        ]
+      },
+      "diffusion_single_conditioning_fourier_injected": {
+        "incomingRelationRefs": [
+          "relations.single_conditioning_projected_carries_into_fourier_injection",
+          "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+        ],
+        "outgoingRelationRefs": [
+          "relations.single_conditioning_refined_into_diffusion_conditioned_single"
+        ],
+        "producerRefs": [
+          "value_sites.diffusion_single_conditioning_projected",
+          "value_sites.fourier_time_embedding"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_conditioned_single"
+        ]
+      },
+      "diffusion_conditioned_single": {
+        "incomingRelationRefs": [
+          "relations.single_conditioning_refined_into_diffusion_conditioned_single"
+        ],
+        "outgoingRelationRefs": [
+          "relations.conditioned_single_injected_into_token_activation",
+          "relations.conditioned_single_drives_token_attention_adaln",
+          "relations.conditioned_single_drives_token_transition_adaln"
+        ],
+        "producerRefs": [
+          "value_sites.diffusion_single_conditioning_fourier_injected"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_token_activation_conditioned",
+          "modules.token_attention_pair_bias",
+          "modules.token_conditioned_transition"
+        ]
+      },
+      "noisy_atom_positions": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.noisy_positions_scaled_to_unit_variance",
+          "relations.noisy_positions_weighted_into_denoised_output"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "value_sites.scaled_noisy_atom_positions",
+          "value_sites.denoised_atom_positions"
+        ]
+      },
+      "scaled_noisy_atom_positions": {
+        "incomingRelationRefs": [
+          "relations.noisy_positions_scaled_to_unit_variance"
+        ],
+        "outgoingRelationRefs": [
+          "relations.scaled_noisy_positions_enter_atom_encoder"
+        ],
+        "producerRefs": [
+          "value_sites.noisy_atom_positions"
+        ],
+        "consumerRefs": [
+          "modules.atom_attention_encoder_conditioned"
+        ]
+      },
+      "atom_single_conditioning_base": {
+        "incomingRelationRefs": [
+          "relations.atom_encoder_embeds_reference_metadata"
+        ],
+        "outgoingRelationRefs": [
+          "relations.trunk_single_added_to_atom_conditioning",
+          "relations.atom_conditioning_initializes_atom_query"
+        ],
+        "producerRefs": [
+          "modules.atom_attention_encoder_conditioned"
+        ],
+        "consumerRefs": [
+          "value_sites.atom_single_conditioning_trunk_broadcast",
+          "value_sites.atom_query_initial"
+        ]
+      },
+      "atom_single_conditioning_trunk_broadcast": {
+        "incomingRelationRefs": [
+          "relations.trunk_single_added_to_atom_conditioning"
+        ],
+        "outgoingRelationRefs": [
+          "relations.atom_conditioning_drives_encoder_atom_transformer",
+          "relations.encoder_saves_conditioning_skip"
+        ],
+        "producerRefs": [
+          "value_sites.atom_single_conditioning_base"
+        ],
+        "consumerRefs": [
+          "modules.atom_encoder_atom_transformer",
+          "value_sites.atom_attention_encoder_single_conditioning_skip"
+        ]
+      },
+      "atom_pair_reference_geometry": {
+        "incomingRelationRefs": [
+          "relations.atom_encoder_embeds_reference_pair_geometry"
+        ],
+        "outgoingRelationRefs": [
+          "relations.conditioned_pair_added_to_atom_pair"
+        ],
+        "producerRefs": [
+          "modules.atom_attention_encoder_conditioned"
+        ],
+        "consumerRefs": [
+          "value_sites.atom_pair_trunk_broadcast"
+        ]
+      },
+      "atom_pair_trunk_broadcast": {
+        "incomingRelationRefs": [
+          "relations.conditioned_pair_added_to_atom_pair"
+        ],
+        "outgoingRelationRefs": [
+          "relations.atom_conditioning_folded_into_atom_pair"
+        ],
+        "producerRefs": [
+          "value_sites.atom_pair_reference_geometry"
+        ],
+        "consumerRefs": [
+          "value_sites.atom_pair_conditioning_refined"
+        ]
+      },
+      "atom_pair_conditioning_refined": {
+        "incomingRelationRefs": [
+          "relations.atom_conditioning_folded_into_atom_pair"
+        ],
+        "outgoingRelationRefs": [
+          "relations.atom_pair_biases_encoder_atom_transformer",
+          "relations.encoder_saves_pair_skip"
+        ],
+        "producerRefs": [
+          "value_sites.atom_pair_trunk_broadcast"
+        ],
+        "consumerRefs": [
+          "modules.atom_encoder_atom_transformer",
+          "value_sites.atom_attention_encoder_pair_skip"
+        ]
+      },
+      "atom_query_initial": {
+        "incomingRelationRefs": [
+          "relations.atom_conditioning_initializes_atom_query"
+        ],
+        "outgoingRelationRefs": [
+          "relations.noisy_position_added_to_atom_query"
+        ],
+        "producerRefs": [
+          "value_sites.atom_single_conditioning_base"
+        ],
+        "consumerRefs": [
+          "value_sites.atom_query_with_noisy_position"
+        ]
+      },
+      "atom_query_with_noisy_position": {
+        "incomingRelationRefs": [
+          "relations.noisy_position_added_to_atom_query"
+        ],
+        "outgoingRelationRefs": [
+          "relations.atom_query_enters_encoder_atom_transformer"
+        ],
+        "producerRefs": [
+          "value_sites.atom_query_initial"
+        ],
+        "consumerRefs": [
+          "modules.atom_encoder_atom_transformer"
+        ]
+      },
+      "atom_query_after_encoder_transformer": {
+        "incomingRelationRefs": [
+          "relations.encoder_atom_transformer_produces_query"
+        ],
+        "outgoingRelationRefs": [
+          "relations.encoder_pools_atom_queries_into_token_activation",
+          "relations.encoder_saves_query_skip"
+        ],
+        "producerRefs": [
+          "modules.atom_encoder_atom_transformer"
+        ],
+        "consumerRefs": [
+          "value_sites.atom_attention_encoder_token_output",
+          "value_sites.atom_attention_encoder_query_skip"
+        ]
+      },
+      "atom_attention_encoder_token_output": {
+        "incomingRelationRefs": [
+          "relations.encoder_pools_atom_queries_into_token_activation"
+        ],
+        "outgoingRelationRefs": [
+          "relations.encoder_token_output_enters_token_bottleneck"
+        ],
+        "producerRefs": [
+          "value_sites.atom_query_after_encoder_transformer"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_token_activation_conditioned"
+        ]
+      },
+      "atom_attention_encoder_query_skip": {
+        "incomingRelationRefs": [
+          "relations.encoder_saves_query_skip"
+        ],
+        "outgoingRelationRefs": [
+          "relations.query_skip_enters_atom_decoder"
+        ],
+        "producerRefs": [
+          "value_sites.atom_query_after_encoder_transformer"
+        ],
+        "consumerRefs": [
+          "modules.atom_attention_decoder"
+        ]
+      },
+      "atom_attention_encoder_single_conditioning_skip": {
+        "incomingRelationRefs": [
+          "relations.encoder_saves_conditioning_skip"
+        ],
+        "outgoingRelationRefs": [
+          "relations.conditioning_skip_drives_decoder_atom_transformer"
+        ],
+        "producerRefs": [
+          "value_sites.atom_single_conditioning_trunk_broadcast"
+        ],
+        "consumerRefs": [
+          "modules.atom_decoder_atom_transformer"
+        ]
+      },
+      "atom_attention_encoder_pair_skip": {
+        "incomingRelationRefs": [
+          "relations.encoder_saves_pair_skip"
+        ],
+        "outgoingRelationRefs": [
+          "relations.pair_skip_biases_decoder_atom_transformer"
+        ],
+        "producerRefs": [
+          "value_sites.atom_pair_conditioning_refined"
+        ],
+        "consumerRefs": [
+          "modules.atom_decoder_atom_transformer"
+        ]
+      },
+      "sequence_local_atom_attention_mask": {
+        "incomingRelationRefs": [
+          "relations.locality_mask_module_produces_mask"
+        ],
+        "outgoingRelationRefs": [
+          "relations.locality_mask_restricts_encoder_atom_transformer",
+          "relations.locality_mask_restricts_decoder_atom_transformer"
+        ],
+        "producerRefs": [
+          "modules.sequence_local_attention_mask"
+        ],
+        "consumerRefs": [
+          "modules.atom_encoder_atom_transformer",
+          "modules.atom_decoder_atom_transformer"
+        ]
+      },
+      "diffusion_token_activation_conditioned": {
+        "incomingRelationRefs": [
+          "relations.encoder_token_output_enters_token_bottleneck",
+          "relations.conditioned_single_injected_into_token_activation"
+        ],
+        "outgoingRelationRefs": [
+          "relations.conditioned_token_activation_initializes_block_state"
+        ],
+        "producerRefs": [
+          "value_sites.atom_attention_encoder_token_output",
+          "value_sites.diffusion_conditioned_single"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_token_block_input"
+        ]
+      },
+      "diffusion_token_block_input": {
+        "incomingRelationRefs": [
+          "relations.conditioned_token_activation_initializes_block_state",
+          "relations.token_block_output_reenters_next_block"
+        ],
+        "outgoingRelationRefs": [
+          "relations.token_block_activation_enters_attention_branch",
+          "relations.token_block_activation_enters_transition_branch"
+        ],
+        "producerRefs": [
+          "value_sites.diffusion_token_activation_conditioned",
+          "value_sites.diffusion_token_block_output"
+        ],
+        "consumerRefs": [
+          "modules.token_attention_pair_bias",
+          "modules.token_conditioned_transition"
+        ]
+      },
+      "diffusion_token_attention_branch": {
+        "incomingRelationRefs": [
+          "relations.token_attention_branch_produces_update"
+        ],
+        "outgoingRelationRefs": [
+          "relations.token_attention_branch_updates_block_output"
+        ],
+        "producerRefs": [
+          "modules.token_attention_pair_bias"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_token_block_output"
+        ]
+      },
+      "diffusion_token_transition_branch": {
+        "incomingRelationRefs": [
+          "relations.token_transition_branch_produces_update"
+        ],
+        "outgoingRelationRefs": [
+          "relations.token_transition_branch_updates_block_output"
+        ],
+        "producerRefs": [
+          "modules.token_conditioned_transition"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_token_block_output"
+        ]
+      },
+      "diffusion_token_block_output": {
+        "incomingRelationRefs": [
+          "relations.token_attention_branch_updates_block_output",
+          "relations.token_transition_branch_updates_block_output"
+        ],
+        "outgoingRelationRefs": [
+          "relations.token_block_output_reenters_next_block",
+          "relations.final_token_block_output_normalized"
+        ],
+        "producerRefs": [
+          "value_sites.diffusion_token_attention_branch",
+          "value_sites.diffusion_token_transition_branch"
+        ],
+        "consumerRefs": [
+          "value_sites.diffusion_token_block_input",
+          "value_sites.diffusion_token_activation_normalized"
+        ]
+      },
+      "diffusion_token_activation_normalized": {
+        "incomingRelationRefs": [
+          "relations.final_token_block_output_normalized"
+        ],
+        "outgoingRelationRefs": [
+          "relations.normalized_token_activation_enters_atom_decoder"
+        ],
+        "producerRefs": [
+          "value_sites.diffusion_token_block_output"
+        ],
+        "consumerRefs": [
+          "modules.atom_attention_decoder"
+        ]
+      },
+      "atom_query_broadcast_with_skip": {
+        "incomingRelationRefs": [
+          "relations.atom_decoder_broadcasts_token_update_onto_atoms"
+        ],
+        "outgoingRelationRefs": [
+          "relations.atom_query_enters_decoder_atom_transformer"
+        ],
+        "producerRefs": [
+          "modules.atom_attention_decoder"
+        ],
+        "consumerRefs": [
+          "modules.atom_decoder_atom_transformer"
+        ]
+      },
+      "atom_query_after_decoder_transformer": {
+        "incomingRelationRefs": [
+          "relations.decoder_atom_transformer_produces_query"
+        ],
+        "outgoingRelationRefs": [
+          "relations.decoder_query_projected_to_position_update"
+        ],
+        "producerRefs": [
+          "modules.atom_decoder_atom_transformer"
+        ],
+        "consumerRefs": [
+          "value_sites.atom_attention_decoder_position_update"
+        ]
+      },
+      "atom_attention_decoder_position_update": {
+        "incomingRelationRefs": [
+          "relations.decoder_query_projected_to_position_update"
+        ],
+        "outgoingRelationRefs": [
+          "relations.position_update_weighted_into_denoised_output"
+        ],
+        "producerRefs": [
+          "value_sites.atom_query_after_decoder_transformer"
+        ],
+        "consumerRefs": [
+          "value_sites.denoised_atom_positions"
+        ]
+      },
+      "denoised_atom_positions": {
+        "incomingRelationRefs": [
+          "relations.noisy_positions_weighted_into_denoised_output",
+          "relations.position_update_weighted_into_denoised_output"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "value_sites.noisy_atom_positions",
+          "value_sites.atom_attention_decoder_position_update"
+        ],
+        "consumerRefs": [
+
         ]
       }
     },
@@ -5597,6 +11022,206 @@ export const manifest = {
         }
       },
       {
+        "id": "asym_id_conditions_relative_position_encoding",
+        "from": "value_sites.asym_id",
+        "to": "modules.relative_position_encoding",
+        "kind": "conditioning",
+        "carries": [
+          "representations.asym_id"
+        ],
+        "operation": "determine_same_chain_gate_for_offset_signals",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 1 (b_same_chain_ij = f_i^asym_id == f_j^asym_id), gating line 4's a_rel_pos (same-chain), line 6's a_rel_token (same-chain and same-residue), and line 8's a_rel_chain (not same-chain, per the paper's literal condition -- see open_questions.relative_chain_offset_gate_paper_code_divergence for the reference implementation's differing gate)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "entity_id_enters_relative_position_encoding",
+        "from": "value_sites.entity_id",
+        "to": "modules.relative_position_encoding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.entity_id"
+        ],
+        "operation": "provide_raw_entity_id_for_same_entity_signal",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 3 (b_same_entity_ij = f_i^entity_id == f_j^entity_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "residue_index_enters_relative_position_encoding",
+        "from": "value_sites.residue_index",
+        "to": "modules.relative_position_encoding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.residue_index"
+        ],
+        "operation": "provide_raw_residue_index_for_offset_and_same_residue_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 2, 4 (b_same_residue_ij = f_i^residue_index == f_j^residue_index; d_residue_ij built from f_i^residue_index - f_j^residue_index)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sym_id_enters_relative_position_encoding",
+        "from": "value_sites.sym_id",
+        "to": "modules.relative_position_encoding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sym_id"
+        ],
+        "operation": "provide_raw_sym_id_for_chain_offset",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 8 (d_chain_ij built from f_i^sym_id - f_j^sym_id)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_index_enters_relative_position_encoding",
+        "from": "value_sites.token_index",
+        "to": "modules.relative_position_encoding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.token_index"
+        ],
+        "operation": "provide_raw_token_index_for_finer_offset",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 6 (d_token_ij built from f_i^token_index - f_j^token_index)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_produces_residue_offset",
+        "from": "modules.relative_position_encoding",
+        "to": "value_sites.relative_residue_offset",
+        "kind": "data_flow",
+        "carries": [
+          "representations.relative_residue_offset"
+        ],
+        "operation": "bucket_and_gate_residue_index_offset",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 4-5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_produces_token_offset",
+        "from": "modules.relative_position_encoding",
+        "to": "value_sites.relative_token_offset",
+        "kind": "data_flow",
+        "carries": [
+          "representations.relative_token_offset"
+        ],
+        "operation": "bucket_and_gate_token_index_offset",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 6-7"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_produces_same_entity_signal",
+        "from": "modules.relative_position_encoding",
+        "to": "value_sites.same_entity_signal",
+        "kind": "data_flow",
+        "carries": [
+          "representations.same_entity_signal"
+        ],
+        "operation": "compute_same_entity_boolean",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_produces_chain_offset",
+        "from": "modules.relative_position_encoding",
+        "to": "value_sites.relative_chain_offset",
+        "kind": "data_flow",
+        "carries": [
+          "representations.relative_chain_offset"
+        ],
+        "operation": "bucket_and_gate_chain_offset",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 lines 8-9"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_produces_output",
+        "from": "modules.relative_position_encoding",
+        "to": "value_sites.relative_position_encoding_output",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "concatenate_and_project_relative_position_signals",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 10 (p_ij = LinearNoBias(concat([a_rel_pos_ij, a_rel_token_ij, b_same_entity_ij, a_rel_chain_ij])))"
+            }
+          ]
+        }
+      },
+      {
         "id": "msa_input_enters_row_embedding",
         "from": "value_sites.msa_input",
         "to": "modules.msa_row_embedding",
@@ -6695,6 +12320,1246 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "pair_state_output_enters_diffusion_conditioning",
+        "from": "value_sites.pair_state_output",
+        "to": "modules.diffusion_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "provide_trunk_pair_for_pair_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- z_trunk is the trunk's own final pair output"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_output_enters_diffusion_conditioning",
+        "from": "value_sites.relative_position_encoding_output",
+        "to": "modules.diffusion_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "provide_relative_position_encoding_for_pair_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- this call has no access to z_init and needs its own fresh copy of the static positional prior, distinct from the copy that seeded z_init at Algorithm 1 line 4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_state_output_enters_diffusion_conditioning",
+        "from": "value_sites.single_state_output",
+        "to": "modules.diffusion_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "provide_trunk_single_for_single_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 6 (s_i = concat([s_i^trunk, s_i^inputs])) -- s_trunk is the trunk's own final single output"
+            }
+          ]
+        }
+      },
+      {
+        "id": "s_inputs_enters_diffusion_conditioning",
+        "from": "value_sites.s_inputs",
+        "to": "modules.diffusion_conditioning",
+        "kind": "data_flow",
+        "carries": [
+          "representations.s_inputs"
+        ],
+        "operation": "provide_raw_input_embedding_for_single_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 6 (s_i = concat([s_i^trunk, s_i^inputs])) -- s_i^inputs enters here in its raw, unprocessed form, the same value read independently by value_sites.z_init's outer-sum projection, not any trunk-refined version of it"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_conditioning_produces_pair_conditioning_projected",
+        "from": "modules.diffusion_conditioning",
+        "to": "value_sites.diffusion_pair_conditioning_projected",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_pair_conditioning"
+        ],
+        "operation": "concatenate_and_project_pair_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 1-2 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})]); z_ij <- LinearNoBias(LayerNorm(z_ij)), z_ij in R^c_z)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_conditioning_refined_into_diffusion_conditioned_pair",
+        "from": "value_sites.diffusion_pair_conditioning_projected",
+        "to": "value_sites.diffusion_conditioned_pair",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_pair_conditioning"
+        ],
+        "operation": "refine_pair_conditioning_via_two_transition_rounds",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 3-5 (for all b in [1,2] do z_ij += Transition(z_ij, n=2)) -- two rounds of residual SwiGLU refinement, not separately modeled per-iteration, the same granularity already used for this architecture's other repeated Transition applications"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_conditioning_produces_single_conditioning_projected",
+        "from": "modules.diffusion_conditioning",
+        "to": "value_sites.diffusion_single_conditioning_projected",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_single_conditioning"
+        ],
+        "operation": "concatenate_and_project_single_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 6-7 (s_i = concat([s_i^trunk, s_i^inputs]); s_i <- LinearNoBias(LayerNorm(s_i)), s_i in R^c_s)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noise_level_enters_fourier_embedding",
+        "from": "value_sites.noise_level",
+        "to": "modules.fourier_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "compress_and_provide_noise_level_for_fourier_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 8 (n = FourierEmbedding(1/4 * log(t_hat/sigma_data), 256)) -- the log-compression by 1/4 * log(t_hat/sigma_data), sigma_data=16 per Algorithm 20's signature, happens before the call, not inside FourierEmbedding itself"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fourier_embedding_produces_fourier_time_embedding",
+        "from": "modules.fourier_embedding",
+        "to": "value_sites.fourier_time_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.fourier_time_embedding"
+        ],
+        "operation": "compute_frozen_random_cosine_features",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 22 (FourierEmbedding), full algorithm box"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_conditioning_projected_carries_into_fourier_injection",
+        "from": "value_sites.diffusion_single_conditioning_projected",
+        "to": "value_sites.diffusion_single_conditioning_fourier_injected",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_single_conditioning"
+        ],
+        "operation": "carry_forward_projected_single_conditioning_as_fourier_injection_base",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the \"+=\" left-hand side is the same s_i value_sites.diffusion_single_conditioning_projected already holds"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fourier_time_embedding_additively_injected_into_single_conditioning",
+        "from": "value_sites.fourier_time_embedding",
+        "to": "value_sites.diffusion_single_conditioning_fourier_injected",
+        "kind": "state_update",
+        "carries": [
+          "representations.fourier_time_embedding"
+        ],
+        "operation": "project_and_additively_inject_fourier_time_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the Fourier embedding gets its own separate LayerNorm+LinearNoBias projection into c_s, distinct from line 7's projection, and is added (\"+=\") into the already-projected s_i rather than concatenated in alongside s_trunk/s_inputs at line 6"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_conditioning_refined_into_diffusion_conditioned_single",
+        "from": "value_sites.diffusion_single_conditioning_fourier_injected",
+        "to": "value_sites.diffusion_conditioned_single",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_single_conditioning"
+        ],
+        "operation": "refine_single_conditioning_via_two_transition_rounds",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 21 lines 10-12 (for all b in [1,2] do s_i += Transition(s_i, n=2)) -- two rounds of residual SwiGLU refinement, not separately modeled per-iteration, the same granularity already used for this architecture's other repeated Transition applications"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noisy_positions_scaled_to_unit_variance",
+        "from": "value_sites.noisy_atom_positions",
+        "to": "value_sites.scaled_noisy_atom_positions",
+        "kind": "state_update",
+        "carries": [
+          "representations.scaled_noisy_atom_positions"
+        ],
+        "operation": "scale_positions_to_dimensionless_unit_variance",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 2 (r_l^noisy = x_l^noisy / sqrt(t_hat^2 + sigma_data^2)). This is DiffusionModule's own line, applied before the atom encoder is called, so the encoder only ever sees positions that are already dimensionless; without it the same weights would have to cope with a coordinate range that changes by orders of magnitude along the noise schedule"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__, which divides positions_noisy by sqrt(noise_level**2 + SIGMA_DATA**2) before passing the result to atom_cross_att_encoder"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_reference_features_enter_conditioned_atom_encoder",
+        "from": "value_sites.atom_reference_features_input",
+        "to": "modules.atom_attention_encoder_conditioned",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_reference_features"
+        ],
+        "operation": "provide_reference_conformer_features_for_atom_embedding",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 3 ({f*} passed into AtomAttentionEncoder); Algorithm 5 lines 1-6, the same raw per-atom features the bare-mode call in Algorithm 2 line 1 reads"
+            }
+          ]
+        }
+      },
+      {
+        "id": "scaled_noisy_positions_enter_atom_encoder",
+        "from": "value_sites.scaled_noisy_atom_positions",
+        "to": "modules.atom_attention_encoder_conditioned",
+        "kind": "data_flow",
+        "carries": [
+          "representations.scaled_noisy_atom_positions"
+        ],
+        "operation": "provide_scaled_noisy_positions_for_query_injection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 3 ({r_l^noisy} passed into AtomAttentionEncoder), the first of the three optional arguments whose presence switches the encoder from chemistry summarizer to position-correction encoder"
+            }
+          ]
+        }
+      },
+      {
+        "id": "raw_trunk_single_broadcasts_onto_atoms",
+        "from": "value_sites.single_state_output",
+        "to": "modules.atom_attention_encoder_conditioned",
+        "kind": "conditioning",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "provide_raw_trunk_single_for_atom_broadcast",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 3, where AtomAttentionEncoder is handed {s_i^trunk}, the trunk's own single representation straight from the Pairformer, and not the conditioned single tensor DiffusionConditioning produced at line 1. Compare relations.conditioned_pair_broadcasts_onto_atom_pairs, which is the conditioned tensor on the pair side; this asymmetry is deliberate and easy to get wrong in both directions"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__, whose atom_cross_att_encoder call passes trunk_single_cond=embeddings['single'] (the trunk output) while passing trunk_pair_cond=trunk_pair_cond (the value returned by _conditioning)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_pair_broadcasts_onto_atom_pairs",
+        "from": "value_sites.diffusion_conditioned_pair",
+        "to": "modules.atom_attention_encoder_conditioned",
+        "kind": "conditioning",
+        "carries": [
+          "representations.diffusion_pair_conditioning"
+        ],
+        "operation": "provide_conditioned_pair_for_atom_pair_broadcast",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 3, where AtomAttentionEncoder is handed {z_ij}, the pair tensor DiffusionConditioning just produced at line 1, and not {z_ij^trunk}. So the atom-level encoder sees the trunk's pair information only after it has been mixed with a freshly recomputed RelativePositionEncoding, while it sees the trunk's single information raw; see relations.raw_trunk_single_broadcasts_onto_atoms"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__, whose atom_cross_att_encoder call passes trunk_pair_cond=trunk_pair_cond, the second return value of _conditioning, rather than embeddings['pair']"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_encoder_embeds_reference_metadata",
+        "from": "modules.atom_attention_encoder_conditioned",
+        "to": "value_sites.atom_single_conditioning_base",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "embed_per_atom_reference_metadata",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 1, one projection of the concatenated reference position, charge, validity mask, element one-hot, and character-encoded atom name"
+            }
+          ]
+        }
+      },
+      {
+        "id": "trunk_single_added_to_atom_conditioning",
+        "from": "value_sites.atom_single_conditioning_base",
+        "to": "value_sites.atom_single_conditioning_trunk_broadcast",
+        "kind": "state_update",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "add_projected_trunk_single_to_atom_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 9 (c_l += LinearNoBias(LayerNorm(s_trunk_tok_idx(l)))). Every atom of a given residue inherits the same trunk-derived contextual vector the Pairformer computed for that residue"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_encoder_embeds_reference_pair_geometry",
+        "from": "modules.atom_attention_encoder_conditioned",
+        "to": "value_sites.atom_pair_reference_geometry",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_pair_representation"
+        ],
+        "operation": "embed_reference_offsets_and_inverse_square_distances",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 2-6. Reference-conformer positions are only meaningful within one isolated conformer, so the validity mask v_lm zeroes every pair whose two atoms come from separately generated conformers"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_pair_added_to_atom_pair",
+        "from": "value_sites.atom_pair_reference_geometry",
+        "to": "value_sites.atom_pair_trunk_broadcast",
+        "kind": "state_update",
+        "carries": [
+          "representations.atom_pair_representation"
+        ],
+        "operation": "add_projected_conditioned_pair_to_atom_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 10 (p_lm += LinearNoBias(LayerNorm(z_tok_idx(l) tok_idx(m)))), which puts the trunk's structural context, already mixed with the relative-position prior, on top of the raw reference geometry"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_conditioning_folded_into_atom_pair",
+        "from": "value_sites.atom_pair_trunk_broadcast",
+        "to": "value_sites.atom_pair_conditioning_refined",
+        "kind": "state_update",
+        "carries": [
+          "representations.atom_pair_representation"
+        ],
+        "operation": "fold_atom_conditioning_into_pair_and_run_mlp",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 13-14. In conditioned mode the c_l folded in here already carries line 9's trunk broadcast, so the pair tensor receives a second, denser context injection beyond the raw geometry features"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_conditioning_initializes_atom_query",
+        "from": "value_sites.atom_single_conditioning_base",
+        "to": "value_sites.atom_query_initial",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "copy_atom_conditioning_into_query",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 7 (q_l = c_l). The algorithm box places this copy before line 9's trunk broadcast, so the query starts from the reference-metadata conditioning alone; see open_questions.atom_encoder_query_initialization_order_paper_code_divergence"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noisy_position_added_to_atom_query",
+        "from": "value_sites.atom_query_initial",
+        "to": "value_sites.atom_query_with_noisy_position",
+        "kind": "state_update",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "add_projected_scaled_noisy_position_to_query",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 11 (q_l += LinearNoBias(r_l)). The query now encodes both what this atom's chemistry and trunk context say it should look like and where it currently sits, which is exactly what attention needs to compute a correction"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_enters_encoder_atom_transformer",
+        "from": "value_sites.atom_query_with_noisy_position",
+        "to": "modules.atom_encoder_atom_transformer",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "attend_over_local_atom_neighbourhood",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15, the first argument of the AtomTransformer call"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_conditioning_drives_encoder_atom_transformer",
+        "from": "value_sites.atom_single_conditioning_trunk_broadcast",
+        "to": "modules.atom_encoder_atom_transformer",
+        "kind": "conditioning",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "drive_adaptive_layer_norm_per_atom",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15 ({c_l} in the second argument), which Algorithm 7 line 2 forwards into the s_i slot of DiffusionTransformer. Because c_l is never None on this path, every atom-level block runs the full Adaptive LayerNorm and AdaLN-Zero machinery, conditioning each atom on its own vector rather than each token on s_i"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_pair_biases_encoder_atom_transformer",
+        "from": "value_sites.atom_pair_conditioning_refined",
+        "to": "modules.atom_encoder_atom_transformer",
+        "kind": "conditioning",
+        "carries": [
+          "representations.atom_pair_representation"
+        ],
+        "operation": "bias_atom_attention_logits",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15 ({p_lm} in the third argument), forwarded by Algorithm 7 line 2 into the z_ij slot and projected into the per-head additive bias at Algorithm 24 line 8"
+            }
+          ]
+        }
+      },
+      {
+        "id": "locality_mask_restricts_encoder_atom_transformer",
+        "from": "value_sites.sequence_local_atom_attention_mask",
+        "to": "modules.atom_encoder_atom_transformer",
+        "kind": "conditioning",
+        "carries": [
+          "representations.sequence_local_attention_mask"
+        ],
+        "operation": "restrict_attention_to_local_atom_windows",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 7 lines 1-2, where beta_lm is built and handed to DiffusionTransformer. Algorithm 24 line 8 adds it to the same term that carries the pair projection, so masking here is pair-biasing with effectively infinite negative values rather than a second, separate mechanism"
+            }
+          ]
+        }
+      },
+      {
+        "id": "encoder_atom_transformer_produces_query",
+        "from": "modules.atom_encoder_atom_transformer",
+        "to": "value_sites.atom_query_after_encoder_transformer",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "return_locally_attended_atom_query",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 15, the returned {q_l}, after three blocks of sequence-local attention and conditioned transition"
+            }
+          ]
+        }
+      },
+      {
+        "id": "encoder_pools_atom_queries_into_token_activation",
+        "from": "value_sites.atom_query_after_encoder_transformer",
+        "to": "value_sites.atom_attention_encoder_token_output",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "project_relu_and_mean_pool_atoms_to_tokens",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 16. Mean-pooling over each token's own atoms is the literal per-atom to per-token conversion mechanism, and it is what lets the expensive full self-attention stage run at token resolution instead of atom resolution"
+            }
+          ]
+        }
+      },
+      {
+        "id": "encoder_saves_query_skip",
+        "from": "value_sites.atom_query_after_encoder_transformer",
+        "to": "value_sites.atom_attention_encoder_query_skip",
+        "kind": "skip",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "save_atom_query_for_decoder",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 17 (q_l^skip = q_l), discarded by the bare-mode call in Algorithm 2 line 1 and carried across the token bottleneck here"
+            }
+          ]
+        }
+      },
+      {
+        "id": "encoder_saves_conditioning_skip",
+        "from": "value_sites.atom_single_conditioning_trunk_broadcast",
+        "to": "value_sites.atom_attention_encoder_single_conditioning_skip",
+        "kind": "skip",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "save_atom_conditioning_for_decoder",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 17 (c_l^skip = c_l), computed once per denoising step and reused by the decoder rather than recomputed"
+            }
+          ]
+        }
+      },
+      {
+        "id": "encoder_saves_pair_skip",
+        "from": "value_sites.atom_pair_conditioning_refined",
+        "to": "value_sites.atom_attention_encoder_pair_skip",
+        "kind": "skip",
+        "carries": [
+          "representations.atom_pair_representation"
+        ],
+        "operation": "save_atom_pair_for_decoder",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 17 (p_lm^skip = p_lm), reused unchanged as the decoder's pair bias"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_layout_determines_locality_mask",
+        "from": "value_sites.atom_reference_features_input",
+        "to": "modules.sequence_local_attention_mask",
+        "kind": "index_flow",
+        "carries": [
+          "representations.atom_reference_features"
+        ],
+        "operation": "provide_flat_atom_ordering_for_locality_windows",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 7 line 1, whose condition depends only on the flat atom indices l and m and the fixed window sizes, with the flat indexing itself coming from the tokenized atom layout"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py, where the queries and keys layouts (batch.atom_cross_att.queries_to_keys) are built from the feature batch's atom layout and take the place of an explicit bias tensor"
+            }
+          ]
+        }
+      },
+      {
+        "id": "locality_mask_module_produces_mask",
+        "from": "modules.sequence_local_attention_mask",
+        "to": "value_sites.sequence_local_atom_attention_mask",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sequence_local_attention_mask"
+        ],
+        "operation": "build_block_diagonal_locality_mask",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 7 line 1, the full condition with N_queries=32 and N_keys=128, giving non-overlapping 32-atom query bands whose realized 128-atom key windows overlap between neighbours"
+            }
+          ]
+        }
+      },
+      {
+        "id": "encoder_token_output_enters_token_bottleneck",
+        "from": "value_sites.atom_attention_encoder_token_output",
+        "to": "value_sites.diffusion_token_activation_conditioned",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "carry_forward_pooled_token_activation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 4, whose \"+=\" left-hand side is the same a_i the encoder just returned at line 3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_single_injected_into_token_activation",
+        "from": "value_sites.diffusion_conditioned_single",
+        "to": "value_sites.diffusion_token_activation_conditioned",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_single_conditioning"
+        ],
+        "operation": "project_and_additively_inject_conditioned_single",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 4 (a_i += LinearNoBias(LayerNorm(s_i))). This is a second, distinct conditioning channel, easy to conflate with Adaptive LayerNorm but not the same mechanism. Line 4 sets the token representation's starting point once using the full conditioning vector; Adaptive LayerNorm then re-derives a scale and shift from that same vector inside every one of the 24 blocks"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__ single_cond_embedding_projection, applied to the conditioned single and added into act before the Transformer runs"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_token_activation_initializes_block_state",
+        "from": "value_sites.diffusion_token_activation_conditioned",
+        "to": "value_sites.diffusion_token_block_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "initialize_diffusion_transformer_block_activation",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 5, the activation handed to the 24-block stack; only one representative block is modeled here, not the loop"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_block_activation_enters_attention_branch",
+        "from": "value_sites.diffusion_token_block_input",
+        "to": "modules.token_attention_pair_bias",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "attend_over_all_tokens",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2, the first argument of the AttentionPairBias call"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_single_drives_token_attention_adaln",
+        "from": "value_sites.diffusion_conditioned_single",
+        "to": "modules.token_attention_pair_bias",
+        "kind": "conditioning",
+        "carries": [
+          "representations.diffusion_single_conditioning"
+        ],
+        "operation": "drive_adaptive_layer_norm_and_output_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2 ({s_i} in the second argument), which is what makes Algorithm 24 take its conditioned branch. Because the scale and shift are recomputed from this vector at every call, one shared set of weights behaves like a different noise-level-specialized network at each point along the sampling trajectory"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_pair_biases_token_attention",
+        "from": "value_sites.diffusion_conditioned_pair",
+        "to": "modules.token_attention_pair_bias",
+        "kind": "conditioning",
+        "carries": [
+          "representations.diffusion_pair_conditioning"
+        ],
+        "operation": "bias_token_attention_logits",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2 ({z_ij} in the third argument), projected into the per-head additive bias at Algorithm 24 line 8. Algorithm 20 line 5 passes beta_ij=0 here, so the conditioned pair tensor is the only source of attention bias at token level"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_attention_branch_produces_update",
+        "from": "modules.token_attention_pair_bias",
+        "to": "value_sites.diffusion_token_attention_branch",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "return_gated_attention_update",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 2 (b_i = AttentionPairBias(...)) and Algorithm 24 line 15, which returns the gated update with nothing added back to the un-normalized input"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_block_activation_enters_transition_branch",
+        "from": "value_sites.diffusion_token_block_input",
+        "to": "modules.token_conditioned_transition",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "transform_token_activation_pointwise",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3, where ConditionedTransitionBlock is called with a_i, the block's original input from before the attention branch ran, not with b_i. This is what makes the block parallel rather than sequential"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioned_single_drives_token_transition_adaln",
+        "from": "value_sites.diffusion_conditioned_single",
+        "to": "modules.token_conditioned_transition",
+        "kind": "conditioning",
+        "carries": [
+          "representations.diffusion_single_conditioning"
+        ],
+        "operation": "drive_adaptive_layer_norm_and_output_gate",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3 ({s_i} in the second argument of ConditionedTransitionBlock); Algorithm 25 lines 1 and 3, the same two conditioning points as the attention branch"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_transition_branch_produces_update",
+        "from": "modules.token_conditioned_transition",
+        "to": "value_sites.diffusion_token_transition_branch",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "return_gated_transition_update",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 25 line 4, the returned update, with the residual sum left to the caller"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_attention_branch_updates_block_output",
+        "from": "value_sites.diffusion_token_attention_branch",
+        "to": "value_sites.diffusion_token_block_output",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "sum_attention_branch_into_block_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3 (a_i <- b_i + ConditionedTransitionBlock(a_i, s_i)), the block's only residual connection; see open_questions.diffusion_transformer_block_residual_paper_code_divergence"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_transition_branch_updates_block_output",
+        "from": "value_sites.diffusion_token_transition_branch",
+        "to": "value_sites.diffusion_token_block_output",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "sum_transition_branch_into_block_output",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3, the second term of the same sum. Both branches were computed independently off the same pre-block activation, which is the parallel attention and feedforward formulation also used by GPT-J and PaLM"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_block_output_reenters_next_block",
+        "from": "value_sites.diffusion_token_block_output",
+        "to": "value_sites.diffusion_token_block_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "reenter_next_diffusion_transformer_block",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 lines 1-4, the loop over N_block=24 blocks, each with its own parameters"
+            }
+          ]
+        }
+      },
+      {
+        "id": "final_token_block_output_normalized",
+        "from": "value_sites.diffusion_token_block_output",
+        "to": "value_sites.diffusion_token_activation_normalized",
+        "kind": "state_update",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "layer_norm_token_activation_after_transformer",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 6 (a_i <- LayerNorm(a_i)), applied once to the stack's output before the decoder reads it"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__ output_norm, applied to the Transformer's return value before atom_cross_att_decoder is called"
+            }
+          ]
+        }
+      },
+      {
+        "id": "normalized_token_activation_enters_atom_decoder",
+        "from": "value_sites.diffusion_token_activation_normalized",
+        "to": "modules.atom_attention_decoder",
+        "kind": "data_flow",
+        "carries": [
+          "representations.diffusion_token_activation"
+        ],
+        "operation": "broadcast_token_update_back_onto_atoms",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 7 ({a_i} passed into AtomAttentionDecoder); Algorithm 6 line 1, where each atom reads its own parent token's entry"
+            }
+          ]
+        }
+      },
+      {
+        "id": "query_skip_enters_atom_decoder",
+        "from": "value_sites.atom_attention_encoder_query_skip",
+        "to": "modules.atom_attention_decoder",
+        "kind": "skip",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "provide_atom_query_skip_for_broadcast_addition",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 1 (q_l = LinearNoBias(a_tok_idx(l)) + q_l^skip). The atom does not reconstruct fine-grained context from the coarse token update alone; it starts from where it left off and adds the new correction on top"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_decoder_broadcasts_token_update_onto_atoms",
+        "from": "modules.atom_attention_decoder",
+        "to": "value_sites.atom_query_broadcast_with_skip",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "project_broadcast_and_add_query_skip",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 1, the projection down to the atom channel width, the broadcast to every atom of the token, and the skip addition, in one line"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_query_enters_decoder_atom_transformer",
+        "from": "value_sites.atom_query_broadcast_with_skip",
+        "to": "modules.atom_decoder_atom_transformer",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "reconcile_broadcast_update_locally",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2, the first argument of the decoder's AtomTransformer call"
+            }
+          ]
+        }
+      },
+      {
+        "id": "conditioning_skip_drives_decoder_atom_transformer",
+        "from": "value_sites.atom_attention_encoder_single_conditioning_skip",
+        "to": "modules.atom_decoder_atom_transformer",
+        "kind": "conditioning",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "drive_adaptive_layer_norm_from_saved_conditioning",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 ({c_l^skip} in the second argument), the encoder's saved conditioning rather than a recomputed one; atom identity, reference geometry, and the trunk broadcast do not change within one denoising step"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_skip_biases_decoder_atom_transformer",
+        "from": "value_sites.atom_attention_encoder_pair_skip",
+        "to": "modules.atom_decoder_atom_transformer",
+        "kind": "conditioning",
+        "carries": [
+          "representations.atom_pair_representation"
+        ],
+        "operation": "bias_decoder_atom_attention_logits",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 ({p_lm^skip} in the third argument), the encoder's saved atom-pair tensor reused as the decoder's attention bias"
+            }
+          ]
+        }
+      },
+      {
+        "id": "locality_mask_restricts_decoder_atom_transformer",
+        "from": "value_sites.sequence_local_atom_attention_mask",
+        "to": "modules.atom_decoder_atom_transformer",
+        "kind": "conditioning",
+        "carries": [
+          "representations.sequence_local_attention_mask"
+        ],
+        "operation": "restrict_attention_to_local_atom_windows",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2 into Algorithm 7 line 1, the same locality mask the encoder pass uses, since both are AtomTransformer calls over the same atom ordering"
+            }
+          ]
+        }
+      },
+      {
+        "id": "decoder_atom_transformer_produces_query",
+        "from": "modules.atom_decoder_atom_transformer",
+        "to": "value_sites.atom_query_after_decoder_transformer",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_single_representation"
+        ],
+        "operation": "return_locally_reconciled_atom_query",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 2, the returned {q_l}, after atoms in a local neighbourhood have harmonized the broadcast token update with their own fine context and with each other"
+            }
+          ]
+        }
+      },
+      {
+        "id": "decoder_query_projected_to_position_update",
+        "from": "value_sites.atom_query_after_decoder_transformer",
+        "to": "value_sites.atom_attention_decoder_position_update",
+        "kind": "data_flow",
+        "carries": [
+          "representations.atom_position_update"
+        ],
+        "operation": "layer_norm_and_project_to_position_update",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), a projection down to a literal 3D vector in the same dimensionless space as the scaled noisy positions"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noisy_positions_weighted_into_denoised_output",
+        "from": "value_sites.noisy_atom_positions",
+        "to": "value_sites.denoised_atom_positions",
+        "kind": "state_update",
+        "carries": [
+          "representations.denoised_atom_positions"
+        ],
+        "operation": "weight_noisy_input_by_posterior_mean_skip_coefficient",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 8, first term (x_l^out = sigma_data^2/(sigma_data^2+t_hat^2) * x_l^noisy + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update); this term reads the original, unrescaled noisy input, not value_sites.scaled_noisy_atom_positions -- a posterior-mean-style blend where the noisy-input coefficient goes to zero at high noise and toward one at low noise, when the input is already nearly correct"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__ (skip_scaling = SIGMA_DATA**2 / (noise_level**2 + SIGMA_DATA**2); return (skip_scaling * positions_noisy + out_scaling * position_update) * atom_mask[..., None]) -- positions_noisy is the same raw argument used earlier only to compute the rescaled act, never itself overwritten"
+            }
+          ]
+        }
+      },
+      {
+        "id": "position_update_weighted_into_denoised_output",
+        "from": "value_sites.atom_attention_decoder_position_update",
+        "to": "value_sites.denoised_atom_positions",
+        "kind": "state_update",
+        "carries": [
+          "representations.denoised_atom_positions"
+        ],
+        "operation": "weight_position_update_by_posterior_mean_out_coefficient",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 8, second term (... + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update); this coefficient dominates at high noise, when the network's own prediction is trusted most, and shrinks toward zero at low noise"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py DiffusionHead.__call__ (out_scaling = noise_level * SIGMA_DATA / jnp.sqrt(noise_level**2 + SIGMA_DATA**2)), the coefficient applied to position_update, the atom decoder's own returned tensor, immediately before the two terms are summed and masked"
+            }
+          ]
+        }
       }
     ],
     "claims": [
@@ -6769,22 +13634,49 @@ export const manifest = {
     ],
     "openQuestions": [
       {
-        "id": "relative_position_encoding_and_token_bonds_unmodeled",
-        "question": "Algorithm 1 lines 4-5 add RelativePositionEncoding(f*) and a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3). Only the s_inputs contribution is modeled by pair_state_projection_produces_z_init; RelativePositionEncoding and the token_bonds embedding are real, additional contributors to z_init that are not yet represented as their own value sites, modules, or relations.",
+        "id": "token_bonds_embedding_unmodeled",
+        "question": "Algorithm 1 line 5 adds a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3) and RelativePositionEncoding (line 4). RelativePositionEncoding is now modeled by modules.relative_position_encoding and reachable via value_sites.relative_position_encoding_output, but no relation wires that output into value_sites.z_init itself -- only s_inputs (via relations.pair_state_projection_produces_z_init) is a graph-connected contributor to z_init today. The token_bonds embedding -- a separate, small contributor to z_init built from user-provided bond information, unrelated to modules.relative_position_encoding -- is not yet represented as its own value site, module, or relation at all.",
         "status": "deferred",
         "affected_refs": [
           "value_sites.z_init",
           "relations.pair_state_projection_produces_z_init",
           "modules.pair_state_input_projection"
         ],
-        "resolution_criteria": "Model RelativePositionEncoding (Algorithm 3) and the token_bonds embedding as their own boundary:input value sites and relations feeding z_init, alongside the existing s_inputs outer-sum contribution.",
+        "resolution_criteria": "Model the token_bonds embedding (a LinearNoBias projection of the user-provided token_bonds feature) as its own boundary:input value site and relation feeding z_init, alongside the existing s_inputs contribution (relations.pair_state_projection_produces_z_init). Separately, and only if wanted, also add a relation from value_sites.relative_position_encoding_output into z_init -- RelativePositionEncoding is modeled but that specific wire does not exist yet.",
         "evidence": {
           "status": "open_question",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 lines 4-5"
+              "locator": "Supplementary Algorithm 1 line 5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_chain_offset_gate_paper_code_divergence",
+        "question": "Supplementary Algorithm 3 line 8 (paper) gates a_rel_chain's offset on \"not b_same_chain\" (built from asym_id) -- same-chain token pairs fall into the catch-all bucket, cross-chain pairs get a real offset. The reference implementation's create_relative_encoding() instead gates the equivalent computation on entity_id_same. These are not equivalent conditions -- same-chain implies same-entity, but same-entity does not imply same-chain (e.g. two different physical copies of a homotrimer share entity_id but not asym_id), so a same-chain token pair gets the catch-all bucket per the paper but a real (zero) offset per the code. representations.relative_chain_offset and its producing relation are grounded in the paper's literal condition, not the code's.",
+        "status": "deferred",
+        "affected_refs": [
+          "representations.relative_chain_offset",
+          "modules.relative_position_encoding",
+          "relations.relative_position_encoding_produces_chain_offset",
+          "relations.asym_id_conditions_relative_position_encoding"
+        ],
+        "resolution_criteria": "Determine which condition the shipped model actually relies on (e.g. by tracing training/inference behavior on a same-chain, same-entity example) and, if it differs from the paper's literal Algorithm 3 line 8, update representations.relative_chain_offset's construction and evidence to match the reference implementation instead.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 3 line 8 (d_chain_ij gated on not b_same_chain_ij)"
+            },
+            {
+              "source_ref": "af3_featurization_code",
+              "role": "implementation_evidence",
+              "locator": "create_relative_encoding(), rel_chain construction (final_rel_chain = jnp.where(entity_id_same, clipped_rel_chain, catch_all))"
             }
           ]
         }
@@ -6805,6 +13697,61 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 8 line 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_transformer_block_residual_paper_code_divergence",
+        "question": "Supplementary Algorithm 23 line 3 reads a_i <- b_i + ConditionedTransitionBlock(a_i, s_i), where b_i is the attention branch's own return value. Neither Algorithm 24 nor Algorithm 25 adds anything back to its un-normalized input, so read literally the block output is Attention(a) + Transition(a), with no identity path for a itself, and the transition branch reads the pre-attention activation. The released implementation instead applies two sequential residual updates, act += self_attention(act, ...) followed by act += transition_block(act, ...), so the transition branch reads the post-attention activation and the block keeps an identity path. The two agree that each sub-block returns an update rather than a residual sum, and they differ in what the transition branch reads and in whether the block is parallel or sequential. This architecture models the paper's literal Algorithm 23, which is why value_sites.diffusion_token_block_input feeds both branches and both branch outputs are summed into value_sites.diffusion_token_block_output.",
+        "status": "deferred",
+        "affected_refs": [
+          "value_sites.diffusion_token_block_input",
+          "value_sites.diffusion_token_block_output",
+          "relations.token_block_activation_enters_transition_branch",
+          "relations.token_attention_branch_updates_block_output",
+          "relations.token_transition_branch_updates_block_output",
+          "modules.diffusion_transformer_token_level"
+        ],
+        "resolution_criteria": "Decide whether this source set should follow the released implementation's sequential residual block instead of the paper's Algorithm 23 line 3. Following the code would mean retargeting relations.token_block_activation_enters_transition_branch to a new post-attention value site and replacing the two-branch sum with two sequential residual updates. The same question applies identically to both atom-level AtomTransformer occurrences, since they call the same routine.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 23 line 3; Algorithm 24 line 15 and Algorithm 25 line 4, neither of which adds its input back to its own output"
+            },
+            {
+              "source_ref": "af3_self_attention_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_transformer.py Transformer.__call__ block, which applies act += self_attention(act, ...) and then act += transition_block(act, ...) on the already-updated activation"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_encoder_query_initialization_order_paper_code_divergence",
+        "question": "Supplementary Algorithm 5 places line 7 (q_l = c_l) before line 9 (c_l += LinearNoBias(LayerNorm(s_trunk))), so read in order the atom query is a copy of the reference-metadata conditioning only and never receives the trunk single broadcast; the broadcast reaches the query only indirectly, through the pair tensor and through Adaptive LayerNorm inside AtomTransformer. The released implementation adds the trunk broadcast into queries_single_cond first and only then forms the query from it, so its query does carry the trunk single directly. This architecture models the paper's line order, which is why relations.atom_conditioning_initializes_atom_query reads value_sites.atom_single_conditioning_base rather than value_sites.atom_single_conditioning_trunk_broadcast.",
+        "status": "deferred",
+        "affected_refs": [
+          "value_sites.atom_query_initial",
+          "value_sites.atom_single_conditioning_base",
+          "relations.atom_conditioning_initializes_atom_query"
+        ],
+        "resolution_criteria": "Confirm which order the shipped model uses, most directly by checking whether the trunk single projection is applied before or after the query is formed in the released atom encoder, and if the code's order is authoritative, retarget relations.atom_conditioning_initializes_atom_query to value_sites.atom_single_conditioning_trunk_broadcast.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 lines 7-11, where the q_l = c_l copy precedes the conditional block that augments c_l"
+            },
+            {
+              "source_ref": "af3_atom_cross_attention_code",
+              "role": "implementation_evidence",
+              "locator": "atom_cross_attention.py atom_cross_att_encoder, which adds the projected trunk_single_cond into queries_single_cond and then sets queries_act to the projected positions plus queries_single_cond"
             }
           ]
         }
@@ -7125,6 +14072,39 @@ export const manifest = {
         "path": "src/alphafold3/model/network/template_modules.py",
         "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py",
         "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py"
+      },
+      {
+        "id": "af3_atom_cross_attention_code",
+        "kind": "code",
+        "title": "AlphaFold 3 atom attention encoder and decoder implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/atom_cross_attention.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/atom_cross_attention.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/atom_cross_attention.py"
+      },
+      {
+        "id": "af3_diffusion_head_code",
+        "kind": "code",
+        "title": "AlphaFold 3 diffusion module and sampler implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/diffusion_head.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_head.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_head.py"
+      },
+      {
+        "id": "af3_featurization_code",
+        "kind": "code",
+        "title": "AlphaFold 3 input feature construction, including relative position encoding",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/featurization.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py"
       },
       {
         "id": "genie2_2024",
@@ -7488,6 +14468,1832 @@ export const manifest = {
     ]
   },
   "standardBlocks": {
+    "attention_pair_bias": {
+      "id": "attention_pair_bias",
+      "schemaVersion": "standard-block-v0.3",
+      "name": "Attention with Pair Bias",
+      "sourceYaml": "../../standard_blocks/attention-pair-bias.yaml",
+      "description": "Multi-head self-attention over one activation track whose logits carry an additive term projected from a pair tensor, with the caller's own additive mask folded into that same term, a content-derived output gate, and an optional conditioning signal that switches the pre-attention normalization from plain LayerNorm to Adaptive LayerNorm and adds an AdaLN-Zero gate on the returned update.",
+      "math": [
+        {
+          "id": "adaln_normalize",
+          "text": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+          "operation": "adaptive_layer_norm"
+        },
+        {
+          "id": "layer_norm_normalize",
+          "text": "a_norm = LayerNorm(single_state)",
+          "operation": "layer_normalization"
+        },
+        {
+          "id": "project_qkv",
+          "text": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+          "operation": "query_key_value_projection"
+        },
+        {
+          "id": "form_pair_bias_term",
+          "text": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+          "operation": "pair_bias_and_mask_projection"
+        },
+        {
+          "id": "form_attention_logits",
+          "text": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+          "operation": "biased_attention_logits"
+        },
+        {
+          "id": "softmax_attention",
+          "text": "attention_weights = softmax(combined_logits, dim=keys)",
+          "operation": "softmax"
+        },
+        {
+          "id": "project_content_gate",
+          "text": "content_gate = sigmoid(LinearNoBias(a_norm))",
+          "operation": "content_gate_projection"
+        },
+        {
+          "id": "aggregate_gated_values",
+          "text": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+          "operation": "gated_value_aggregation"
+        },
+        {
+          "id": "project_attention_update",
+          "text": "projected_update = LinearNoBias(concat_heads(attention_context))",
+          "operation": "concat_heads_and_project"
+        },
+        {
+          "id": "project_output_gate",
+          "text": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+          "operation": "adaln_zero_gate_projection"
+        },
+        {
+          "id": "apply_output_gate",
+          "text": "attention_output = output_gate * projected_update",
+          "operation": "adaln_zero_output_gate"
+        },
+        {
+          "id": "return_ungated_update",
+          "text": "attention_output = projected_update",
+          "operation": "return_update_without_adaln_zero_gate"
+        }
+      ],
+      "kind": "attention",
+      "status": "review",
+      "parameters": [
+        {
+          "id": "n",
+          "notation": "N",
+          "kind": "sequence",
+          "resolution": "boundary",
+          "role": "number of attended items; tokens at token resolution and atoms at atom resolution"
+        },
+        {
+          "id": "c_a",
+          "notation": "c_a",
+          "kind": "channel",
+          "resolution": "boundary",
+          "role": "channel width of the activation being attended"
+        },
+        {
+          "id": "c_s",
+          "notation": "c_s",
+          "kind": "channel",
+          "resolution": "boundary",
+          "role": "channel width of the conditioning signal"
+        },
+        {
+          "id": "c_z",
+          "notation": "c_z",
+          "kind": "channel",
+          "resolution": "boundary",
+          "role": "channel width of the pair tensor that supplies the attention bias"
+        },
+        {
+          "id": "h",
+          "notation": "N_head",
+          "kind": "heads",
+          "resolution": "instance",
+          "role": "number of attention heads"
+        },
+        {
+          "id": "c",
+          "notation": "c",
+          "kind": "channel",
+          "resolution": "instance",
+          "role": "per-head query/key/value width; the attended width divided by the head count"
+        }
+      ],
+      "ports": [
+        {
+          "id": "single_state",
+          "label": "attended activation",
+          "direction": "input",
+          "kind": "representation",
+          "required": true,
+          "cardinality": "one",
+          "relation_kinds": [
+            "data_flow",
+            "state_update"
+          ],
+          "glyph": "single",
+          "notation": "a_i",
+          "role": "the activation track this block attends over and returns an update for",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        },
+        {
+          "id": "conditioning_signal",
+          "label": "conditioning signal",
+          "direction": "conditioning",
+          "kind": "representation",
+          "required": false,
+          "cardinality": "one",
+          "relation_kinds": [
+            "conditioning",
+            "data_flow"
+          ],
+          "glyph": "single",
+          "notation": "s_i",
+          "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "conditioning_channel",
+                "dimension": "c_s"
+              }
+            ]
+          }
+        },
+        {
+          "id": "pair_context",
+          "label": "pair context",
+          "direction": "conditioning",
+          "kind": "representation",
+          "required": true,
+          "cardinality": "one",
+          "relation_kinds": [
+            "conditioning",
+            "data_flow"
+          ],
+          "glyph": "pair",
+          "notation": "z_ij",
+          "role": "pair tensor projected into a per-head additive bias on the attention logits",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "key_token",
+                "dimension": "n"
+              },
+              {
+                "id": "pair_channel",
+                "dimension": "c_z"
+              }
+            ]
+          }
+        },
+        {
+          "id": "mask_bias",
+          "label": "additive mask term",
+          "direction": "conditioning",
+          "kind": "mask",
+          "required": false,
+          "cardinality": "one",
+          "relation_kinds": [
+            "conditioning",
+            "control"
+          ],
+          "glyph": "pair",
+          "notation": "beta_ij",
+          "role": "the caller's own additive term on the same bias slot the pair projection writes into; a locality mask supplies large negative values on disallowed pairs, and a caller that supplies nothing leaves the slot at zero",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "key_token",
+                "dimension": "n"
+              }
+            ]
+          }
+        },
+        {
+          "id": "attention_output",
+          "label": "attention update",
+          "direction": "output",
+          "kind": "representation",
+          "required": true,
+          "cardinality": "one",
+          "relation_kinds": [
+            "data_flow"
+          ],
+          "glyph": "single",
+          "notation": "b_i",
+          "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        }
+      ],
+      "variants": [
+        {
+          "id": "adaln_conditioned",
+          "label": "Conditioned (AdaLN and AdaLN-Zero)",
+          "description": "The caller supplies a conditioning signal, so the pre-attention normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+          "step_refs": [
+            "steps.adaln_normalize",
+            "steps.project_qkv",
+            "steps.form_pair_bias_term",
+            "steps.form_attention_logits",
+            "steps.softmax_attention",
+            "steps.project_content_gate",
+            "steps.aggregate_gated_values",
+            "steps.project_attention_update",
+            "steps.project_output_gate",
+            "steps.apply_output_gate"
+          ]
+        },
+        {
+          "id": "unconditioned_layer_norm",
+          "label": "Unconditioned (plain LayerNorm)",
+          "description": "The caller supplies no conditioning signal, so the pre-attention normalization is plain LayerNorm and the AdaLN-Zero output gate is skipped entirely, leaving the content-derived gate as the block's only gating.",
+          "step_refs": [
+            "steps.layer_norm_normalize",
+            "steps.project_qkv",
+            "steps.form_pair_bias_term",
+            "steps.form_attention_logits",
+            "steps.softmax_attention",
+            "steps.project_content_gate",
+            "steps.aggregate_gated_values",
+            "steps.project_attention_update",
+            "steps.return_ungated_update"
+          ]
+        }
+      ],
+      "defaultVariant": "adaln_conditioned",
+      "values": [
+        {
+          "id": "normalized_state",
+          "label": "normalized activation",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "a_norm",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        },
+        {
+          "id": "qkv",
+          "label": "per-head Q/K/V",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "qkv",
+          "shape_contract": {
+            "kind": "tuple",
+            "fields": [
+              {
+                "id": "q",
+                "shape": {
+                  "kind": "tensor",
+                  "axes": [
+                    {
+                      "id": "query_token",
+                      "dimension": "n"
+                    },
+                    {
+                      "id": "head",
+                      "dimension": "h"
+                    },
+                    {
+                      "id": "hidden_channel",
+                      "dimension": "c"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "k",
+                "shape": {
+                  "kind": "tensor",
+                  "axes": [
+                    {
+                      "id": "key_token",
+                      "dimension": "n"
+                    },
+                    {
+                      "id": "head",
+                      "dimension": "h"
+                    },
+                    {
+                      "id": "hidden_channel",
+                      "dimension": "c"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "v",
+                "shape": {
+                  "kind": "tensor",
+                  "axes": [
+                    {
+                      "id": "key_token",
+                      "dimension": "n"
+                    },
+                    {
+                      "id": "head",
+                      "dimension": "h"
+                    },
+                    {
+                      "id": "value_channel",
+                      "dimension": "c"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pair_bias",
+          "label": "pair bias and mask term",
+          "kind": "logit",
+          "glyph": "pair",
+          "notation": "b_ij",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "head",
+                "dimension": "h"
+              },
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "key_token",
+                "dimension": "n"
+              }
+            ]
+          }
+        },
+        {
+          "id": "combined_logits",
+          "label": "biased attention logits",
+          "kind": "logit",
+          "glyph": "pair",
+          "notation": "l_ij",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "head",
+                "dimension": "h"
+              },
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "key_token",
+                "dimension": "n"
+              }
+            ]
+          }
+        },
+        {
+          "id": "attention_weights",
+          "label": "attention weights",
+          "kind": "weight",
+          "glyph": "pair",
+          "notation": "A_ij",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "head",
+                "dimension": "h"
+              },
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "key_token",
+                "dimension": "n"
+              }
+            ]
+          }
+        },
+        {
+          "id": "content_gate",
+          "label": "content gate",
+          "kind": "weight",
+          "glyph": "single",
+          "notation": "g_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "head",
+                "dimension": "h"
+              },
+              {
+                "id": "value_channel",
+                "dimension": "c"
+              }
+            ]
+          }
+        },
+        {
+          "id": "attention_context",
+          "label": "gated per-head context",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "o_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "head",
+                "dimension": "h"
+              },
+              {
+                "id": "value_channel",
+                "dimension": "c"
+              }
+            ]
+          }
+        },
+        {
+          "id": "projected_update",
+          "label": "projected attention update",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "u_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        },
+        {
+          "id": "output_gate",
+          "label": "AdaLN-Zero output gate",
+          "kind": "weight",
+          "glyph": "single",
+          "notation": "gamma_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        }
+      ],
+      "steps": [
+        {
+          "id": "adaln_normalize",
+          "label": "Adaptive LayerNorm",
+          "operation": "adaptive_layer_norm",
+          "shape_rule": "preserve",
+          "inputs": [
+            "ports.single_state",
+            "ports.conditioning_signal"
+          ],
+          "outputs": [
+            "values.normalized_state"
+          ],
+          "role": "normalize the attended activation with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+          "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+          "code_bindings": [
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "write"
+            },
+            {
+              "lexeme": "single_state",
+              "ref": "ports.single_state",
+              "access": "read"
+            },
+            {
+              "lexeme": "conditioning_signal",
+              "ref": "ports.conditioning_signal",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "layer_norm_normalize",
+          "label": "Plain LayerNorm",
+          "operation": "layer_normalization",
+          "shape_rule": "preserve",
+          "inputs": [
+            "ports.single_state"
+          ],
+          "outputs": [
+            "values.normalized_state"
+          ],
+          "role": "the fallback normalization taken when the caller supplies no conditioning signal",
+          "code": "a_norm = LayerNorm(single_state)",
+          "code_bindings": [
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "write"
+            },
+            {
+              "lexeme": "single_state",
+              "ref": "ports.single_state",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "project_qkv",
+          "label": "Project per-head Q/K/V",
+          "operation": "query_key_value_projection",
+          "shape_rule": "split_heads",
+          "inputs": [
+            "values.normalized_state"
+          ],
+          "outputs": [
+            "values.qkv"
+          ],
+          "role": "split the normalized activation into per-head queries, keys, and values; the query projection carries a bias term and the key/value projections do not",
+          "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+          "code_bindings": [
+            {
+              "lexeme": "q",
+              "ref": "values.qkv",
+              "access": "write"
+            },
+            {
+              "lexeme": "k",
+              "ref": "values.qkv",
+              "access": "write"
+            },
+            {
+              "lexeme": "v",
+              "ref": "values.qkv",
+              "access": "write"
+            },
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "form_pair_bias_term",
+          "label": "Form the pair bias and mask term",
+          "operation": "pair_bias_and_mask_projection",
+          "shape_rule": "linear",
+          "inputs": [
+            "ports.pair_context",
+            "ports.mask_bias"
+          ],
+          "outputs": [
+            "values.pair_bias"
+          ],
+          "role": "one additive slot serves two jobs, a soft per-head bias projected from the pair tensor and whatever additive mask the caller supplies on top of it",
+          "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+          "code_bindings": [
+            {
+              "lexeme": "pair_bias",
+              "ref": "values.pair_bias",
+              "access": "write"
+            },
+            {
+              "lexeme": "pair_context",
+              "ref": "ports.pair_context",
+              "access": "read"
+            },
+            {
+              "lexeme": "mask_bias",
+              "ref": "ports.mask_bias",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "form_attention_logits",
+          "label": "Form biased attention logits",
+          "operation": "biased_attention_logits",
+          "shape_rule": "logit_composition",
+          "inputs": [
+            "values.qkv",
+            "values.pair_bias"
+          ],
+          "outputs": [
+            "values.combined_logits"
+          ],
+          "role": "scaled query-key dot products plus the pair bias and mask term",
+          "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+          "code_bindings": [
+            {
+              "lexeme": "combined_logits",
+              "ref": "values.combined_logits",
+              "access": "write"
+            },
+            {
+              "lexeme": "q",
+              "ref": "values.qkv",
+              "access": "read"
+            },
+            {
+              "lexeme": "k",
+              "ref": "values.qkv",
+              "access": "read"
+            },
+            {
+              "lexeme": "pair_bias",
+              "ref": "values.pair_bias",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "softmax_attention",
+          "label": "Normalize over keys",
+          "operation": "softmax",
+          "shape_rule": "softmax",
+          "inputs": [
+            "values.combined_logits"
+          ],
+          "outputs": [
+            "values.attention_weights"
+          ],
+          "role": "one softmax per head over the key axis, which is where a large negative mask value drives a disallowed pair to zero weight",
+          "code": "attention_weights = softmax(combined_logits, dim=keys)",
+          "code_bindings": [
+            {
+              "lexeme": "attention_weights",
+              "ref": "values.attention_weights",
+              "access": "write"
+            },
+            {
+              "lexeme": "combined_logits",
+              "ref": "values.combined_logits",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "project_content_gate",
+          "label": "Project the content gate",
+          "operation": "content_gate_projection",
+          "shape_rule": "linear",
+          "inputs": [
+            "values.normalized_state"
+          ],
+          "outputs": [
+            "values.content_gate"
+          ],
+          "role": "a per-query, per-head sigmoid gate read from the query's own normalized activation, applied after the weighted average rather than before it",
+          "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+          "code_bindings": [
+            {
+              "lexeme": "content_gate",
+              "ref": "values.content_gate",
+              "access": "write"
+            },
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "aggregate_gated_values",
+          "label": "Aggregate values and gate",
+          "operation": "gated_value_aggregation",
+          "shape_rule": "linear",
+          "inputs": [
+            "values.attention_weights",
+            "values.qkv",
+            "values.content_gate"
+          ],
+          "outputs": [
+            "values.attention_context"
+          ],
+          "role": "average the per-head values under the attention weights, then scale each query's result by its own content gate",
+          "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+          "code_bindings": [
+            {
+              "lexeme": "attention_context",
+              "ref": "values.attention_context",
+              "access": "write"
+            },
+            {
+              "lexeme": "attention_weights",
+              "ref": "values.attention_weights",
+              "access": "read"
+            },
+            {
+              "lexeme": "v",
+              "ref": "values.qkv",
+              "access": "read"
+            },
+            {
+              "lexeme": "content_gate",
+              "ref": "values.content_gate",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "project_attention_update",
+          "label": "Concatenate heads and project",
+          "operation": "concat_heads_and_project",
+          "shape_rule": "linear",
+          "inputs": [
+            "values.attention_context"
+          ],
+          "outputs": [
+            "values.projected_update"
+          ],
+          "role": "concatenate the per-head contexts and project them back to the attended width",
+          "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+          "code_bindings": [
+            {
+              "lexeme": "projected_update",
+              "ref": "values.projected_update",
+              "access": "write"
+            },
+            {
+              "lexeme": "attention_context",
+              "ref": "values.attention_context",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "project_output_gate",
+          "label": "Project the AdaLN-Zero gate",
+          "operation": "adaln_zero_gate_projection",
+          "shape_rule": "linear",
+          "inputs": [
+            "ports.conditioning_signal"
+          ],
+          "outputs": [
+            "values.output_gate"
+          ],
+          "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+          "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+          "code_bindings": [
+            {
+              "lexeme": "output_gate",
+              "ref": "values.output_gate",
+              "access": "write"
+            },
+            {
+              "lexeme": "conditioning_signal",
+              "ref": "ports.conditioning_signal",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "apply_output_gate",
+          "label": "Apply the AdaLN-Zero gate",
+          "operation": "adaln_zero_output_gate",
+          "shape_rule": "preserve",
+          "inputs": [
+            "values.projected_update",
+            "values.output_gate"
+          ],
+          "outputs": [
+            "ports.attention_output"
+          ],
+          "role": "gate the projected update before returning it",
+          "code": "attention_output = output_gate * projected_update",
+          "code_bindings": [
+            {
+              "lexeme": "attention_output",
+              "ref": "ports.attention_output",
+              "access": "write"
+            },
+            {
+              "lexeme": "projected_update",
+              "ref": "values.projected_update",
+              "access": "read"
+            },
+            {
+              "lexeme": "output_gate",
+              "ref": "values.output_gate",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "return_ungated_update",
+          "label": "Return the update ungated",
+          "operation": "return_update_without_adaln_zero_gate",
+          "shape_rule": "preserve",
+          "inputs": [
+            "values.projected_update"
+          ],
+          "outputs": [
+            "ports.attention_output"
+          ],
+          "role": "with no conditioning signal there is no AdaLN-Zero gate, so the projected update is returned as it stands",
+          "code": "attention_output = projected_update",
+          "code_bindings": [
+            {
+              "lexeme": "attention_output",
+              "ref": "ports.attention_output",
+              "access": "write"
+            },
+            {
+              "lexeme": "projected_update",
+              "ref": "values.projected_update",
+              "access": "read"
+            }
+          ]
+        }
+      ],
+      "visualTemplate": {
+        "grid": {
+          "columns": 15,
+          "rows": 6,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "ref": "ports.single_state",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact"
+          },
+          {
+            "id": "conditioning_signal",
+            "ref": "ports.conditioning_signal",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact"
+          },
+          {
+            "id": "pair_context",
+            "ref": "ports.pair_context",
+            "col": 1,
+            "row": 5,
+            "prominence": "secondary",
+            "treatment": "compact"
+          },
+          {
+            "id": "mask_bias",
+            "ref": "ports.mask_bias",
+            "col": 1,
+            "row": 6,
+            "prominence": "context",
+            "treatment": "chip"
+          },
+          {
+            "id": "adaln_normalize",
+            "ref": "steps.adaln_normalize",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "layer_norm_normalize",
+            "ref": "steps.layer_norm_normalize",
+            "col": 2,
+            "row": 2,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "form_pair_bias_term",
+            "ref": "steps.form_pair_bias_term",
+            "col": 2,
+            "row": 5,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "normalized_state",
+            "ref": "values.normalized_state",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "pair_bias",
+            "ref": "values.pair_bias",
+            "col": 3,
+            "row": 5,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "project_qkv",
+            "ref": "steps.project_qkv",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "project_content_gate",
+            "ref": "steps.project_content_gate",
+            "col": 4,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "qkv",
+            "ref": "values.qkv",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "content_gate",
+            "ref": "values.content_gate",
+            "col": 5,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "form_attention_logits",
+            "ref": "steps.form_attention_logits",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "combined_logits",
+            "ref": "values.combined_logits",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "softmax_attention",
+            "ref": "steps.softmax_attention",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "attention_weights",
+            "ref": "values.attention_weights",
+            "col": 9,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "aggregate_gated_values",
+            "ref": "steps.aggregate_gated_values",
+            "col": 10,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "attention_context",
+            "ref": "values.attention_context",
+            "col": 11,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "project_attention_update",
+            "ref": "steps.project_attention_update",
+            "col": 12,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "project_output_gate",
+            "ref": "steps.project_output_gate",
+            "col": 12,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "projected_update",
+            "ref": "values.projected_update",
+            "col": 13,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "output_gate",
+            "ref": "values.output_gate",
+            "col": 13,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "apply_output_gate",
+            "ref": "steps.apply_output_gate",
+            "col": 14,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "return_ungated_update",
+            "ref": "steps.return_ungated_update",
+            "col": 14,
+            "row": 2,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "attention_output",
+            "ref": "ports.attention_output",
+            "col": 15,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact"
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize_and_project",
+            "label": "Normalize, then project",
+            "description": "The conditioning signal decides how the attended activation is normalized. The normalized result feeds the per-head query, key, and value projections and the content gate, while the pair tensor and the caller's additive mask term are folded into one bias term.",
+            "node_refs": [
+              "ports.single_state",
+              "ports.conditioning_signal",
+              "ports.pair_context",
+              "ports.mask_bias",
+              "steps.adaln_normalize",
+              "steps.layer_norm_normalize",
+              "steps.form_pair_bias_term",
+              "values.normalized_state",
+              "values.pair_bias",
+              "steps.project_qkv",
+              "steps.project_content_gate",
+              "values.qkv",
+              "values.content_gate"
+            ]
+          },
+          {
+            "id": "attention_weights",
+            "label": "Form and normalize the weights",
+            "description": "Scaled query-key dot products carry the pair bias and mask term into the logits, and one softmax over keys turns them into attention weights. A large negative mask value here is what removes a disallowed pair.",
+            "node_refs": [
+              "steps.form_attention_logits",
+              "values.combined_logits",
+              "steps.softmax_attention",
+              "values.attention_weights"
+            ]
+          },
+          {
+            "id": "aggregate_and_gate",
+            "label": "Aggregate, project, gate",
+            "description": "The shared weights average the per-head values, the content gate scales each query's result, the heads are concatenated and projected back to the attended width, and the conditioned path applies one more near-closed gate before returning the update.",
+            "node_refs": [
+              "steps.aggregate_gated_values",
+              "values.attention_context",
+              "steps.project_attention_update",
+              "values.projected_update",
+              "steps.project_output_gate",
+              "values.output_gate",
+              "steps.apply_output_gate",
+              "steps.return_ungated_update",
+              "ports.attention_output"
+            ]
+          }
+        ]
+      },
+      "evidencePolicy": {
+        "generic_definition": "Reusable vocabulary for one attention pass whose logits carry an additive pair-derived bias and whose normalization and output gating are switched by the presence of a conditioning signal. The block ends at the returned update; residual addition, the repeat count of any surrounding block loop, and the construction of the mask term itself belong to the surrounding architecture layer.",
+        "usage_requires": [
+          "Evidence that a projection of the pair tensor is added to the attention logits.",
+          "Evidence for which additive mask term, if any, the caller supplies on that same slot.",
+          "Evidence for whether a conditioning signal is supplied, which fixes both the normalization branch and whether the output gate is present.",
+          "Evidence for the head count and the per-head width, neither of which the boundary tensors determine."
+        ]
+      }
+    },
+    "conditioned_transition_block": {
+      "id": "conditioned_transition_block",
+      "schemaVersion": "standard-block-v0.3",
+      "name": "Conditioned Transition Block",
+      "sourceYaml": "../../standard_blocks/conditioned-transition-block.yaml",
+      "description": "A pointwise SwiGLU feedforward block built around the same conditioning switch as the attention block it is paired with. An optional conditioning signal turns the pre-block normalization into Adaptive LayerNorm and adds an AdaLN-Zero gate on the returned update; with no conditioning signal the block reduces to the plain LayerNorm plus SwiGLU transition used elsewhere in the same architecture.",
+      "math": [
+        {
+          "id": "adaln_normalize",
+          "text": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+          "operation": "adaptive_layer_norm"
+        },
+        {
+          "id": "layer_norm_normalize",
+          "text": "a_norm = LayerNorm(single_state)",
+          "operation": "layer_normalization"
+        },
+        {
+          "id": "swiglu_expansion",
+          "text": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+          "operation": "swiglu_transition"
+        },
+        {
+          "id": "project_transition_update",
+          "text": "projected_update = LinearNoBias(gated_hidden)",
+          "operation": "output_projection"
+        },
+        {
+          "id": "project_output_gate",
+          "text": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+          "operation": "adaln_zero_gate_projection"
+        },
+        {
+          "id": "apply_output_gate",
+          "text": "transition_output = output_gate * projected_update",
+          "operation": "adaln_zero_output_gate"
+        },
+        {
+          "id": "return_ungated_update",
+          "text": "transition_output = projected_update",
+          "operation": "return_update_without_adaln_zero_gate"
+        }
+      ],
+      "kind": "feed_forward",
+      "status": "review",
+      "parameters": [
+        {
+          "id": "n",
+          "notation": "N",
+          "kind": "sequence",
+          "resolution": "boundary",
+          "role": "number of items the block runs over independently; tokens at token resolution and atoms at atom resolution"
+        },
+        {
+          "id": "c_a",
+          "notation": "c_a",
+          "kind": "channel",
+          "resolution": "boundary",
+          "role": "channel width of the activation the block reads and returns"
+        },
+        {
+          "id": "c_s",
+          "notation": "c_s",
+          "kind": "channel",
+          "resolution": "boundary",
+          "role": "channel width of the conditioning signal"
+        },
+        {
+          "id": "c_hidden",
+          "notation": "n_hidden",
+          "kind": "channel",
+          "resolution": "instance",
+          "role": "expanded hidden width inside the gated transition; the expansion factor times the activation width"
+        }
+      ],
+      "ports": [
+        {
+          "id": "single_state",
+          "label": "block input activation",
+          "direction": "input",
+          "kind": "representation",
+          "required": true,
+          "cardinality": "one",
+          "relation_kinds": [
+            "data_flow",
+            "state_update"
+          ],
+          "glyph": "single",
+          "notation": "a_i",
+          "role": "the activation this block transforms pointwise, one item at a time",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        },
+        {
+          "id": "conditioning_signal",
+          "label": "conditioning signal",
+          "direction": "conditioning",
+          "kind": "representation",
+          "required": false,
+          "cardinality": "one",
+          "relation_kinds": [
+            "conditioning",
+            "data_flow"
+          ],
+          "glyph": "single",
+          "notation": "s_i",
+          "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "conditioning_channel",
+                "dimension": "c_s"
+              }
+            ]
+          }
+        },
+        {
+          "id": "transition_output",
+          "label": "transition update",
+          "direction": "output",
+          "kind": "representation",
+          "required": true,
+          "cardinality": "one",
+          "relation_kinds": [
+            "data_flow"
+          ],
+          "glyph": "single",
+          "notation": "t_i",
+          "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        }
+      ],
+      "variants": [
+        {
+          "id": "adaln_conditioned_transition",
+          "label": "Conditioned (AdaLN and AdaLN-Zero)",
+          "description": "The caller supplies a conditioning signal, so the pre-block normalization is Adaptive LayerNorm and the returned update passes through a conditioning-derived AdaLN-Zero gate initialized near zero.",
+          "step_refs": [
+            "steps.adaln_normalize",
+            "steps.swiglu_expansion",
+            "steps.project_transition_update",
+            "steps.project_output_gate",
+            "steps.apply_output_gate"
+          ]
+        },
+        {
+          "id": "unconditioned_transition",
+          "label": "Unconditioned (plain LayerNorm)",
+          "description": "The caller supplies no conditioning signal, so the block is a plain LayerNorm followed by a SwiGLU transition and its output projection, with no gate on the returned update.",
+          "step_refs": [
+            "steps.layer_norm_normalize",
+            "steps.swiglu_expansion",
+            "steps.project_transition_update",
+            "steps.return_ungated_update"
+          ]
+        }
+      ],
+      "defaultVariant": "adaln_conditioned_transition",
+      "values": [
+        {
+          "id": "normalized_state",
+          "label": "normalized activation",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "a_norm",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        },
+        {
+          "id": "gated_hidden",
+          "label": "SwiGLU hidden activation",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "b_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "hidden_channel",
+                "dimension": "c_hidden"
+              }
+            ]
+          }
+        },
+        {
+          "id": "projected_update",
+          "label": "projected transition update",
+          "kind": "representation",
+          "glyph": "single",
+          "notation": "u_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        },
+        {
+          "id": "output_gate",
+          "label": "AdaLN-Zero output gate",
+          "kind": "weight",
+          "glyph": "single",
+          "notation": "gamma_i",
+          "shape_contract": {
+            "kind": "tensor",
+            "axes": [
+              {
+                "id": "query_token",
+                "dimension": "n"
+              },
+              {
+                "id": "single_channel",
+                "dimension": "c_a"
+              }
+            ]
+          }
+        }
+      ],
+      "steps": [
+        {
+          "id": "adaln_normalize",
+          "label": "Adaptive LayerNorm",
+          "operation": "adaptive_layer_norm",
+          "shape_rule": "preserve",
+          "inputs": [
+            "ports.single_state",
+            "ports.conditioning_signal"
+          ],
+          "outputs": [
+            "values.normalized_state"
+          ],
+          "role": "normalize the block input with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+          "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+          "code_bindings": [
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "write"
+            },
+            {
+              "lexeme": "single_state",
+              "ref": "ports.single_state",
+              "access": "read"
+            },
+            {
+              "lexeme": "conditioning_signal",
+              "ref": "ports.conditioning_signal",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "layer_norm_normalize",
+          "label": "Plain LayerNorm",
+          "operation": "layer_normalization",
+          "shape_rule": "preserve",
+          "inputs": [
+            "ports.single_state"
+          ],
+          "outputs": [
+            "values.normalized_state"
+          ],
+          "role": "the fallback normalization taken when the caller supplies no conditioning signal",
+          "code": "a_norm = LayerNorm(single_state)",
+          "code_bindings": [
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "write"
+            },
+            {
+              "lexeme": "single_state",
+              "ref": "ports.single_state",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "swiglu_expansion",
+          "label": "Gated expansion",
+          "operation": "swiglu_transition",
+          "shape_rule": "linear",
+          "inputs": [
+            "values.normalized_state"
+          ],
+          "outputs": [
+            "values.gated_hidden"
+          ],
+          "role": "two independent linear projections of the same normalized activation, one passed through swish and used to gate the other elementwise, so the nonlinearity and the second linear layer are fused rather than stacked",
+          "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+          "code_bindings": [
+            {
+              "lexeme": "gated_hidden",
+              "ref": "values.gated_hidden",
+              "access": "write"
+            },
+            {
+              "lexeme": "a_norm",
+              "ref": "values.normalized_state",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "project_transition_update",
+          "label": "Project back to the block width",
+          "operation": "output_projection",
+          "shape_rule": "linear",
+          "inputs": [
+            "values.gated_hidden"
+          ],
+          "outputs": [
+            "values.projected_update"
+          ],
+          "role": "project the expanded hidden activation back down to the width of the block's own input",
+          "code": "projected_update = LinearNoBias(gated_hidden)",
+          "code_bindings": [
+            {
+              "lexeme": "projected_update",
+              "ref": "values.projected_update",
+              "access": "write"
+            },
+            {
+              "lexeme": "gated_hidden",
+              "ref": "values.gated_hidden",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "project_output_gate",
+          "label": "Project the AdaLN-Zero gate",
+          "operation": "adaln_zero_gate_projection",
+          "shape_rule": "linear",
+          "inputs": [
+            "ports.conditioning_signal"
+          ],
+          "outputs": [
+            "values.output_gate"
+          ],
+          "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+          "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+          "code_bindings": [
+            {
+              "lexeme": "output_gate",
+              "ref": "values.output_gate",
+              "access": "write"
+            },
+            {
+              "lexeme": "conditioning_signal",
+              "ref": "ports.conditioning_signal",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "apply_output_gate",
+          "label": "Apply the AdaLN-Zero gate",
+          "operation": "adaln_zero_output_gate",
+          "shape_rule": "preserve",
+          "inputs": [
+            "values.projected_update",
+            "values.output_gate"
+          ],
+          "outputs": [
+            "ports.transition_output"
+          ],
+          "role": "gate the projected update before returning it",
+          "code": "transition_output = output_gate * projected_update",
+          "code_bindings": [
+            {
+              "lexeme": "transition_output",
+              "ref": "ports.transition_output",
+              "access": "write"
+            },
+            {
+              "lexeme": "projected_update",
+              "ref": "values.projected_update",
+              "access": "read"
+            },
+            {
+              "lexeme": "output_gate",
+              "ref": "values.output_gate",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "return_ungated_update",
+          "label": "Return the update ungated",
+          "operation": "return_update_without_adaln_zero_gate",
+          "shape_rule": "preserve",
+          "inputs": [
+            "values.projected_update"
+          ],
+          "outputs": [
+            "ports.transition_output"
+          ],
+          "role": "with no conditioning signal there is no AdaLN-Zero gate, so the projected update is returned as it stands",
+          "code": "transition_output = projected_update",
+          "code_bindings": [
+            {
+              "lexeme": "transition_output",
+              "ref": "ports.transition_output",
+              "access": "write"
+            },
+            {
+              "lexeme": "projected_update",
+              "ref": "values.projected_update",
+              "access": "read"
+            }
+          ]
+        }
+      ],
+      "visualTemplate": {
+        "grid": {
+          "columns": 9,
+          "rows": 3,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "ref": "ports.single_state",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact"
+          },
+          {
+            "id": "conditioning_signal",
+            "ref": "ports.conditioning_signal",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact"
+          },
+          {
+            "id": "adaln_normalize",
+            "ref": "steps.adaln_normalize",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "layer_norm_normalize",
+            "ref": "steps.layer_norm_normalize",
+            "col": 2,
+            "row": 2,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "normalized_state",
+            "ref": "values.normalized_state",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "swiglu_expansion",
+            "ref": "steps.swiglu_expansion",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "gated_hidden",
+            "ref": "values.gated_hidden",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "project_transition_update",
+            "ref": "steps.project_transition_update",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "project_output_gate",
+            "ref": "steps.project_output_gate",
+            "col": 6,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "projected_update",
+            "ref": "values.projected_update",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "output_gate",
+            "ref": "values.output_gate",
+            "col": 7,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact"
+          },
+          {
+            "id": "apply_output_gate",
+            "ref": "steps.apply_output_gate",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "return_ungated_update",
+            "ref": "steps.return_ungated_update",
+            "col": 8,
+            "row": 2,
+            "prominence": "primary",
+            "treatment": "compact"
+          },
+          {
+            "id": "transition_output",
+            "ref": "ports.transition_output",
+            "col": 9,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact"
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize",
+            "label": "Normalize",
+            "description": "The conditioning signal decides whether the block input is normalized adaptively, with a scale and shift recomputed from that signal at every call, or by a plain LayerNorm with static parameters.",
+            "node_refs": [
+              "ports.single_state",
+              "ports.conditioning_signal",
+              "steps.adaln_normalize",
+              "steps.layer_norm_normalize",
+              "values.normalized_state"
+            ]
+          },
+          {
+            "id": "gated_transition",
+            "label": "Gated transition",
+            "description": "One normalized activation feeds two independent projections into the expanded hidden width; swish on one branch gates the other, which is what makes this a SwiGLU transition rather than a plain two-layer feedforward.",
+            "node_refs": [
+              "steps.swiglu_expansion",
+              "values.gated_hidden"
+            ]
+          },
+          {
+            "id": "project_and_gate",
+            "label": "Project, then gate",
+            "description": "The hidden activation is projected back to the block's own width, and the conditioned path applies one more near-closed gate before returning the update to whatever residual connection the surrounding architecture owns.",
+            "node_refs": [
+              "steps.project_transition_update",
+              "values.projected_update",
+              "steps.project_output_gate",
+              "values.output_gate",
+              "steps.apply_output_gate",
+              "steps.return_ungated_update",
+              "ports.transition_output"
+            ]
+          }
+        ]
+      },
+      "evidencePolicy": {
+        "generic_definition": "Reusable vocabulary for one pointwise gated feedforward block whose normalization and output gating are switched by the presence of a conditioning signal. The block ends at the returned update; residual addition and the repeat count of any surrounding block loop belong to the surrounding architecture layer.",
+        "usage_requires": [
+          "Evidence for whether a conditioning signal is supplied, which fixes both the normalization branch and whether the output gate is present.",
+          "Evidence for the expansion factor behind the hidden width, which the boundary tensors do not determine."
+        ]
+      }
+    }
   },
   "pseudocode": {
     "alphafold3_pairformer": {
@@ -9149,12 +17955,12 @@ export const manifest = {
       {
         "id": "pairformer_overview",
         "title": "AlphaFold 3",
-        "summary": "AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The Template module then reads raw per-template structural evidence (masked distograms, unit vectors, and residue types from homologous templates) and writes a pooled contribution into the pair representation before anything else touches it. The MSA module reads the raw per-row MSA next and folds evolutionary coupling, correlated variation across aligned sequences, into that same pair representation -- structural template evidence and evolutionary coupling are the only two places new external evidence enters the pair representation each cycle, template evidence first. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.",
+        "summary": "Reference-conformer geometry, template structures, and MSA evidence build the single and pair representations, which 48 Pairformer blocks refine. The Diffusion Module then uses those trunk representations to predict atom coordinates, one noise-conditioned denoising step at a time; the outer sampling loop is not shown here.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 13,
-          "rows": 7,
+          "columns": 16,
+          "rows": 9,
           "column_sizing": "content",
           "col_gap": 36,
           "row_gap": 24
@@ -9382,6 +18188,26 @@ export const manifest = {
             "board_ref": "pairformer_block"
           },
           {
+            "id": "entity_id",
+            "ref": "value_sites.entity_id",
+            "label": "entity id",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 12,
+            "row": 1
+          },
+          {
+            "id": "residue_index",
+            "ref": "value_sites.residue_index",
+            "label": "residue index",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 12,
+            "row": 2
+          },
+          {
             "id": "single_state_output",
             "ref": "value_sites.single_state_output",
             "label": "trunk singles",
@@ -9389,7 +18215,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 13,
+            "col": 12,
             "row": 3
           },
           {
@@ -9400,8 +18226,110 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 13,
+            "col": 12,
             "row": 5
+          },
+          {
+            "id": "sym_id",
+            "ref": "value_sites.sym_id",
+            "label": "chain copy id",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 12,
+            "row": 6
+          },
+          {
+            "id": "token_index",
+            "ref": "value_sites.token_index",
+            "label": "token index",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 12,
+            "row": 7
+          },
+          {
+            "id": "noise_level",
+            "ref": "value_sites.noise_level",
+            "label": "noise level",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 13,
+            "row": 2
+          },
+          {
+            "id": "noisy_atom_positions",
+            "ref": "value_sites.noisy_atom_positions",
+            "label": "noisy atom coordinates",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 13,
+            "row": 6
+          },
+          {
+            "id": "scaled_noisy_atom_positions",
+            "ref": "value_sites.scaled_noisy_atom_positions",
+            "label": "scaled noisy atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 13,
+            "row": 7
+          },
+          {
+            "id": "diffusion_module",
+            "ref": "modules.diffusion_module",
+            "label": "Diffusion Module",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 14,
+            "row": 4,
+            "board_ref": "diffusion_module_detail"
+          },
+          {
+            "id": "relative_position_encoding",
+            "ref": "modules.relative_position_encoding",
+            "label": "relative positions",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 13,
+            "row": 1,
+            "board_ref": "relative_position_encoding_detail"
+          },
+          {
+            "id": "fourier_embedding",
+            "ref": "modules.fourier_embedding",
+            "label": "noise embedding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 14,
+            "row": 2
+          },
+          {
+            "id": "denoised_atom_positions",
+            "ref": "value_sites.denoised_atom_positions",
+            "label": "denoised atom coordinates",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 16,
+            "row": 4
+          },
+          {
+            "id": "atom_position_update",
+            "ref": "value_sites.atom_attention_decoder_position_update",
+            "label": "predicted atom update",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 15,
+            "row": 4
           }
         ],
         "edge_overrides": [
@@ -9437,10 +18365,75 @@ export const manifest = {
           },
           {
             "ref": "value_sites.z_init"
+          },
+          {
+            "ref": "value_sites.relative_position_encoding_output"
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "value_sites.diffusion_conditioned_pair",
+            "reason": "Internal pair conditioning is expanded on the diffusion module's child boards; the root shows the collapsed module."
+          },
+          {
+            "ref": "value_sites.diffusion_conditioned_single",
+            "reason": "Internal single conditioning is expanded on the diffusion module's child boards; the root shows the collapsed module."
+          },
+          {
+            "ref": "value_sites.sequence_local_atom_attention_mask",
+            "reason": "The atom locality mask is shared by the encoder and decoder inside the collapsed diffusion module."
+          },
+          {
+            "ref": "value_sites.atom_attention_encoder_token_output",
+            "reason": "Pooled token activations are shown on the diffusion module detail boards, not the root."
+          },
+          {
+            "ref": "value_sites.atom_attention_encoder_query_skip",
+            "reason": "The atom query skip is an internal encoder-to-decoder handoff within the collapsed diffusion module."
+          },
+          {
+            "ref": "value_sites.atom_attention_encoder_single_conditioning_skip",
+            "reason": "The atom conditioning skip is an internal encoder-to-decoder handoff within the collapsed diffusion module."
+          },
+          {
+            "ref": "value_sites.atom_attention_encoder_pair_skip",
+            "reason": "The atom pair skip is an internal encoder-to-decoder handoff within the collapsed diffusion module."
+          },
+          {
+            "ref": "value_sites.diffusion_token_activation_conditioned",
+            "reason": "The token bottleneck activation is expanded on the diffusion module detail boards."
+          },
+          {
+            "ref": "value_sites.diffusion_token_activation_normalized",
+            "reason": "The token transformer's normalized output is expanded on the diffusion module detail boards."
           }
         ],
         "projection_mode": "derived",
         "edges": [
+          {
+            "id": "projection_3b7ec09b81db",
+            "from": "asym_id",
+            "to": "relative_position_encoding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.asym_id_conditions_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.asym_id_conditions_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.asym_id"
+            ],
+            "presentation": {
+            }
+          },
           {
             "id": "projection_1e58c1a7866e",
             "from": "asym_id",
@@ -9461,6 +18454,78 @@ export const manifest = {
             ],
             "carries": [
               "representations.asym_id"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_2a8432650063",
+            "from": "atom_position_update",
+            "to": "denoised_atom_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.position_update_weighted_into_denoised_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.position_update_weighted_into_denoised_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_df038c34a7d1",
+            "from": "atom_reference_features_input",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_reference_features_enter_conditioned_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_reference_features_enter_conditioned_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_530abf97931d",
+            "from": "atom_reference_features_input",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "index_flow",
+            "relation_path": [
+              "relations.atom_layout_determines_locality_mask"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_layout_determines_locality_mask"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
             ],
             "presentation": {
             }
@@ -9533,6 +18598,78 @@ export const manifest = {
             ],
             "carries": [
               "representations.deletion_value"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a743ef98d03e",
+            "from": "diffusion_module",
+            "to": "atom_position_update",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.decoder_query_projected_to_position_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.decoder_query_projected_to_position_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_position_update"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c3fd8226bcdb",
+            "from": "entity_id",
+            "to": "relative_position_encoding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.entity_id_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.entity_id_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.entity_id"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e8d904cbe78b",
+            "from": "fourier_embedding",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.fourier_time_embedding"
             ],
             "presentation": {
             }
@@ -9633,6 +18770,78 @@ export const manifest = {
             ],
             "carries": [
               "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_5dedbd668c36",
+            "from": "noise_level",
+            "to": "fourier_embedding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noise_level_enters_fourier_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noise_level_enters_fourier_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_dda3473f0cc0",
+            "from": "noisy_atom_positions",
+            "to": "denoised_atom_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_positions_weighted_into_denoised_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_weighted_into_denoised_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_06a8ef12492e",
+            "from": "noisy_atom_positions",
+            "to": "scaled_noisy_atom_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_positions_scaled_to_unit_variance"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_scaled_to_unit_variance"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.scaled_noisy_atom_positions"
             ],
             "presentation": {
             }
@@ -9762,6 +18971,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_70c7f6953c48",
+            "from": "pair_state_output",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pair_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_97d1e9fd492c",
             "from": "pairformer_stack",
             "to": "pair_state_output",
@@ -9846,6 +19079,58 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_07c3b9cb2a5a",
+            "from": "relative_position_encoding",
+            "to": "diffusion_module",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_output",
+              "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_output"
+              },
+              {
+                "relation_ref": "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.relative_position_encoding_output"
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8c257d252623",
+            "from": "residue_index",
+            "to": "relative_position_encoding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.residue_index_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.residue_index_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.residue_index"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_64699a528d0f",
             "from": "restype_input",
             "to": "input_feature_embedder",
@@ -9865,6 +19150,30 @@ export const manifest = {
             ],
             "carries": [
               "representations.restype"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b99fb02de58f",
+            "from": "s_inputs",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
             ],
             "presentation": {
             }
@@ -9942,6 +19251,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_7cc5d893862d",
+            "from": "scaled_noisy_atom_positions",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.scaled_noisy_positions_enter_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.scaled_noisy_positions_enter_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.scaled_noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_a09034493b88",
             "from": "single_state_input_projection",
             "to": "pairformer_stack",
@@ -9965,6 +19298,78 @@ export const manifest = {
             ],
             "carries": [
               "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8074a02e0131",
+            "from": "single_state_output",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.raw_trunk_single_broadcasts_onto_atoms"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.raw_trunk_single_broadcasts_onto_atoms"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c45aebdf2426",
+            "from": "single_state_output",
+            "to": "diffusion_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.single_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f5b674863e77",
+            "from": "sym_id",
+            "to": "relative_position_encoding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sym_id_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sym_id_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sym_id"
             ],
             "presentation": {
             }
@@ -10114,6 +19519,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_3eedca20663f",
+            "from": "token_index",
+            "to": "relative_position_encoding",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_index_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_index_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.token_index"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_d3b940b30ce4",
             "from": "token_mask_input",
             "to": "pairformer_stack",
@@ -10139,7 +19568,14 @@ export const manifest = {
           }
         ],
         "classifications": {
+          "modules.atom_attention_decoder": "collapsed:modules.diffusion_module",
           "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
+          "modules.atom_attention_encoder_conditioned": "collapsed:modules.diffusion_module",
+          "modules.atom_decoder_atom_transformer": "collapsed:modules.diffusion_module",
+          "modules.atom_encoder_atom_transformer": "collapsed:modules.diffusion_module",
+          "modules.diffusion_conditioning": "collapsed:modules.diffusion_module",
+          "modules.diffusion_module": "visible",
+          "modules.fourier_embedding": "visible",
           "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_embedder": "visible",
           "modules.msa_module": "visible",
@@ -10157,6 +19593,8 @@ export const manifest = {
           "modules.pair_state_input_projection": "visible",
           "modules.pair_transition": "collapsed:modules.pairformer_stack",
           "modules.pairformer_stack": "visible",
+          "modules.relative_position_encoding": "visible",
+          "modules.sequence_local_attention_mask": "collapsed:modules.diffusion_module",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
           "modules.single_state_input_projection": "visible",
@@ -10169,14 +19607,45 @@ export const manifest = {
           "modules.template_pair_transition": "collapsed:modules.template_module",
           "modules.template_triangle_multiplication_incoming": "collapsed:modules.template_module",
           "modules.template_triangle_multiplication_outgoing": "collapsed:modules.template_module",
+          "modules.token_attention_pair_bias": "collapsed:modules.diffusion_module",
+          "modules.token_conditioned_transition": "collapsed:modules.diffusion_module",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
           "value_sites.asym_id": "visible",
+          "value_sites.atom_attention_decoder_position_update": "visible",
+          "value_sites.atom_attention_encoder_pair_skip": "excluded",
+          "value_sites.atom_attention_encoder_query_skip": "excluded",
+          "value_sites.atom_attention_encoder_single_conditioning_skip": "excluded",
+          "value_sites.atom_attention_encoder_token_output": "excluded",
+          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.diffusion_module",
+          "value_sites.atom_pair_reference_geometry": "collapsed:modules.diffusion_module",
+          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_initial": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_with_noisy_position": "collapsed:modules.diffusion_module",
           "value_sites.atom_reference_features_input": "visible",
+          "value_sites.atom_single_conditioning_base": "collapsed:modules.diffusion_module",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.diffusion_module",
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
           "value_sites.deletion_mean_input": "visible",
           "value_sites.deletion_value_input": "visible",
+          "value_sites.denoised_atom_positions": "visible",
+          "value_sites.diffusion_conditioned_pair": "excluded",
+          "value_sites.diffusion_conditioned_single": "excluded",
+          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_activation_conditioned": "excluded",
+          "value_sites.diffusion_token_activation_normalized": "excluded",
+          "value_sites.diffusion_token_attention_branch": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_block_input": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_module",
+          "value_sites.entity_id": "visible",
+          "value_sites.fourier_time_embedding": "collapsed:modules.fourier_embedding",
           "value_sites.has_deletion_input": "visible",
           "value_sites.msa_activations": "collapsed:modules.msa_module",
           "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.msa_module",
@@ -10192,6 +19661,8 @@ export const manifest = {
           "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.msa_module",
           "value_sites.msa_pair_weighted_averaging_value": "collapsed:modules.msa_module",
           "value_sites.msa_pair_weighted_averaging_weights": "collapsed:modules.msa_module",
+          "value_sites.noise_level": "visible",
+          "value_sites.noisy_atom_positions": "visible",
           "value_sites.outer_product_mean_flattened": "collapsed:modules.msa_module",
           "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.msa_module",
           "value_sites.outer_product_mean_projection_a": "collapsed:modules.msa_module",
@@ -10205,13 +19676,22 @@ export const manifest = {
           "value_sites.pair_state_input": "elided",
           "value_sites.pair_state_output": "visible",
           "value_sites.profile_input": "visible",
+          "value_sites.relative_chain_offset": "collapsed:modules.relative_position_encoding",
+          "value_sites.relative_position_encoding_output": "elided",
+          "value_sites.relative_residue_offset": "collapsed:modules.relative_position_encoding",
+          "value_sites.relative_token_offset": "collapsed:modules.relative_position_encoding",
+          "value_sites.residue_index": "visible",
           "value_sites.restype_input": "visible",
           "value_sites.s_inputs": "visible",
+          "value_sites.same_entity_signal": "collapsed:modules.relative_position_encoding",
+          "value_sites.scaled_noisy_atom_positions": "visible",
+          "value_sites.sequence_local_atom_attention_mask": "excluded",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
           "value_sites.single_state_input": "elided",
           "value_sites.single_state_output": "visible",
+          "value_sites.sym_id": "visible",
           "value_sites.template_backbone_frame_mask": "visible",
           "value_sites.template_distogram": "visible",
           "value_sites.template_module_pair_output": "collapsed:modules.template_module",
@@ -10226,6 +19706,7 @@ export const manifest = {
           "value_sites.template_pseudo_beta_mask": "visible",
           "value_sites.template_restype": "visible",
           "value_sites.template_unit_vector": "visible",
+          "value_sites.token_index": "visible",
           "value_sites.token_mask_input": "visible",
           "value_sites.z_init": "elided"
         },
@@ -10373,7 +19854,7 @@ export const manifest = {
           {
             "id": "single_state_output",
             "ref": "value_sites.single_state_output",
-            "label": "final singles",
+            "label": "singles after 48 blocks",
             "notation": "s^{trunk}",
             "prominence": "context",
             "treatment": "compact",
@@ -10384,7 +19865,7 @@ export const manifest = {
           {
             "id": "pair_state_output",
             "ref": "value_sites.pair_state_output",
-            "label": "final pairs",
+            "label": "pairs after 48 blocks",
             "notation": "z^{trunk}",
             "prominence": "context",
             "treatment": "compact",
@@ -15555,6 +25036,11924 @@ export const manifest = {
           "value_sites.template_pair_feature": "visible"
         },
         "projectionMode": "derived"
+      },
+      {
+        "id": "diffusion_module_detail",
+        "title": "One Diffusion Module Denoising Step",
+        "summary": "Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. The root board shows the raw noise input and final blend into denoised coordinates.",
+        "parent": "pairformer_overview",
+        "subject_ref": "modules.diffusion_module",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 7,
+          "rows": 6,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "step_trunk_singles",
+            "ref": "value_sites.single_state_output",
+            "label": "trunk singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "step_trunk_pairs",
+            "ref": "value_sites.pair_state_output",
+            "label": "trunk pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "step_relative_output",
+            "ref": "value_sites.relative_position_encoding_output",
+            "label": "relative pair encoding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "step_fourier_output",
+            "ref": "value_sites.fourier_time_embedding",
+            "label": "Fourier noise features",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "step_raw_input_embedding",
+            "ref": "value_sites.s_inputs",
+            "label": "raw input embedding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "step_scaled_noisy_atoms",
+            "ref": "value_sites.scaled_noisy_atom_positions",
+            "label": "scaled noisy atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "step_reference_atoms",
+            "ref": "value_sites.atom_reference_features_input",
+            "label": "reference atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 6
+          },
+          {
+            "id": "step_conditioning",
+            "ref": "modules.diffusion_conditioning",
+            "label": "diffusion conditioning",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2,
+            "board_ref": "diffusion_conditioning_detail"
+          },
+          {
+            "id": "step_conditioned_pair",
+            "ref": "value_sites.diffusion_conditioned_pair",
+            "label": "conditioned pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "step_conditioned_single",
+            "ref": "value_sites.diffusion_conditioned_single",
+            "label": "conditioned singles",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "step_atom_encoder",
+            "ref": "modules.atom_attention_encoder_conditioned",
+            "label": "atom encoder",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 4,
+            "board_ref": "atom_attention_encoder_detail"
+          },
+          {
+            "id": "step_encoder_tokens",
+            "ref": "value_sites.atom_attention_encoder_token_output",
+            "label": "pooled atom tokens",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 3
+          },
+          {
+            "id": "step_token_with_singles",
+            "ref": "value_sites.diffusion_token_activation_conditioned",
+            "label": "token input plus singles",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "step_token_transformer",
+            "ref": "modules.diffusion_transformer_token_level",
+            "label": "24 token blocks",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4,
+            "board_ref": "diffusion_transformer_token_detail"
+          },
+          {
+            "id": "step_token_output",
+            "ref": "value_sites.diffusion_token_activation_normalized",
+            "label": "refined tokens",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 3
+          },
+          {
+            "id": "step_atom_decoder",
+            "ref": "modules.atom_attention_decoder",
+            "label": "atom decoder",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 4,
+            "board_ref": "atom_attention_decoder_detail"
+          },
+          {
+            "id": "step_position_update",
+            "ref": "value_sites.atom_attention_decoder_position_update",
+            "label": "atom position update",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 7,
+            "row": 4
+          },
+          {
+            "id": "step_locality_mask",
+            "ref": "modules.sequence_local_attention_mask",
+            "label": "local atom mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "step_locality_mask_value",
+            "ref": "value_sites.sequence_local_atom_attention_mask",
+            "label": "sequence-local mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 6
+          }
+        ],
+        "elide": [
+          {
+            "ref": "value_sites.atom_attention_encoder_query_skip"
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "value_sites.atom_attention_encoder_single_conditioning_skip",
+            "reason": "The encoder and decoder detail boards show the saved single-conditioning tensor; the overview keeps the main coordinate path legible."
+          },
+          {
+            "ref": "value_sites.atom_attention_encoder_pair_skip",
+            "reason": "The encoder and decoder detail boards show the saved pair-conditioning tensor; the overview keeps the main coordinate path legible."
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_fa54e35b31d3",
+            "from": "step_atom_decoder",
+            "to": "step_position_update",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.decoder_query_projected_to_position_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.decoder_query_projected_to_position_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_position_update"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7be0fa87d009",
+            "from": "step_atom_encoder",
+            "to": "step_atom_decoder",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "skip",
+            "relation_path": [
+              "relations.encoder_saves_query_skip",
+              "relations.query_skip_enters_atom_decoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_saves_query_skip"
+              },
+              {
+                "relation_ref": "relations.query_skip_enters_atom_decoder"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.atom_attention_encoder_query_skip"
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_fae809c7e115",
+            "from": "step_atom_encoder",
+            "to": "step_encoder_tokens",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.encoder_pools_atom_queries_into_token_activation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_pools_atom_queries_into_token_activation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_84315ead650b",
+            "from": "step_conditioned_pair",
+            "to": "step_atom_encoder",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_pair_broadcasts_onto_atom_pairs"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_pair_broadcasts_onto_atom_pairs"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7b8ddaaca341",
+            "from": "step_conditioned_pair",
+            "to": "step_token_transformer",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_pair_biases_token_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_pair_biases_token_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8fcc3cb0a806",
+            "from": "step_conditioned_single",
+            "to": "step_token_transformer",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_single_drives_token_attention_adaln"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_single_drives_token_attention_adaln"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_6993d3fa06e4",
+            "from": "step_conditioned_single",
+            "to": "step_token_transformer",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_single_drives_token_transition_adaln"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_single_drives_token_transition_adaln"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_dce236e286d8",
+            "from": "step_conditioning",
+            "to": "step_conditioned_pair",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_conditioning_refined_into_diffusion_conditioned_pair"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_conditioning_refined_into_diffusion_conditioned_pair"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4d426fa41ee0",
+            "from": "step_conditioning",
+            "to": "step_conditioned_single",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_conditioning_refined_into_diffusion_conditioned_single"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_conditioning_refined_into_diffusion_conditioned_single"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e8474e29dbff",
+            "from": "step_fourier_output",
+            "to": "step_conditioning",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.fourier_time_embedding"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_fd03751ef8c5",
+            "from": "step_locality_mask",
+            "to": "step_locality_mask_value",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.locality_mask_module_produces_mask"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.locality_mask_module_produces_mask"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c25cbfea9305",
+            "from": "step_locality_mask_value",
+            "to": "step_atom_decoder",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.locality_mask_restricts_decoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.locality_mask_restricts_decoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_748feac6c6a0",
+            "from": "step_locality_mask_value",
+            "to": "step_atom_encoder",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.locality_mask_restricts_encoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.locality_mask_restricts_encoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ce01b16109ea",
+            "from": "step_raw_input_embedding",
+            "to": "step_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_01032ef725a9",
+            "from": "step_reference_atoms",
+            "to": "step_atom_encoder",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_reference_features_enter_conditioned_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_reference_features_enter_conditioned_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b7d98b760e35",
+            "from": "step_reference_atoms",
+            "to": "step_locality_mask",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "index_flow",
+            "relation_path": [
+              "relations.atom_layout_determines_locality_mask"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_layout_determines_locality_mask"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ea0927549212",
+            "from": "step_relative_output",
+            "to": "step_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_950677d59078",
+            "from": "step_scaled_noisy_atoms",
+            "to": "step_atom_encoder",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.scaled_noisy_positions_enter_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.scaled_noisy_positions_enter_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.scaled_noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7592946055b7",
+            "from": "step_token_output",
+            "to": "step_atom_decoder",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.normalized_token_activation_enters_atom_decoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.normalized_token_activation_enters_atom_decoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d2854cb7821f",
+            "from": "step_token_transformer",
+            "to": "step_token_output",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.final_token_block_output_normalized"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_token_block_output_normalized"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7beeeff8dffd",
+            "from": "step_token_with_singles",
+            "to": "step_token_transformer",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioned_token_activation_initializes_block_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_token_activation_initializes_block_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_86a14217703f",
+            "from": "step_trunk_pairs",
+            "to": "step_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pair_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_32dc4faaf2b8",
+            "from": "step_trunk_singles",
+            "to": "step_atom_encoder",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.raw_trunk_single_broadcasts_onto_atoms"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.raw_trunk_single_broadcasts_onto_atoms"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_87a4df28d485",
+            "from": "step_trunk_singles",
+            "to": "step_conditioning",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.single_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.atom_attention_decoder": "visible",
+          "modules.atom_attention_encoder_conditioned": "visible",
+          "modules.atom_decoder_atom_transformer": "collapsed:modules.atom_attention_decoder",
+          "modules.atom_encoder_atom_transformer": "collapsed:modules.atom_attention_encoder_conditioned",
+          "modules.diffusion_conditioning": "visible",
+          "modules.diffusion_transformer_token_level": "visible",
+          "modules.sequence_local_attention_mask": "visible",
+          "modules.token_attention_pair_bias": "collapsed:modules.diffusion_transformer_token_level",
+          "modules.token_conditioned_transition": "collapsed:modules.diffusion_transformer_token_level",
+          "value_sites.atom_attention_decoder_position_update": "visible",
+          "value_sites.atom_attention_encoder_pair_skip": "excluded",
+          "value_sites.atom_attention_encoder_query_skip": "elided",
+          "value_sites.atom_attention_encoder_single_conditioning_skip": "excluded",
+          "value_sites.atom_attention_encoder_token_output": "visible",
+          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_pair_reference_geometry": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.atom_attention_decoder",
+          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.atom_attention_decoder",
+          "value_sites.atom_query_initial": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_query_with_noisy_position": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_reference_features_input": "visible",
+          "value_sites.atom_single_conditioning_base": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.diffusion_conditioned_pair": "visible",
+          "value_sites.diffusion_conditioned_single": "visible",
+          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.diffusion_conditioning",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.diffusion_conditioning",
+          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.diffusion_conditioning",
+          "value_sites.diffusion_token_activation_conditioned": "visible",
+          "value_sites.diffusion_token_activation_normalized": "visible",
+          "value_sites.diffusion_token_attention_branch": "collapsed:modules.diffusion_transformer_token_level",
+          "value_sites.diffusion_token_block_input": "collapsed:modules.diffusion_transformer_token_level",
+          "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_transformer_token_level",
+          "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_transformer_token_level",
+          "value_sites.fourier_time_embedding": "visible",
+          "value_sites.pair_state_output": "visible",
+          "value_sites.relative_position_encoding_output": "visible",
+          "value_sites.s_inputs": "visible",
+          "value_sites.scaled_noisy_atom_positions": "visible",
+          "value_sites.sequence_local_atom_attention_mask": "visible",
+          "value_sites.single_state_output": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "relative_position_encoding_detail",
+        "title": "Relative Position Encoding",
+        "summary": "Five raw token identifiers construct four pairwise signals. Residue and token offsets are gated by physical-chain identity, entity equality is a separate Boolean, and chain-copy offset uses the paper's stated gate. Their concatenation is projected once to the pair width.",
+        "parent": "pairformer_overview",
+        "subject_ref": "modules.relative_position_encoding",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 4,
+          "rows": 5,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 22
+        },
+        "nodes": [
+          {
+            "id": "rpe_asym_id",
+            "ref": "value_sites.asym_id",
+            "label": "physical chain id",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "rpe_entity_id",
+            "ref": "value_sites.entity_id",
+            "label": "entity id",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "rpe_residue_index",
+            "ref": "value_sites.residue_index",
+            "label": "residue index",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "rpe_token_index",
+            "ref": "value_sites.token_index",
+            "label": "token index",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "rpe_sym_id",
+            "ref": "value_sites.sym_id",
+            "label": "chain copy id",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "rpe_module",
+            "ref": "modules.relative_position_encoding",
+            "label": "build pair offsets",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "rpe_residue_offset",
+            "ref": "value_sites.relative_residue_offset",
+            "label": "residue offset",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "rpe_token_offset",
+            "ref": "value_sites.relative_token_offset",
+            "label": "token offset",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "rpe_same_entity",
+            "ref": "value_sites.same_entity_signal",
+            "label": "same entity",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "rpe_chain_offset",
+            "ref": "value_sites.relative_chain_offset",
+            "label": "chain-copy offset",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "rpe_output",
+            "ref": "value_sites.relative_position_encoding_output",
+            "label": "projected pair encoding",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 3
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_73fc4b6b5c16",
+            "from": "rpe_asym_id",
+            "to": "rpe_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.asym_id_conditions_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.asym_id_conditions_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.asym_id"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f0a779d4861a",
+            "from": "rpe_entity_id",
+            "to": "rpe_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.entity_id_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.entity_id_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.entity_id"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_49ce2879db26",
+            "from": "rpe_module",
+            "to": "rpe_chain_offset",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_chain_offset"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_chain_offset"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.relative_chain_offset"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f4670a3e5a54",
+            "from": "rpe_module",
+            "to": "rpe_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_dc2b589c22dd",
+            "from": "rpe_module",
+            "to": "rpe_residue_offset",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_residue_offset"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_residue_offset"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.relative_residue_offset"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c0b65e508b91",
+            "from": "rpe_module",
+            "to": "rpe_same_entity",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_same_entity_signal"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_same_entity_signal"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.same_entity_signal"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_11b0a89e6664",
+            "from": "rpe_module",
+            "to": "rpe_token_offset",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_token_offset"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_token_offset"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.relative_token_offset"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e0afd85c1fa2",
+            "from": "rpe_residue_index",
+            "to": "rpe_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.residue_index_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.residue_index_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.residue_index"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_1e300aa09069",
+            "from": "rpe_sym_id",
+            "to": "rpe_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sym_id_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sym_id_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sym_id"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d91382de97f8",
+            "from": "rpe_token_index",
+            "to": "rpe_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_index_enters_relative_position_encoding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_index_enters_relative_position_encoding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.token_index"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.relative_position_encoding": "visible",
+          "value_sites.asym_id": "visible",
+          "value_sites.entity_id": "visible",
+          "value_sites.relative_chain_offset": "visible",
+          "value_sites.relative_position_encoding_output": "visible",
+          "value_sites.relative_residue_offset": "visible",
+          "value_sites.relative_token_offset": "visible",
+          "value_sites.residue_index": "visible",
+          "value_sites.same_entity_signal": "visible",
+          "value_sites.sym_id": "visible",
+          "value_sites.token_index": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "diffusion_conditioning_detail",
+        "title": "Diffusion Conditioning",
+        "summary": "Pair conditioning joins the trunk pair tensor with a fresh relative-position encoding. Single conditioning joins trunk singles with raw input embeddings, adds a Fourier noise embedding, and then refines both branches through two Transition rounds.",
+        "parent": "diffusion_module_detail",
+        "subject_ref": "modules.diffusion_conditioning",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 5,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 22
+        },
+        "nodes": [
+          {
+            "id": "cond_trunk_pair",
+            "ref": "value_sites.pair_state_output",
+            "label": "trunk pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "cond_relative_position",
+            "ref": "value_sites.relative_position_encoding_output",
+            "label": "relative positions",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "cond_trunk_single",
+            "ref": "value_sites.single_state_output",
+            "label": "trunk singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "cond_input_single",
+            "ref": "value_sites.s_inputs",
+            "label": "raw input embedding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "cond_module",
+            "ref": "modules.diffusion_conditioning",
+            "label": "concatenate and project",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "cond_pair_projected",
+            "ref": "value_sites.diffusion_pair_conditioning_projected",
+            "label": "pair projection",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "cond_pair_final",
+            "ref": "value_sites.diffusion_conditioned_pair",
+            "label": "conditioned pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 1
+          },
+          {
+            "id": "cond_single_projected",
+            "ref": "value_sites.diffusion_single_conditioning_projected",
+            "label": "single projection",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "cond_fourier_value",
+            "ref": "value_sites.fourier_time_embedding",
+            "label": "time embedding",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "cond_single_injected",
+            "ref": "value_sites.diffusion_single_conditioning_fourier_injected",
+            "label": "noise added",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 4
+          },
+          {
+            "id": "cond_single_final",
+            "ref": "value_sites.diffusion_conditioned_single",
+            "label": "conditioned singles",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_4ddce0aa128b",
+            "from": "cond_fourier_value",
+            "to": "cond_single_injected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.fourier_time_embedding"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_77ac94b3abe9",
+            "from": "cond_input_single",
+            "to": "cond_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_bb917756a36f",
+            "from": "cond_module",
+            "to": "cond_pair_projected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.diffusion_conditioning_produces_pair_conditioning_projected"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.diffusion_conditioning_produces_pair_conditioning_projected"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a691c2076ca8",
+            "from": "cond_module",
+            "to": "cond_single_projected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.diffusion_conditioning_produces_single_conditioning_projected"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.diffusion_conditioning_produces_single_conditioning_projected"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_77e3cd1292e3",
+            "from": "cond_pair_projected",
+            "to": "cond_pair_final",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_conditioning_refined_into_diffusion_conditioned_pair"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_conditioning_refined_into_diffusion_conditioned_pair"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4d39f7e332ca",
+            "from": "cond_relative_position",
+            "to": "cond_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7bef01fc9e8d",
+            "from": "cond_single_injected",
+            "to": "cond_single_final",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_conditioning_refined_into_diffusion_conditioned_single"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_conditioning_refined_into_diffusion_conditioned_single"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_15aca4658eb6",
+            "from": "cond_single_projected",
+            "to": "cond_single_injected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_conditioning_projected_carries_into_fourier_injection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_conditioning_projected_carries_into_fourier_injection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c5dd9bc15602",
+            "from": "cond_trunk_pair",
+            "to": "cond_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pair_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b6e1f9c3d964",
+            "from": "cond_trunk_single",
+            "to": "cond_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.single_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.diffusion_conditioning": "visible",
+          "value_sites.diffusion_conditioned_pair": "visible",
+          "value_sites.diffusion_conditioned_single": "visible",
+          "value_sites.diffusion_pair_conditioning_projected": "visible",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "visible",
+          "value_sites.diffusion_single_conditioning_projected": "visible",
+          "value_sites.fourier_time_embedding": "visible",
+          "value_sites.pair_state_output": "visible",
+          "value_sites.relative_position_encoding_output": "visible",
+          "value_sites.s_inputs": "visible",
+          "value_sites.single_state_output": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "diffusion_transformer_token_detail",
+        "title": "Token-Level Diffusion Transformer",
+        "summary": "Twenty-four identical blocks update the pooled token activations. Each block reads the same input in parallel through attention with pair bias and a conditioned SwiGLU transition; their updates combine before the next block.",
+        "parent": "diffusion_module_detail",
+        "subject_ref": "modules.diffusion_transformer_token_level",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 4,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "token_conditioned_activation",
+            "ref": "value_sites.diffusion_token_activation_conditioned",
+            "label": "token input plus singles",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "token_conditioned_singles",
+            "ref": "value_sites.diffusion_conditioned_single",
+            "label": "single conditioning",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 2,
+            "row": 1
+          },
+          {
+            "id": "token_conditioned_pairs",
+            "ref": "value_sites.diffusion_conditioned_pair",
+            "label": "pair conditioning",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "token_block_input",
+            "ref": "value_sites.diffusion_token_block_input",
+            "label": "block input",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "token_attention",
+            "ref": "modules.token_attention_pair_bias",
+            "label": "attention branch",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2,
+            "board_ref": "token_attention_pair_bias_internals"
+          },
+          {
+            "id": "token_transition",
+            "ref": "modules.token_conditioned_transition",
+            "label": "transition branch",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4,
+            "board_ref": "token_conditioned_transition_internals"
+          },
+          {
+            "id": "token_attention_update",
+            "ref": "value_sites.diffusion_token_attention_branch",
+            "label": "attention update",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "token_transition_update",
+            "ref": "value_sites.diffusion_token_transition_branch",
+            "label": "transition update",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 4
+          },
+          {
+            "id": "token_block_output",
+            "ref": "value_sites.diffusion_token_block_output",
+            "label": "block output",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 3
+          },
+          {
+            "id": "token_final_output",
+            "ref": "value_sites.diffusion_token_activation_normalized",
+            "label": "normalized token output",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 1
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_4e80249f43b3",
+            "from": "token_attention",
+            "to": "token_attention_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_attention_branch_produces_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_attention_branch_produces_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f6efe7bf862b",
+            "from": "token_attention_update",
+            "to": "token_block_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.token_attention_branch_updates_block_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_attention_branch_updates_block_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ceb05f34b984",
+            "from": "token_block_input",
+            "to": "token_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_block_activation_enters_attention_branch"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_block_activation_enters_attention_branch"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a856f7583e6d",
+            "from": "token_block_input",
+            "to": "token_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_block_activation_enters_transition_branch"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_block_activation_enters_transition_branch"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e9091576454b",
+            "from": "token_block_output",
+            "to": "token_block_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.token_block_output_reenters_next_block"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_block_output_reenters_next_block"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a7b9c134704b",
+            "from": "token_block_output",
+            "to": "token_final_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.final_token_block_output_normalized"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_token_block_output_normalized"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7e0827b16e5c",
+            "from": "token_conditioned_activation",
+            "to": "token_block_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioned_token_activation_initializes_block_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_token_activation_initializes_block_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_322862068c41",
+            "from": "token_conditioned_pairs",
+            "to": "token_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_pair_biases_token_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_pair_biases_token_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4a4c5ce19b63",
+            "from": "token_conditioned_singles",
+            "to": "token_attention",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_single_drives_token_attention_adaln"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_single_drives_token_attention_adaln"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a2b0245866b3",
+            "from": "token_conditioned_singles",
+            "to": "token_transition",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_single_drives_token_transition_adaln"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_single_drives_token_transition_adaln"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_85ec9c14a025",
+            "from": "token_transition",
+            "to": "token_transition_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_transition_branch_produces_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_transition_branch_produces_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f0f56abaa87e",
+            "from": "token_transition_update",
+            "to": "token_block_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.token_transition_branch_updates_block_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_transition_branch_updates_block_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.token_attention_pair_bias": "visible",
+          "modules.token_conditioned_transition": "visible",
+          "value_sites.diffusion_conditioned_pair": "visible",
+          "value_sites.diffusion_conditioned_single": "visible",
+          "value_sites.diffusion_token_activation_conditioned": "visible",
+          "value_sites.diffusion_token_activation_normalized": "visible",
+          "value_sites.diffusion_token_attention_branch": "visible",
+          "value_sites.diffusion_token_block_input": "visible",
+          "value_sites.diffusion_token_block_output": "visible",
+          "value_sites.diffusion_token_transition_branch": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "atom_attention_encoder_detail",
+        "title": "Conditioned Atom Attention Encoder",
+        "summary": "Atom reference geometry, raw trunk singles, conditioned pairs, and scaled noisy coordinates form per-atom queries and conditioning. The two AtomTransformer boxes are drilldown handles into one three-block call, not two sequential calls; its combined result is pooled to tokens while three atom tensors are saved for the decoder.",
+        "parent": "diffusion_module_detail",
+        "subject_ref": "modules.atom_attention_encoder_conditioned",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 6,
+          "rows": 7,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 22
+        },
+        "nodes": [
+          {
+            "id": "enc_reference",
+            "ref": "value_sites.atom_reference_features_input",
+            "label": "reference atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "enc_trunk_single",
+            "ref": "value_sites.single_state_output",
+            "label": "raw trunk singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "enc_conditioned_pair",
+            "ref": "value_sites.diffusion_conditioned_pair",
+            "label": "conditioned pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "enc_scaled_positions",
+            "ref": "value_sites.scaled_noisy_atom_positions",
+            "label": "scaled noisy atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "enc_local_mask",
+            "ref": "value_sites.sequence_local_atom_attention_mask",
+            "label": "local attention mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 7
+          },
+          {
+            "id": "enc_module",
+            "ref": "modules.atom_attention_encoder_conditioned",
+            "label": "embed and broadcast",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "enc_atom_conditioning",
+            "ref": "value_sites.atom_single_conditioning_trunk_broadcast",
+            "label": "atom conditioning",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "enc_atom_pair",
+            "ref": "value_sites.atom_pair_conditioning_refined",
+            "label": "atom pair context",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "enc_atom_query",
+            "ref": "value_sites.atom_query_with_noisy_position",
+            "label": "noisy atom query",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 6
+          },
+          {
+            "id": "enc_attention_branch",
+            "ref": "modules.atom_encoder_atom_transformer",
+            "label": "local attention branch",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 3,
+            "board_ref": "atom_encoder_attention_pair_bias_internals"
+          },
+          {
+            "id": "enc_transition_branch",
+            "ref": "modules.atom_encoder_atom_transformer",
+            "label": "conditioned transition branch",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 5,
+            "board_ref": "atom_encoder_conditioned_transition_internals"
+          },
+          {
+            "id": "enc_attended_query",
+            "ref": "value_sites.atom_query_after_encoder_transformer",
+            "label": "attended atom query",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4
+          },
+          {
+            "id": "enc_token_output",
+            "ref": "value_sites.atom_attention_encoder_token_output",
+            "label": "pooled token activation",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 1
+          },
+          {
+            "id": "enc_query_skip",
+            "ref": "value_sites.atom_attention_encoder_query_skip",
+            "label": "query skip",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 3
+          },
+          {
+            "id": "enc_conditioning_skip",
+            "ref": "value_sites.atom_attention_encoder_single_conditioning_skip",
+            "label": "conditioning skip",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 5
+          },
+          {
+            "id": "enc_pair_skip",
+            "ref": "value_sites.atom_attention_encoder_pair_skip",
+            "label": "pair skip",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 7
+          }
+        ],
+        "occurrence_bindings": [
+          {
+            "match": {
+              "relation_ref": "relations.atom_query_enters_encoder_atom_transformer"
+            },
+            "from_occurrence": "enc_atom_query",
+            "to_occurrence": "enc_attention_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.atom_conditioning_drives_encoder_atom_transformer"
+            },
+            "from_occurrence": "enc_atom_conditioning",
+            "to_occurrence": "enc_transition_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.atom_pair_biases_encoder_atom_transformer"
+            },
+            "from_occurrence": "enc_atom_pair",
+            "to_occurrence": "enc_attention_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.locality_mask_restricts_encoder_atom_transformer"
+            },
+            "from_occurrence": "enc_local_mask",
+            "to_occurrence": "enc_attention_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.encoder_atom_transformer_produces_query"
+            },
+            "from_occurrence": "enc_transition_branch",
+            "to_occurrence": "enc_attended_query"
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_b546c1c120f0",
+            "from": "enc_atom_conditioning",
+            "to": "enc_conditioning_skip",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "skip",
+            "relation_path": [
+              "relations.encoder_saves_conditioning_skip"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_saves_conditioning_skip"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_cda11335ade3",
+            "from": "enc_atom_conditioning",
+            "to": "enc_transition_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_conditioning_drives_encoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b974e89ff8f2",
+            "from": "enc_atom_pair",
+            "to": "enc_attention_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.atom_pair_biases_encoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_pair_biases_encoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_pair_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3a3dc9851cbd",
+            "from": "enc_atom_pair",
+            "to": "enc_pair_skip",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "skip",
+            "relation_path": [
+              "relations.encoder_saves_pair_skip"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_saves_pair_skip"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_pair_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4733724585fc",
+            "from": "enc_atom_query",
+            "to": "enc_attention_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_query_enters_encoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_query_enters_encoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d7e374e0a235",
+            "from": "enc_attended_query",
+            "to": "enc_query_skip",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "skip",
+            "relation_path": [
+              "relations.encoder_saves_query_skip"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_saves_query_skip"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4fea55cce330",
+            "from": "enc_attended_query",
+            "to": "enc_token_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.encoder_pools_atom_queries_into_token_activation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_pools_atom_queries_into_token_activation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_64490b494bb7",
+            "from": "enc_conditioned_pair",
+            "to": "enc_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioned_pair_broadcasts_onto_atom_pairs"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_pair_broadcasts_onto_atom_pairs"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c4ceedc3826b",
+            "from": "enc_local_mask",
+            "to": "enc_attention_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.locality_mask_restricts_encoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.locality_mask_restricts_encoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_1a1a42621b05",
+            "from": "enc_module",
+            "to": "enc_atom_conditioning",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_single_added_to_atom_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_single_added_to_atom_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_678277a6fb2d",
+            "from": "enc_module",
+            "to": "enc_atom_pair",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.atom_conditioning_folded_into_atom_pair"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_conditioning_folded_into_atom_pair"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_pair_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_90d28b0ad163",
+            "from": "enc_module",
+            "to": "enc_atom_query",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_position_added_to_atom_query"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_position_added_to_atom_query"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_be99948f2e5e",
+            "from": "enc_reference",
+            "to": "enc_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_reference_features_enter_conditioned_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_reference_features_enter_conditioned_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_105f0c6e4a37",
+            "from": "enc_scaled_positions",
+            "to": "enc_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.scaled_noisy_positions_enter_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.scaled_noisy_positions_enter_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.scaled_noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_533f364c875f",
+            "from": "enc_transition_branch",
+            "to": "enc_attended_query",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.encoder_atom_transformer_produces_query"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_atom_transformer_produces_query"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8519df8f89b3",
+            "from": "enc_trunk_single",
+            "to": "enc_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.raw_trunk_single_broadcasts_onto_atoms"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.raw_trunk_single_broadcasts_onto_atoms"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.atom_attention_encoder_conditioned": "visible",
+          "modules.atom_encoder_atom_transformer": "visible",
+          "value_sites.atom_attention_encoder_pair_skip": "visible",
+          "value_sites.atom_attention_encoder_query_skip": "visible",
+          "value_sites.atom_attention_encoder_single_conditioning_skip": "visible",
+          "value_sites.atom_attention_encoder_token_output": "visible",
+          "value_sites.atom_pair_conditioning_refined": "visible",
+          "value_sites.atom_pair_reference_geometry": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_query_after_encoder_transformer": "visible",
+          "value_sites.atom_query_initial": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_query_with_noisy_position": "visible",
+          "value_sites.atom_reference_features_input": "visible",
+          "value_sites.atom_single_conditioning_base": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "visible",
+          "value_sites.diffusion_conditioned_pair": "visible",
+          "value_sites.scaled_noisy_atom_positions": "visible",
+          "value_sites.sequence_local_atom_attention_mask": "visible",
+          "value_sites.single_state_output": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "atom_attention_decoder_detail",
+        "title": "Atom Attention Decoder",
+        "summary": "The token update is broadcast back to atoms and added to the saved query skip. The two AtomTransformer boxes open different internals of one three-block call, which reads the saved conditioning and pair skip tensors; its combined result is projected to a position update.",
+        "parent": "diffusion_module_detail",
+        "subject_ref": "modules.atom_attention_decoder",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 6,
+          "column_sizing": "content",
+          "col_gap": 26,
+          "row_gap": 22
+        },
+        "nodes": [
+          {
+            "id": "dec_token_input",
+            "ref": "value_sites.diffusion_token_activation_normalized",
+            "label": "refined tokens",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "dec_query_skip",
+            "ref": "value_sites.atom_attention_encoder_query_skip",
+            "label": "query skip",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "dec_conditioning_skip",
+            "ref": "value_sites.atom_attention_encoder_single_conditioning_skip",
+            "label": "conditioning skip",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "dec_pair_skip",
+            "ref": "value_sites.atom_attention_encoder_pair_skip",
+            "label": "pair skip",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "dec_local_mask",
+            "ref": "value_sites.sequence_local_atom_attention_mask",
+            "label": "local attention mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 6
+          },
+          {
+            "id": "dec_module",
+            "ref": "modules.atom_attention_decoder",
+            "label": "broadcast token update",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "dec_query_with_skip",
+            "ref": "value_sites.atom_query_broadcast_with_skip",
+            "label": "token plus query skip",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "dec_attention_branch",
+            "ref": "modules.atom_decoder_atom_transformer",
+            "label": "local attention branch",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2,
+            "board_ref": "atom_decoder_attention_pair_bias_internals"
+          },
+          {
+            "id": "dec_transition_branch",
+            "ref": "modules.atom_decoder_atom_transformer",
+            "label": "conditioned transition branch",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 4,
+            "board_ref": "atom_decoder_conditioned_transition_internals"
+          },
+          {
+            "id": "dec_attended_query",
+            "ref": "value_sites.atom_query_after_decoder_transformer",
+            "label": "reconciled atom query",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "dec_position_update",
+            "ref": "value_sites.atom_attention_decoder_position_update",
+            "label": "position update",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4
+          }
+        ],
+        "occurrence_bindings": [
+          {
+            "match": {
+              "relation_ref": "relations.atom_query_enters_decoder_atom_transformer"
+            },
+            "from_occurrence": "dec_query_with_skip",
+            "to_occurrence": "dec_attention_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.conditioning_skip_drives_decoder_atom_transformer"
+            },
+            "from_occurrence": "dec_conditioning_skip",
+            "to_occurrence": "dec_transition_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.pair_skip_biases_decoder_atom_transformer"
+            },
+            "from_occurrence": "dec_pair_skip",
+            "to_occurrence": "dec_attention_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.locality_mask_restricts_decoder_atom_transformer"
+            },
+            "from_occurrence": "dec_local_mask",
+            "to_occurrence": "dec_attention_branch"
+          },
+          {
+            "match": {
+              "relation_ref": "relations.decoder_atom_transformer_produces_query"
+            },
+            "from_occurrence": "dec_transition_branch",
+            "to_occurrence": "dec_attended_query"
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_b87302a18b24",
+            "from": "dec_attended_query",
+            "to": "dec_position_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.decoder_query_projected_to_position_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.decoder_query_projected_to_position_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_position_update"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_29da1657e8c9",
+            "from": "dec_conditioning_skip",
+            "to": "dec_transition_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioning_skip_drives_decoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_99091877480d",
+            "from": "dec_local_mask",
+            "to": "dec_attention_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.locality_mask_restricts_decoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.locality_mask_restricts_decoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f1050ea82ce1",
+            "from": "dec_module",
+            "to": "dec_query_with_skip",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_decoder_broadcasts_token_update_onto_atoms"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_decoder_broadcasts_token_update_onto_atoms"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_35efca13a6d7",
+            "from": "dec_pair_skip",
+            "to": "dec_attention_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_skip_biases_decoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_skip_biases_decoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_pair_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_027d85ff7643",
+            "from": "dec_query_skip",
+            "to": "dec_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "skip",
+            "relation_path": [
+              "relations.query_skip_enters_atom_decoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.query_skip_enters_atom_decoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_5f160b7257eb",
+            "from": "dec_query_with_skip",
+            "to": "dec_attention_branch",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_query_enters_decoder_atom_transformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_query_enters_decoder_atom_transformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_1b672f6a1116",
+            "from": "dec_token_input",
+            "to": "dec_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.normalized_token_activation_enters_atom_decoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.normalized_token_activation_enters_atom_decoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_825b49492c76",
+            "from": "dec_transition_branch",
+            "to": "dec_attended_query",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.decoder_atom_transformer_produces_query"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.decoder_atom_transformer_produces_query"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.atom_attention_decoder": "visible",
+          "modules.atom_decoder_atom_transformer": "visible",
+          "value_sites.atom_attention_decoder_position_update": "visible",
+          "value_sites.atom_attention_encoder_pair_skip": "visible",
+          "value_sites.atom_attention_encoder_query_skip": "visible",
+          "value_sites.atom_attention_encoder_single_conditioning_skip": "visible",
+          "value_sites.atom_query_after_decoder_transformer": "visible",
+          "value_sites.atom_query_broadcast_with_skip": "visible",
+          "value_sites.diffusion_token_activation_normalized": "visible",
+          "value_sites.sequence_local_atom_attention_mask": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "token_attention_pair_bias_internals",
+        "kind": "standard_block_instance",
+        "title": "Token Attention with Pair Bias Internals",
+        "summary": "One block's attention branch at token resolution. Adaptive LayerNorm recomputes a scale and shift from the conditioned single vector, the conditioned pair tensor is projected into a per-head additive bias on the logits, sixteen heads attend over all tokens, and an AdaLN-Zero gate that starts almost closed scales the update on its way out. The additive mask slot stays empty here, so the pair tensor is the only source of bias.",
+        "parent": "diffusion_transformer_token_detail",
+        "subject_ref": "modules.token_attention_pair_bias",
+        "expansion_depth": 0,
+        "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+        "grid": {
+          "columns": 15,
+          "rows": 6,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "label": "attended activation",
+            "role": "the activation track this block attends over and returns an update for",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.single_state",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.ports.single_state",
+            "kind": "representation",
+            "rep_ref": "diffusion_token_activation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "token",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_i",
+            "port_ref": "ports.single_state"
+          },
+          {
+            "id": "conditioning_signal",
+            "label": "conditioning signal",
+            "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.ports.conditioning_signal",
+            "kind": "representation",
+            "rep_ref": "diffusion_single_conditioning",
+            "shape": "N_token x 384",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "conditioning_channel",
+                  "dimension": 384
+                }
+              ],
+              "label": "N_token x 384"
+            },
+            "shape_status": "resolved",
+            "scale": "token",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "s_i",
+            "port_ref": "ports.conditioning_signal"
+          },
+          {
+            "id": "pair_context",
+            "label": "pair context",
+            "role": "pair tensor projected into a per-head additive bias on the attention logits",
+            "col": 1,
+            "row": 5,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.pair_context",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.ports.pair_context",
+            "kind": "representation",
+            "rep_ref": "diffusion_pair_conditioning",
+            "shape": "N_token x N_token x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "pair_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_token x N_token x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "token_pair",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "z_ij",
+            "port_ref": "ports.pair_context"
+          },
+          {
+            "id": "mask_bias",
+            "label": "additive mask term",
+            "role": "the caller's own additive term on the same bias slot the pair projection writes into; a locality mask supplies large negative values on disallowed pairs, and a caller that supplies nothing leaves the slot at zero",
+            "col": 1,
+            "row": 6,
+            "prominence": "context",
+            "treatment": "chip",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.mask_bias",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.ports.mask_bias",
+            "kind": "representation",
+            "shape": "N_token x N_token",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_token"
+                }
+              ],
+              "label": "N_token x N_token"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "beta_ij",
+            "port_ref": "ports.mask_bias"
+          },
+          {
+            "id": "adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "role": "normalize the attended activation with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.adaln_normalize",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "operation": "adaptive_layer_norm"
+          },
+          {
+            "id": "form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "role": "one additive slot serves two jobs, a soft per-head bias projected from the pair tensor and whatever additive mask the caller supplies on top of it",
+            "col": 2,
+            "row": 5,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_pair_bias_term",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "operation": "pair_bias_and_mask_projection"
+          },
+          {
+            "id": "normalized_state",
+            "label": "normalized activation",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.normalized_state",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+            "kind": "representation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_norm"
+          },
+          {
+            "id": "pair_bias",
+            "label": "pair bias and mask term",
+            "col": 3,
+            "row": 5,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.pair_bias",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.pair_bias",
+            "kind": "representation",
+            "shape": "16 x N_token x N_token",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 16
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_token"
+                }
+              ],
+              "label": "16 x N_token x N_token"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "b_ij"
+          },
+          {
+            "id": "project_qkv",
+            "label": "Project per-head Q/K/V",
+            "role": "split the normalized activation into per-head queries, keys, and values; the query projection carries a bias term and the key/value projections do not",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_qkv",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "operation": "query_key_value_projection"
+          },
+          {
+            "id": "project_content_gate",
+            "label": "Project the content gate",
+            "role": "a per-query, per-head sigmoid gate read from the query's own normalized activation, applied after the weighted average rather than before it",
+            "col": 4,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_content_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "operation": "content_gate_projection"
+          },
+          {
+            "id": "qkv",
+            "label": "per-head Q/K/V",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.qkv",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.qkv",
+            "kind": "representation",
+            "shape": "q: N_token x 16 x 48; k: N_token x 16 x 48; v: N_token x 16 x 48",
+            "resolved_shape": {
+              "kind": "tuple",
+              "fields": [
+                {
+                  "id": "q",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "query_token",
+                        "dimension": "N_token"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 16
+                      },
+                      {
+                        "id": "hidden_channel",
+                        "dimension": 48
+                      }
+                    ],
+                    "label": "N_token x 16 x 48"
+                  }
+                },
+                {
+                  "id": "k",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "key_token",
+                        "dimension": "N_token"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 16
+                      },
+                      {
+                        "id": "hidden_channel",
+                        "dimension": 48
+                      }
+                    ],
+                    "label": "N_token x 16 x 48"
+                  }
+                },
+                {
+                  "id": "v",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "key_token",
+                        "dimension": "N_token"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 16
+                      },
+                      {
+                        "id": "value_channel",
+                        "dimension": 48
+                      }
+                    ],
+                    "label": "N_token x 16 x 48"
+                  }
+                }
+              ],
+              "label": "q: N_token x 16 x 48; k: N_token x 16 x 48; v: N_token x 16 x 48"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "qkv"
+          },
+          {
+            "id": "content_gate",
+            "label": "content gate",
+            "col": 5,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.content_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.content_gate",
+            "kind": "representation",
+            "shape": "N_token x 16 x 48",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "head",
+                  "dimension": 16
+                },
+                {
+                  "id": "value_channel",
+                  "dimension": 48
+                }
+              ],
+              "label": "N_token x 16 x 48"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "g_i"
+          },
+          {
+            "id": "form_attention_logits",
+            "label": "Form biased attention logits",
+            "role": "scaled query-key dot products plus the pair bias and mask term",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_attention_logits",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "operation": "biased_attention_logits"
+          },
+          {
+            "id": "combined_logits",
+            "label": "biased attention logits",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.combined_logits",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.combined_logits",
+            "kind": "representation",
+            "shape": "16 x N_token x N_token",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 16
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_token"
+                }
+              ],
+              "label": "16 x N_token x N_token"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "l_ij"
+          },
+          {
+            "id": "softmax_attention",
+            "label": "Normalize over keys",
+            "role": "one softmax per head over the key axis, which is where a large negative mask value drives a disallowed pair to zero weight",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.softmax_attention",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "operation": "softmax"
+          },
+          {
+            "id": "attention_weights",
+            "label": "attention weights",
+            "col": 9,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.attention_weights",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.attention_weights",
+            "kind": "representation",
+            "shape": "16 x N_token x N_token",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 16
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_token"
+                }
+              ],
+              "label": "16 x N_token x N_token"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "A_ij"
+          },
+          {
+            "id": "aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "role": "average the per-head values under the attention weights, then scale each query's result by its own content gate",
+            "col": 10,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "operation": "gated_value_aggregation"
+          },
+          {
+            "id": "attention_context",
+            "label": "gated per-head context",
+            "col": 11,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.attention_context",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.attention_context",
+            "kind": "representation",
+            "shape": "N_token x 16 x 48",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "head",
+                  "dimension": 16
+                },
+                {
+                  "id": "value_channel",
+                  "dimension": 48
+                }
+              ],
+              "label": "N_token x 16 x 48"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "o_i"
+          },
+          {
+            "id": "project_attention_update",
+            "label": "Concatenate heads and project",
+            "role": "concatenate the per-head contexts and project them back to the attended width",
+            "col": 12,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_attention_update",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "operation": "concat_heads_and_project"
+          },
+          {
+            "id": "project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+            "col": 12,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "operation": "adaln_zero_gate_projection"
+          },
+          {
+            "id": "projected_update",
+            "label": "projected attention update",
+            "col": 13,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.projected_update",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.projected_update",
+            "kind": "representation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "u_i"
+          },
+          {
+            "id": "output_gate",
+            "label": "AdaLN-Zero output gate",
+            "col": 13,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.values.output_gate",
+            "kind": "representation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "gamma_i"
+          },
+          {
+            "id": "apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "role": "gate the projected update before returning it",
+            "col": 14,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.apply_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "operation": "adaln_zero_output_gate"
+          },
+          {
+            "id": "attention_output",
+            "label": "attention update",
+            "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+            "col": 15,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.attention_output",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.ports.attention_output",
+            "kind": "representation",
+            "rep_ref": "diffusion_token_activation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "token",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "b_i",
+            "port_ref": "ports.attention_output"
+          }
+        ],
+        "edges": [
+          {
+            "id": "token_level_attention_pair_bias__adaln_normalize__input_1",
+            "from": "single_state",
+            "to": "adaln_normalize",
+            "kind": "data_flow",
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "relation_path": [
+              "relations.token_block_activation_enters_attention_branch"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "ports.single_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__adaln_normalize__input_2",
+            "from": "conditioning_signal",
+            "to": "adaln_normalize",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioned_single_drives_token_attention_adaln"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__adaln_normalize__output_1",
+            "from": "adaln_normalize",
+            "to": "normalized_state",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step output",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_qkv__input_1",
+            "from": "normalized_state",
+            "to": "project_qkv",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_qkv",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Project per-head Q/K/V",
+              "role": "reusable step input",
+              "inside": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_qkv__output_1",
+            "from": "project_qkv",
+            "to": "qkv",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_qkv",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Project per-head Q/K/V",
+              "role": "reusable step output",
+              "inside": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__form_pair_bias_term__input_1",
+            "from": "pair_context",
+            "to": "form_pair_bias_term",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.diffusion_pair_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioned_pair_biases_token_attention"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "ports.pair_context",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step input",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__form_pair_bias_term__input_2",
+            "from": "mask_bias",
+            "to": "form_pair_bias_term",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "ports.mask_bias",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step input",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__form_pair_bias_term__output_1",
+            "from": "form_pair_bias_term",
+            "to": "pair_bias",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "values.pair_bias",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step output",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__form_attention_logits__input_1",
+            "from": "qkv",
+            "to": "form_attention_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step input",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__form_attention_logits__input_2",
+            "from": "pair_bias",
+            "to": "form_attention_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.pair_bias",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step input",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__form_attention_logits__output_1",
+            "from": "form_attention_logits",
+            "to": "combined_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.combined_logits",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step output",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__softmax_attention__input_1",
+            "from": "combined_logits",
+            "to": "softmax_attention",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.softmax_attention",
+            "template_data_ref": "values.combined_logits",
+            "connection": {
+              "title": "Normalize over keys",
+              "role": "reusable step input",
+              "inside": "attention_weights = softmax(combined_logits, dim=keys)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__softmax_attention__output_1",
+            "from": "softmax_attention",
+            "to": "attention_weights",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.softmax_attention",
+            "template_data_ref": "values.attention_weights",
+            "connection": {
+              "title": "Normalize over keys",
+              "role": "reusable step output",
+              "inside": "attention_weights = softmax(combined_logits, dim=keys)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_content_gate__input_1",
+            "from": "normalized_state",
+            "to": "project_content_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_content_gate",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Project the content gate",
+              "role": "reusable step input",
+              "inside": "content_gate = sigmoid(LinearNoBias(a_norm))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_content_gate__output_1",
+            "from": "project_content_gate",
+            "to": "content_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_content_gate",
+            "template_data_ref": "values.content_gate",
+            "connection": {
+              "title": "Project the content gate",
+              "role": "reusable step output",
+              "inside": "content_gate = sigmoid(LinearNoBias(a_norm))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__aggregate_gated_values__input_1",
+            "from": "attention_weights",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.attention_weights",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__aggregate_gated_values__input_2",
+            "from": "qkv",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__aggregate_gated_values__input_3",
+            "from": "content_gate",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.content_gate",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__aggregate_gated_values__output_1",
+            "from": "aggregate_gated_values",
+            "to": "attention_context",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.attention_context",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step output",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_attention_update__input_1",
+            "from": "attention_context",
+            "to": "project_attention_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_attention_update",
+            "template_data_ref": "values.attention_context",
+            "connection": {
+              "title": "Concatenate heads and project",
+              "role": "reusable step input",
+              "inside": "projected_update = LinearNoBias(concat_heads(attention_context))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_attention_update__output_1",
+            "from": "project_attention_update",
+            "to": "projected_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_attention_update",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Concatenate heads and project",
+              "role": "reusable step output",
+              "inside": "projected_update = LinearNoBias(concat_heads(attention_context))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_output_gate__input_1",
+            "from": "conditioning_signal",
+            "to": "project_output_gate",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioned_single_drives_token_attention_adaln"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_output_gate",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__project_output_gate__output_1",
+            "from": "project_output_gate",
+            "to": "output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.project_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__apply_output_gate__input_1",
+            "from": "projected_update",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__apply_output_gate__input_2",
+            "from": "output_gate",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "token_level_attention_pair_bias__apply_output_gate__output_1",
+            "from": "apply_output_gate",
+            "to": "attention_output",
+            "kind": "data_flow",
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "relation_path": [
+              "relations.token_attention_branch_produces_update"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.token_level_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "ports.attention_output",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize_and_project",
+            "label": "Normalize, then project",
+            "description": "The conditioning signal decides how the attended activation is normalized. The normalized result feeds the per-head query, key, and value projections and the content gate, while the pair tensor and the caller's additive mask term are folded into one bias term.",
+            "order": 1,
+            "node_ids": [
+              "single_state",
+              "conditioning_signal",
+              "pair_context",
+              "mask_bias",
+              "adaln_normalize",
+              "form_pair_bias_term",
+              "normalized_state",
+              "pair_bias",
+              "project_qkv",
+              "project_content_gate",
+              "qkv",
+              "content_gate"
+            ]
+          },
+          {
+            "id": "attention_weights",
+            "label": "Form and normalize the weights",
+            "description": "Scaled query-key dot products carry the pair bias and mask term into the logits, and one softmax over keys turns them into attention weights. A large negative mask value here is what removes a disallowed pair.",
+            "order": 2,
+            "node_ids": [
+              "form_attention_logits",
+              "combined_logits",
+              "softmax_attention",
+              "attention_weights"
+            ]
+          },
+          {
+            "id": "aggregate_and_gate",
+            "label": "Aggregate, project, gate",
+            "description": "The shared weights average the per-head values, the content gate scales each query's result, the heads are concatenated and projected back to the attended width, and the conditioned path applies one more near-closed gate before returning the update.",
+            "order": 3,
+            "node_ids": [
+              "aggregate_gated_values",
+              "attention_context",
+              "project_attention_update",
+              "projected_update",
+              "project_output_gate",
+              "output_gate",
+              "apply_output_gate",
+              "attention_output"
+            ]
+          }
+        ],
+        "projectionMode": "standard_block_template",
+        "standardBlockRef": "standard_blocks/attention-pair-bias.yaml",
+        "standardBlockId": "attention_pair_bias",
+        "blockInstanceRef": "block_instances.token_level_attention_pair_bias",
+        "variant": "adaln_conditioned",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "useScope": "whole_module",
+        "conformance": "exact",
+        "shapeParameters": {
+          "h": 16,
+          "c": 48,
+          "n": "N_token",
+          "c_a": 768,
+          "c_s": 384,
+          "c_z": 128
+        },
+        "shapeParameterSources": {
+          "h": {
+            "kind": "configuration",
+            "ref": "reference_configuration.diffusion_token_transformer_heads"
+          },
+          "c": {
+            "kind": "configuration",
+            "ref": "reference_configuration.diffusion_token_transformer_head_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.diffusion_single_conditioning"
+          },
+          "c_z": {
+            "kind": "boundary",
+            "portRef": "ports.pair_context",
+            "representationRef": "representations.diffusion_pair_conditioning"
+          }
+        },
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.single_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_qkv",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_qkv",
+            "label": "Project per-head Q/K/V",
+            "operation": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.qkv"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "q",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 1
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 21
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 23,
+                    "end": 24
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 11,
+                    "end": 17
+                  },
+                  {
+                    "start": 40,
+                    "end": 46
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_pair_bias_term",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "operation": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "inputs": [
+              "ports.pair_context",
+              "ports.mask_bias"
+            ],
+            "outputs": [
+              "values.pair_bias"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "pair_bias",
+                "access": "write",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 9
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_context",
+                "access": "read",
+                "localRef": "ports.pair_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.pair_context",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.pair_context",
+                "occurrences": [
+                  {
+                    "start": 35,
+                    "end": 47
+                  }
+                ]
+              },
+              {
+                "lexeme": "mask_bias",
+                "access": "read",
+                "localRef": "ports.mask_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.mask_bias",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.mask_bias",
+                "occurrences": [
+                  {
+                    "start": 52,
+                    "end": 61
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_attention_logits",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.form_attention_logits",
+            "label": "Form biased attention logits",
+            "operation": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "inputs": [
+              "values.qkv",
+              "values.pair_bias"
+            ],
+            "outputs": [
+              "values.combined_logits"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "combined_logits",
+                "access": "write",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              },
+              {
+                "lexeme": "q",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 22,
+                    "end": 23
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 25,
+                    "end": 26
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_bias",
+                "access": "read",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 40,
+                    "end": 49
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "softmax_attention",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.softmax_attention",
+            "label": "Normalize over keys",
+            "operation": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "inputs": [
+              "values.combined_logits"
+            ],
+            "outputs": [
+              "values.attention_weights"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_weights",
+                "access": "write",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "combined_logits",
+                "access": "read",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 28,
+                    "end": 43
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_content_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_content_gate",
+            "label": "Project the content gate",
+            "operation": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.content_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "content_gate",
+                "access": "write",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 36,
+                    "end": 42
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "aggregate_gated_values",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "operation": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "inputs": [
+              "values.attention_weights",
+              "values.qkv",
+              "values.content_gate"
+            ],
+            "outputs": [
+              "values.attention_context"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_context",
+                "access": "write",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_weights",
+                "access": "read",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 48,
+                    "end": 65
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 67,
+                    "end": 68
+                  }
+                ]
+              },
+              {
+                "lexeme": "content_gate",
+                "access": "read",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 32
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_attention_update",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_attention_update",
+            "label": "Concatenate heads and project",
+            "operation": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "inputs": [
+              "values.attention_context"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_context",
+                "access": "read",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 45,
+                    "end": 62
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.token_level_attention_pair_bias.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.attention_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_output",
+                "access": "write",
+                "localRef": "ports.attention_output",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.attention_output",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.ports.attention_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 33,
+                    "end": 49
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 19,
+                    "end": 30
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "token_conditioned_transition_internals",
+        "kind": "standard_block_instance",
+        "title": "Token Conditioned Transition Internals",
+        "summary": "One block's transition branch at token resolution, reading the same pre-block activation the attention branch reads rather than its output. Adaptive LayerNorm, a SwiGLU expansion to twice the block width, a projection back down, and the same near-closed AdaLN-Zero gate. Half the expansion factor of the Pairformer's own Transition, a direct compute trade for a block that runs on every denoising step.",
+        "parent": "diffusion_transformer_token_detail",
+        "subject_ref": "modules.token_conditioned_transition",
+        "expansion_depth": 0,
+        "block_instance_ref": "block_instances.token_level_conditioned_transition",
+        "grid": {
+          "columns": 9,
+          "rows": 3,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "label": "block input activation",
+            "role": "the activation this block transforms pointwise, one item at a time",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.single_state",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.ports.single_state",
+            "kind": "representation",
+            "rep_ref": "diffusion_token_activation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "token",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_i",
+            "port_ref": "ports.single_state"
+          },
+          {
+            "id": "conditioning_signal",
+            "label": "conditioning signal",
+            "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.ports.conditioning_signal",
+            "kind": "representation",
+            "rep_ref": "diffusion_single_conditioning",
+            "shape": "N_token x 384",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "conditioning_channel",
+                  "dimension": 384
+                }
+              ],
+              "label": "N_token x 384"
+            },
+            "shape_status": "resolved",
+            "scale": "token",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "s_i",
+            "port_ref": "ports.conditioning_signal"
+          },
+          {
+            "id": "adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "role": "normalize the block input with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.adaln_normalize",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "operation": "adaptive_layer_norm"
+          },
+          {
+            "id": "normalized_state",
+            "label": "normalized activation",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.normalized_state",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.values.normalized_state",
+            "kind": "representation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_norm"
+          },
+          {
+            "id": "swiglu_expansion",
+            "label": "Gated expansion",
+            "role": "two independent linear projections of the same normalized activation, one passed through swish and used to gate the other elementwise, so the nonlinearity and the second linear layer are fused rather than stacked",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.swiglu_expansion",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "operation": "swiglu_transition"
+          },
+          {
+            "id": "gated_hidden",
+            "label": "SwiGLU hidden activation",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.values.gated_hidden",
+            "kind": "representation",
+            "shape": "N_token x 1536",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "hidden_channel",
+                  "dimension": 1536
+                }
+              ],
+              "label": "N_token x 1536"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "b_i"
+          },
+          {
+            "id": "project_transition_update",
+            "label": "Project back to the block width",
+            "role": "project the expanded hidden activation back down to the width of the block's own input",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.project_transition_update",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "operation": "output_projection"
+          },
+          {
+            "id": "project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+            "col": 6,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.project_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "operation": "adaln_zero_gate_projection"
+          },
+          {
+            "id": "projected_update",
+            "label": "projected transition update",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.projected_update",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.values.projected_update",
+            "kind": "representation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "u_i"
+          },
+          {
+            "id": "output_gate",
+            "label": "AdaLN-Zero output gate",
+            "col": 7,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.values.output_gate",
+            "kind": "representation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "gamma_i"
+          },
+          {
+            "id": "apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "role": "gate the projected update before returning it",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.apply_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "operation": "adaln_zero_output_gate"
+          },
+          {
+            "id": "transition_output",
+            "label": "transition update",
+            "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+            "col": 9,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.transition_output",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.ports.transition_output",
+            "kind": "representation",
+            "rep_ref": "diffusion_token_activation",
+            "shape": "N_token x 768",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_token"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 768
+                }
+              ],
+              "label": "N_token x 768"
+            },
+            "shape_status": "resolved",
+            "scale": "token",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "t_i",
+            "port_ref": "ports.transition_output"
+          }
+        ],
+        "edges": [
+          {
+            "id": "token_level_conditioned_transition__adaln_normalize__input_1",
+            "from": "single_state",
+            "to": "adaln_normalize",
+            "kind": "data_flow",
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "relation_path": [
+              "relations.token_block_activation_enters_transition_branch"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "ports.single_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__adaln_normalize__input_2",
+            "from": "conditioning_signal",
+            "to": "adaln_normalize",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioned_single_drives_token_transition_adaln"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__adaln_normalize__output_1",
+            "from": "adaln_normalize",
+            "to": "normalized_state",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step output",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__swiglu_expansion__input_1",
+            "from": "normalized_state",
+            "to": "swiglu_expansion",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.swiglu_expansion",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Gated expansion",
+              "role": "reusable step input",
+              "inside": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__swiglu_expansion__output_1",
+            "from": "swiglu_expansion",
+            "to": "gated_hidden",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.swiglu_expansion",
+            "template_data_ref": "values.gated_hidden",
+            "connection": {
+              "title": "Gated expansion",
+              "role": "reusable step output",
+              "inside": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__project_transition_update__input_1",
+            "from": "gated_hidden",
+            "to": "project_transition_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.project_transition_update",
+            "template_data_ref": "values.gated_hidden",
+            "connection": {
+              "title": "Project back to the block width",
+              "role": "reusable step input",
+              "inside": "projected_update = LinearNoBias(gated_hidden)"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__project_transition_update__output_1",
+            "from": "project_transition_update",
+            "to": "projected_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.project_transition_update",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Project back to the block width",
+              "role": "reusable step output",
+              "inside": "projected_update = LinearNoBias(gated_hidden)"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__project_output_gate__input_1",
+            "from": "conditioning_signal",
+            "to": "project_output_gate",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioned_single_drives_token_transition_adaln"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.project_output_gate",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__project_output_gate__output_1",
+            "from": "project_output_gate",
+            "to": "output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.project_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__apply_output_gate__input_1",
+            "from": "projected_update",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__apply_output_gate__input_2",
+            "from": "output_gate",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "token_level_conditioned_transition__apply_output_gate__output_1",
+            "from": "apply_output_gate",
+            "to": "transition_output",
+            "kind": "data_flow",
+            "carries": [
+              "representations.diffusion_token_activation"
+            ],
+            "relation_path": [
+              "relations.token_transition_branch_produces_update"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.token_level_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.token_level_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "ports.transition_output",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize",
+            "label": "Normalize",
+            "description": "The conditioning signal decides whether the block input is normalized adaptively, with a scale and shift recomputed from that signal at every call, or by a plain LayerNorm with static parameters.",
+            "order": 1,
+            "node_ids": [
+              "single_state",
+              "conditioning_signal",
+              "adaln_normalize",
+              "normalized_state"
+            ]
+          },
+          {
+            "id": "gated_transition",
+            "label": "Gated transition",
+            "description": "One normalized activation feeds two independent projections into the expanded hidden width; swish on one branch gates the other, which is what makes this a SwiGLU transition rather than a plain two-layer feedforward.",
+            "order": 2,
+            "node_ids": [
+              "swiglu_expansion",
+              "gated_hidden"
+            ]
+          },
+          {
+            "id": "project_and_gate",
+            "label": "Project, then gate",
+            "description": "The hidden activation is projected back to the block's own width, and the conditioned path applies one more near-closed gate before returning the update to whatever residual connection the surrounding architecture owns.",
+            "order": 3,
+            "node_ids": [
+              "project_transition_update",
+              "projected_update",
+              "project_output_gate",
+              "output_gate",
+              "apply_output_gate",
+              "transition_output"
+            ]
+          }
+        ],
+        "projectionMode": "standard_block_template",
+        "standardBlockRef": "standard_blocks/conditioned-transition-block.yaml",
+        "standardBlockId": "conditioned_transition_block",
+        "blockInstanceRef": "block_instances.token_level_conditioned_transition",
+        "variant": "adaln_conditioned_transition",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "useScope": "whole_module",
+        "conformance": "exact",
+        "shapeParameters": {
+          "c_hidden": 1536,
+          "n": "N_token",
+          "c_a": 768,
+          "c_s": 384
+        },
+        "shapeParameterSources": {
+          "c_hidden": {
+            "kind": "configuration",
+            "ref": "reference_configuration.diffusion_token_transition_hidden_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.diffusion_token_activation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.diffusion_single_conditioning"
+          }
+        },
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.single_state",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "swiglu_expansion",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.swiglu_expansion",
+            "label": "Gated expansion",
+            "operation": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.gated_hidden"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "gated_hidden",
+                "access": "write",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 40
+                  },
+                  {
+                    "start": 58,
+                    "end": 64
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_transition_update",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.project_transition_update",
+            "label": "Project back to the block width",
+            "operation": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "inputs": [
+              "values.gated_hidden"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "gated_hidden",
+                "access": "read",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 32,
+                    "end": 44
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.token_level_conditioned_transition.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.transition_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "transition_output",
+                "access": "write",
+                "localRef": "ports.transition_output",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.transition_output",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.ports.transition_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 50
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.token_level_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_encoder_attention_pair_bias_internals",
+        "kind": "standard_block_instance",
+        "title": "Encoder Atom Attention Internals",
+        "summary": "The same attention block as the token level, running inside the encoder's AtomTransformer call. Two things change. The additive slot that stays empty at token level now carries the sequence-local mask that confines each atom to a 128-atom neighbourhood, and conditioning is per atom rather than per token. Four heads instead of sixteen, inside a three-block loop instead of twenty-four.",
+        "parent": "atom_attention_encoder_detail",
+        "subject_ref": "modules.atom_encoder_atom_transformer",
+        "expansion_depth": 0,
+        "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+        "grid": {
+          "columns": 15,
+          "rows": 6,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "label": "attended activation",
+            "role": "the activation track this block attends over and returns an update for",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.single_state",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.ports.single_state",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_i",
+            "port_ref": "ports.single_state"
+          },
+          {
+            "id": "conditioning_signal",
+            "label": "conditioning signal",
+            "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.ports.conditioning_signal",
+            "kind": "representation",
+            "rep_ref": "atom_single_conditioning",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "conditioning_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "s_i",
+            "port_ref": "ports.conditioning_signal"
+          },
+          {
+            "id": "pair_context",
+            "label": "pair context",
+            "role": "pair tensor projected into a per-head additive bias on the attention logits",
+            "col": 1,
+            "row": 5,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.pair_context",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.ports.pair_context",
+            "kind": "representation",
+            "rep_ref": "atom_pair_representation",
+            "shape": "N_atom x N_atom x 16",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "pair_channel",
+                  "dimension": 16
+                }
+              ],
+              "label": "N_atom x N_atom x 16"
+            },
+            "shape_status": "resolved",
+            "scale": "atom_pair",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "z_ij",
+            "port_ref": "ports.pair_context"
+          },
+          {
+            "id": "mask_bias",
+            "label": "additive mask term",
+            "role": "the caller's own additive term on the same bias slot the pair projection writes into; a locality mask supplies large negative values on disallowed pairs, and a caller that supplies nothing leaves the slot at zero",
+            "col": 1,
+            "row": 6,
+            "prominence": "context",
+            "treatment": "chip",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.mask_bias",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.ports.mask_bias",
+            "kind": "representation",
+            "rep_ref": "sequence_local_attention_mask",
+            "shape": "N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "atom_pair",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "beta_ij",
+            "port_ref": "ports.mask_bias"
+          },
+          {
+            "id": "adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "role": "normalize the attended activation with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.adaln_normalize",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "operation": "adaptive_layer_norm"
+          },
+          {
+            "id": "form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "role": "one additive slot serves two jobs, a soft per-head bias projected from the pair tensor and whatever additive mask the caller supplies on top of it",
+            "col": 2,
+            "row": 5,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_pair_bias_term",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "operation": "pair_bias_and_mask_projection"
+          },
+          {
+            "id": "normalized_state",
+            "label": "normalized activation",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.normalized_state",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_norm"
+          },
+          {
+            "id": "pair_bias",
+            "label": "pair bias and mask term",
+            "col": 3,
+            "row": 5,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.pair_bias",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.pair_bias",
+            "kind": "representation",
+            "shape": "4 x N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "4 x N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "b_ij"
+          },
+          {
+            "id": "project_qkv",
+            "label": "Project per-head Q/K/V",
+            "role": "split the normalized activation into per-head queries, keys, and values; the query projection carries a bias term and the key/value projections do not",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_qkv",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "operation": "query_key_value_projection"
+          },
+          {
+            "id": "project_content_gate",
+            "label": "Project the content gate",
+            "role": "a per-query, per-head sigmoid gate read from the query's own normalized activation, applied after the weighted average rather than before it",
+            "col": 4,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_content_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "operation": "content_gate_projection"
+          },
+          {
+            "id": "qkv",
+            "label": "per-head Q/K/V",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.qkv",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+            "kind": "representation",
+            "shape": "q: N_atom x 4 x 32; k: N_atom x 4 x 32; v: N_atom x 4 x 32",
+            "resolved_shape": {
+              "kind": "tuple",
+              "fields": [
+                {
+                  "id": "q",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "query_token",
+                        "dimension": "N_atom"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 4
+                      },
+                      {
+                        "id": "hidden_channel",
+                        "dimension": 32
+                      }
+                    ],
+                    "label": "N_atom x 4 x 32"
+                  }
+                },
+                {
+                  "id": "k",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "key_token",
+                        "dimension": "N_atom"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 4
+                      },
+                      {
+                        "id": "hidden_channel",
+                        "dimension": 32
+                      }
+                    ],
+                    "label": "N_atom x 4 x 32"
+                  }
+                },
+                {
+                  "id": "v",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "key_token",
+                        "dimension": "N_atom"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 4
+                      },
+                      {
+                        "id": "value_channel",
+                        "dimension": 32
+                      }
+                    ],
+                    "label": "N_atom x 4 x 32"
+                  }
+                }
+              ],
+              "label": "q: N_atom x 4 x 32; k: N_atom x 4 x 32; v: N_atom x 4 x 32"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "qkv"
+          },
+          {
+            "id": "content_gate",
+            "label": "content gate",
+            "col": 5,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.content_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.content_gate",
+            "kind": "representation",
+            "shape": "N_atom x 4 x 32",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "value_channel",
+                  "dimension": 32
+                }
+              ],
+              "label": "N_atom x 4 x 32"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "g_i"
+          },
+          {
+            "id": "form_attention_logits",
+            "label": "Form biased attention logits",
+            "role": "scaled query-key dot products plus the pair bias and mask term",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_attention_logits",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "operation": "biased_attention_logits"
+          },
+          {
+            "id": "combined_logits",
+            "label": "biased attention logits",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.combined_logits",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.combined_logits",
+            "kind": "representation",
+            "shape": "4 x N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "4 x N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "l_ij"
+          },
+          {
+            "id": "softmax_attention",
+            "label": "Normalize over keys",
+            "role": "one softmax per head over the key axis, which is where a large negative mask value drives a disallowed pair to zero weight",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.softmax_attention",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "operation": "softmax"
+          },
+          {
+            "id": "attention_weights",
+            "label": "attention weights",
+            "col": 9,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.attention_weights",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.attention_weights",
+            "kind": "representation",
+            "shape": "4 x N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "4 x N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "A_ij"
+          },
+          {
+            "id": "aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "role": "average the per-head values under the attention weights, then scale each query's result by its own content gate",
+            "col": 10,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "operation": "gated_value_aggregation"
+          },
+          {
+            "id": "attention_context",
+            "label": "gated per-head context",
+            "col": 11,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.attention_context",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.attention_context",
+            "kind": "representation",
+            "shape": "N_atom x 4 x 32",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "value_channel",
+                  "dimension": 32
+                }
+              ],
+              "label": "N_atom x 4 x 32"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "o_i"
+          },
+          {
+            "id": "project_attention_update",
+            "label": "Concatenate heads and project",
+            "role": "concatenate the per-head contexts and project them back to the attended width",
+            "col": 12,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_attention_update",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "operation": "concat_heads_and_project"
+          },
+          {
+            "id": "project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+            "col": 12,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "operation": "adaln_zero_gate_projection"
+          },
+          {
+            "id": "projected_update",
+            "label": "projected attention update",
+            "col": 13,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.projected_update",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.projected_update",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "u_i"
+          },
+          {
+            "id": "output_gate",
+            "label": "AdaLN-Zero output gate",
+            "col": 13,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.values.output_gate",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "gamma_i"
+          },
+          {
+            "id": "apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "role": "gate the projected update before returning it",
+            "col": 14,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.apply_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "operation": "adaln_zero_output_gate"
+          },
+          {
+            "id": "attention_output",
+            "label": "attention update",
+            "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+            "col": 15,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.attention_output",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.ports.attention_output",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "b_i",
+            "port_ref": "ports.attention_output"
+          }
+        ],
+        "edges": [
+          {
+            "id": "atom_encoder_attention_pair_bias__adaln_normalize__input_1",
+            "from": "single_state",
+            "to": "adaln_normalize",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.atom_query_enters_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "ports.single_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__adaln_normalize__input_2",
+            "from": "conditioning_signal",
+            "to": "adaln_normalize",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__adaln_normalize__output_1",
+            "from": "adaln_normalize",
+            "to": "normalized_state",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step output",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_qkv__input_1",
+            "from": "normalized_state",
+            "to": "project_qkv",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_qkv",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Project per-head Q/K/V",
+              "role": "reusable step input",
+              "inside": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_qkv__output_1",
+            "from": "project_qkv",
+            "to": "qkv",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_qkv",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Project per-head Q/K/V",
+              "role": "reusable step output",
+              "inside": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__form_pair_bias_term__input_1",
+            "from": "pair_context",
+            "to": "form_pair_bias_term",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_pair_representation"
+            ],
+            "relation_path": [
+              "relations.atom_pair_biases_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "ports.pair_context",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step input",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__form_pair_bias_term__input_2",
+            "from": "mask_bias",
+            "to": "form_pair_bias_term",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "relation_path": [
+              "relations.locality_mask_restricts_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "ports.mask_bias",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step input",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__form_pair_bias_term__output_1",
+            "from": "form_pair_bias_term",
+            "to": "pair_bias",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "values.pair_bias",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step output",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__form_attention_logits__input_1",
+            "from": "qkv",
+            "to": "form_attention_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step input",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__form_attention_logits__input_2",
+            "from": "pair_bias",
+            "to": "form_attention_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.pair_bias",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step input",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__form_attention_logits__output_1",
+            "from": "form_attention_logits",
+            "to": "combined_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.combined_logits",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step output",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__softmax_attention__input_1",
+            "from": "combined_logits",
+            "to": "softmax_attention",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.softmax_attention",
+            "template_data_ref": "values.combined_logits",
+            "connection": {
+              "title": "Normalize over keys",
+              "role": "reusable step input",
+              "inside": "attention_weights = softmax(combined_logits, dim=keys)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__softmax_attention__output_1",
+            "from": "softmax_attention",
+            "to": "attention_weights",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.softmax_attention",
+            "template_data_ref": "values.attention_weights",
+            "connection": {
+              "title": "Normalize over keys",
+              "role": "reusable step output",
+              "inside": "attention_weights = softmax(combined_logits, dim=keys)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_content_gate__input_1",
+            "from": "normalized_state",
+            "to": "project_content_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_content_gate",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Project the content gate",
+              "role": "reusable step input",
+              "inside": "content_gate = sigmoid(LinearNoBias(a_norm))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_content_gate__output_1",
+            "from": "project_content_gate",
+            "to": "content_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_content_gate",
+            "template_data_ref": "values.content_gate",
+            "connection": {
+              "title": "Project the content gate",
+              "role": "reusable step output",
+              "inside": "content_gate = sigmoid(LinearNoBias(a_norm))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__aggregate_gated_values__input_1",
+            "from": "attention_weights",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.attention_weights",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__aggregate_gated_values__input_2",
+            "from": "qkv",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__aggregate_gated_values__input_3",
+            "from": "content_gate",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.content_gate",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__aggregate_gated_values__output_1",
+            "from": "aggregate_gated_values",
+            "to": "attention_context",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.attention_context",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step output",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_attention_update__input_1",
+            "from": "attention_context",
+            "to": "project_attention_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_attention_update",
+            "template_data_ref": "values.attention_context",
+            "connection": {
+              "title": "Concatenate heads and project",
+              "role": "reusable step input",
+              "inside": "projected_update = LinearNoBias(concat_heads(attention_context))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_attention_update__output_1",
+            "from": "project_attention_update",
+            "to": "projected_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_attention_update",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Concatenate heads and project",
+              "role": "reusable step output",
+              "inside": "projected_update = LinearNoBias(concat_heads(attention_context))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_output_gate__input_1",
+            "from": "conditioning_signal",
+            "to": "project_output_gate",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_output_gate",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__project_output_gate__output_1",
+            "from": "project_output_gate",
+            "to": "output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.project_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__apply_output_gate__input_1",
+            "from": "projected_update",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__apply_output_gate__input_2",
+            "from": "output_gate",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_encoder_attention_pair_bias__apply_output_gate__output_1",
+            "from": "apply_output_gate",
+            "to": "attention_output",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.encoder_atom_transformer_produces_query"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_encoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "ports.attention_output",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize_and_project",
+            "label": "Normalize, then project",
+            "description": "The conditioning signal decides how the attended activation is normalized. The normalized result feeds the per-head query, key, and value projections and the content gate, while the pair tensor and the caller's additive mask term are folded into one bias term.",
+            "order": 1,
+            "node_ids": [
+              "single_state",
+              "conditioning_signal",
+              "pair_context",
+              "mask_bias",
+              "adaln_normalize",
+              "form_pair_bias_term",
+              "normalized_state",
+              "pair_bias",
+              "project_qkv",
+              "project_content_gate",
+              "qkv",
+              "content_gate"
+            ]
+          },
+          {
+            "id": "attention_weights",
+            "label": "Form and normalize the weights",
+            "description": "Scaled query-key dot products carry the pair bias and mask term into the logits, and one softmax over keys turns them into attention weights. A large negative mask value here is what removes a disallowed pair.",
+            "order": 2,
+            "node_ids": [
+              "form_attention_logits",
+              "combined_logits",
+              "softmax_attention",
+              "attention_weights"
+            ]
+          },
+          {
+            "id": "aggregate_and_gate",
+            "label": "Aggregate, project, gate",
+            "description": "The shared weights average the per-head values, the content gate scales each query's result, the heads are concatenated and projected back to the attended width, and the conditioned path applies one more near-closed gate before returning the update.",
+            "order": 3,
+            "node_ids": [
+              "aggregate_gated_values",
+              "attention_context",
+              "project_attention_update",
+              "projected_update",
+              "project_output_gate",
+              "output_gate",
+              "apply_output_gate",
+              "attention_output"
+            ]
+          }
+        ],
+        "projectionMode": "standard_block_template",
+        "standardBlockRef": "standard_blocks/attention-pair-bias.yaml",
+        "standardBlockId": "attention_pair_bias",
+        "blockInstanceRef": "block_instances.atom_encoder_attention_pair_bias",
+        "variant": "adaln_conditioned",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "The same conditioned attention block as the token level, with three differences owned by the AtomTransformer wrapper around it. The additive mask slot that stays empty at token level carries the sequence-local block-diagonal mask here, which is what restricts each atom to a 128-atom neighbourhood. The head count drops from 16 to 4 and the surrounding block loop from 24 to 3. Conditioning is per atom (each atom's own c_l) rather than per token. The wrapper also owns the residual sum with the transition branch and the repetition itself; this instance covers one attention branch of one block.",
+        "shapeParameters": {
+          "h": 4,
+          "c": 32,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128,
+          "c_z": 16
+        },
+        "shapeParameterSources": {
+          "h": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_heads"
+          },
+          "c": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_head_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          },
+          "c_z": {
+            "kind": "boundary",
+            "portRef": "ports.pair_context",
+            "representationRef": "representations.atom_pair_representation"
+          }
+        },
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.single_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_qkv",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_qkv",
+            "label": "Project per-head Q/K/V",
+            "operation": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.qkv"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "q",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 1
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 21
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 23,
+                    "end": 24
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 11,
+                    "end": 17
+                  },
+                  {
+                    "start": 40,
+                    "end": 46
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_pair_bias_term",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "operation": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "inputs": [
+              "ports.pair_context",
+              "ports.mask_bias"
+            ],
+            "outputs": [
+              "values.pair_bias"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "pair_bias",
+                "access": "write",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 9
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_context",
+                "access": "read",
+                "localRef": "ports.pair_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.pair_context",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.pair_context",
+                "occurrences": [
+                  {
+                    "start": 35,
+                    "end": 47
+                  }
+                ]
+              },
+              {
+                "lexeme": "mask_bias",
+                "access": "read",
+                "localRef": "ports.mask_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.mask_bias",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.mask_bias",
+                "occurrences": [
+                  {
+                    "start": 52,
+                    "end": 61
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_attention_logits",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.form_attention_logits",
+            "label": "Form biased attention logits",
+            "operation": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "inputs": [
+              "values.qkv",
+              "values.pair_bias"
+            ],
+            "outputs": [
+              "values.combined_logits"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "combined_logits",
+                "access": "write",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              },
+              {
+                "lexeme": "q",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 22,
+                    "end": 23
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 25,
+                    "end": 26
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_bias",
+                "access": "read",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 40,
+                    "end": 49
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "softmax_attention",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.softmax_attention",
+            "label": "Normalize over keys",
+            "operation": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "inputs": [
+              "values.combined_logits"
+            ],
+            "outputs": [
+              "values.attention_weights"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_weights",
+                "access": "write",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "combined_logits",
+                "access": "read",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 28,
+                    "end": 43
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_content_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_content_gate",
+            "label": "Project the content gate",
+            "operation": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.content_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "content_gate",
+                "access": "write",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 36,
+                    "end": 42
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "aggregate_gated_values",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "operation": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "inputs": [
+              "values.attention_weights",
+              "values.qkv",
+              "values.content_gate"
+            ],
+            "outputs": [
+              "values.attention_context"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_context",
+                "access": "write",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_weights",
+                "access": "read",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 48,
+                    "end": 65
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 67,
+                    "end": 68
+                  }
+                ]
+              },
+              {
+                "lexeme": "content_gate",
+                "access": "read",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 32
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_attention_update",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_attention_update",
+            "label": "Concatenate heads and project",
+            "operation": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "inputs": [
+              "values.attention_context"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_context",
+                "access": "read",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 45,
+                    "end": 62
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.attention_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_output",
+                "access": "write",
+                "localRef": "ports.attention_output",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.attention_output",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.ports.attention_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 33,
+                    "end": 49
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 19,
+                    "end": 30
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_encoder_conditioned_transition_internals",
+        "kind": "standard_block_instance",
+        "title": "Encoder Atom Transition Internals",
+        "summary": "The transition branch of the encoder's atom-level blocks, conditioned on each atom's own vector and expanded over the 128-channel atom width. The locality mask that shapes the attention branch never reaches this branch, which has no pair input at all.",
+        "parent": "atom_attention_encoder_detail",
+        "subject_ref": "modules.atom_encoder_atom_transformer",
+        "expansion_depth": 0,
+        "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+        "grid": {
+          "columns": 9,
+          "rows": 3,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "label": "block input activation",
+            "role": "the activation this block transforms pointwise, one item at a time",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.single_state",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.ports.single_state",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_i",
+            "port_ref": "ports.single_state"
+          },
+          {
+            "id": "conditioning_signal",
+            "label": "conditioning signal",
+            "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.ports.conditioning_signal",
+            "kind": "representation",
+            "rep_ref": "atom_single_conditioning",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "conditioning_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "s_i",
+            "port_ref": "ports.conditioning_signal"
+          },
+          {
+            "id": "adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "role": "normalize the block input with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.adaln_normalize",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "operation": "adaptive_layer_norm"
+          },
+          {
+            "id": "normalized_state",
+            "label": "normalized activation",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.normalized_state",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.values.normalized_state",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_norm"
+          },
+          {
+            "id": "swiglu_expansion",
+            "label": "Gated expansion",
+            "role": "two independent linear projections of the same normalized activation, one passed through swish and used to gate the other elementwise, so the nonlinearity and the second linear layer are fused rather than stacked",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.swiglu_expansion",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "operation": "swiglu_transition"
+          },
+          {
+            "id": "gated_hidden",
+            "label": "SwiGLU hidden activation",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.values.gated_hidden",
+            "kind": "representation",
+            "shape": "N_atom x 256",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "hidden_channel",
+                  "dimension": 256
+                }
+              ],
+              "label": "N_atom x 256"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "b_i"
+          },
+          {
+            "id": "project_transition_update",
+            "label": "Project back to the block width",
+            "role": "project the expanded hidden activation back down to the width of the block's own input",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.project_transition_update",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "operation": "output_projection"
+          },
+          {
+            "id": "project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+            "col": 6,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.project_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "operation": "adaln_zero_gate_projection"
+          },
+          {
+            "id": "projected_update",
+            "label": "projected transition update",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.projected_update",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.values.projected_update",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "u_i"
+          },
+          {
+            "id": "output_gate",
+            "label": "AdaLN-Zero output gate",
+            "col": 7,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.values.output_gate",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "gamma_i"
+          },
+          {
+            "id": "apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "role": "gate the projected update before returning it",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.apply_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "operation": "adaln_zero_output_gate"
+          },
+          {
+            "id": "transition_output",
+            "label": "transition update",
+            "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+            "col": 9,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.transition_output",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.ports.transition_output",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "t_i",
+            "port_ref": "ports.transition_output"
+          }
+        ],
+        "edges": [
+          {
+            "id": "atom_encoder_conditioned_transition__adaln_normalize__input_1",
+            "from": "single_state",
+            "to": "adaln_normalize",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.atom_query_enters_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "ports.single_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__adaln_normalize__input_2",
+            "from": "conditioning_signal",
+            "to": "adaln_normalize",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__adaln_normalize__output_1",
+            "from": "adaln_normalize",
+            "to": "normalized_state",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step output",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__swiglu_expansion__input_1",
+            "from": "normalized_state",
+            "to": "swiglu_expansion",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.swiglu_expansion",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Gated expansion",
+              "role": "reusable step input",
+              "inside": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__swiglu_expansion__output_1",
+            "from": "swiglu_expansion",
+            "to": "gated_hidden",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.swiglu_expansion",
+            "template_data_ref": "values.gated_hidden",
+            "connection": {
+              "title": "Gated expansion",
+              "role": "reusable step output",
+              "inside": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__project_transition_update__input_1",
+            "from": "gated_hidden",
+            "to": "project_transition_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.project_transition_update",
+            "template_data_ref": "values.gated_hidden",
+            "connection": {
+              "title": "Project back to the block width",
+              "role": "reusable step input",
+              "inside": "projected_update = LinearNoBias(gated_hidden)"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__project_transition_update__output_1",
+            "from": "project_transition_update",
+            "to": "projected_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.project_transition_update",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Project back to the block width",
+              "role": "reusable step output",
+              "inside": "projected_update = LinearNoBias(gated_hidden)"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__project_output_gate__input_1",
+            "from": "conditioning_signal",
+            "to": "project_output_gate",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.atom_conditioning_drives_encoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.project_output_gate",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__project_output_gate__output_1",
+            "from": "project_output_gate",
+            "to": "output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.project_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__apply_output_gate__input_1",
+            "from": "projected_update",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__apply_output_gate__input_2",
+            "from": "output_gate",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_encoder_conditioned_transition__apply_output_gate__output_1",
+            "from": "apply_output_gate",
+            "to": "transition_output",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.encoder_atom_transformer_produces_query"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_encoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_encoder_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "ports.transition_output",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize",
+            "label": "Normalize",
+            "description": "The conditioning signal decides whether the block input is normalized adaptively, with a scale and shift recomputed from that signal at every call, or by a plain LayerNorm with static parameters.",
+            "order": 1,
+            "node_ids": [
+              "single_state",
+              "conditioning_signal",
+              "adaln_normalize",
+              "normalized_state"
+            ]
+          },
+          {
+            "id": "gated_transition",
+            "label": "Gated transition",
+            "description": "One normalized activation feeds two independent projections into the expanded hidden width; swish on one branch gates the other, which is what makes this a SwiGLU transition rather than a plain two-layer feedforward.",
+            "order": 2,
+            "node_ids": [
+              "swiglu_expansion",
+              "gated_hidden"
+            ]
+          },
+          {
+            "id": "project_and_gate",
+            "label": "Project, then gate",
+            "description": "The hidden activation is projected back to the block's own width, and the conditioned path applies one more near-closed gate before returning the update to whatever residual connection the surrounding architecture owns.",
+            "order": 3,
+            "node_ids": [
+              "project_transition_update",
+              "projected_update",
+              "project_output_gate",
+              "output_gate",
+              "apply_output_gate",
+              "transition_output"
+            ]
+          }
+        ],
+        "projectionMode": "standard_block_template",
+        "standardBlockRef": "standard_blocks/conditioned-transition-block.yaml",
+        "standardBlockId": "conditioned_transition_block",
+        "blockInstanceRef": "block_instances.atom_encoder_conditioned_transition",
+        "variant": "adaln_conditioned_transition",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "The same conditioned transition block as the token level, conditioned per atom rather than per token and expanded over a 128-channel activation instead of a 768-channel one. The AtomTransformer wrapper owns the three-block loop and the residual sum with the attention branch; this instance covers one transition branch of one block. The transition branch takes no pair input and no mask, so the locality restriction that shapes the attention branch does not touch it.",
+        "shapeParameters": {
+          "c_hidden": 256,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128
+        },
+        "shapeParameterSources": {
+          "c_hidden": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transition_hidden_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          }
+        },
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.single_state",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "swiglu_expansion",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.swiglu_expansion",
+            "label": "Gated expansion",
+            "operation": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.gated_hidden"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "gated_hidden",
+                "access": "write",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 40
+                  },
+                  {
+                    "start": 58,
+                    "end": 64
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_transition_update",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.project_transition_update",
+            "label": "Project back to the block width",
+            "operation": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "inputs": [
+              "values.gated_hidden"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "gated_hidden",
+                "access": "read",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 32,
+                    "end": 44
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.transition_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "transition_output",
+                "access": "write",
+                "localRef": "ports.transition_output",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.transition_output",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.ports.transition_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 50
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_encoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_decoder_attention_pair_bias_internals",
+        "kind": "standard_block_instance",
+        "title": "Decoder Atom Attention Internals",
+        "summary": "The third occurrence of the same attention block, shaped exactly like the encoder's but conditioned on the tensors the encoder saved before the token bottleneck rather than on anything recomputed here. That reuse of the saved conditioning and pair tensors is what makes the decoder a skip connection across the bottleneck rather than a second encoder.",
+        "parent": "atom_attention_decoder_detail",
+        "subject_ref": "modules.atom_decoder_atom_transformer",
+        "expansion_depth": 0,
+        "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+        "grid": {
+          "columns": 15,
+          "rows": 6,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "label": "attended activation",
+            "role": "the activation track this block attends over and returns an update for",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.single_state",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.ports.single_state",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_i",
+            "port_ref": "ports.single_state"
+          },
+          {
+            "id": "conditioning_signal",
+            "label": "conditioning signal",
+            "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.ports.conditioning_signal",
+            "kind": "representation",
+            "rep_ref": "atom_single_conditioning",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "conditioning_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "s_i",
+            "port_ref": "ports.conditioning_signal"
+          },
+          {
+            "id": "pair_context",
+            "label": "pair context",
+            "role": "pair tensor projected into a per-head additive bias on the attention logits",
+            "col": 1,
+            "row": 5,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.pair_context",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.ports.pair_context",
+            "kind": "representation",
+            "rep_ref": "atom_pair_representation",
+            "shape": "N_atom x N_atom x 16",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "pair_channel",
+                  "dimension": 16
+                }
+              ],
+              "label": "N_atom x N_atom x 16"
+            },
+            "shape_status": "resolved",
+            "scale": "atom_pair",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "z_ij",
+            "port_ref": "ports.pair_context"
+          },
+          {
+            "id": "mask_bias",
+            "label": "additive mask term",
+            "role": "the caller's own additive term on the same bias slot the pair projection writes into; a locality mask supplies large negative values on disallowed pairs, and a caller that supplies nothing leaves the slot at zero",
+            "col": 1,
+            "row": 6,
+            "prominence": "context",
+            "treatment": "chip",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.mask_bias",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.ports.mask_bias",
+            "kind": "representation",
+            "rep_ref": "sequence_local_attention_mask",
+            "shape": "N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "atom_pair",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "beta_ij",
+            "port_ref": "ports.mask_bias"
+          },
+          {
+            "id": "adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "role": "normalize the attended activation with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.adaln_normalize",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "operation": "adaptive_layer_norm"
+          },
+          {
+            "id": "form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "role": "one additive slot serves two jobs, a soft per-head bias projected from the pair tensor and whatever additive mask the caller supplies on top of it",
+            "col": 2,
+            "row": 5,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_pair_bias_term",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "operation": "pair_bias_and_mask_projection"
+          },
+          {
+            "id": "normalized_state",
+            "label": "normalized activation",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.normalized_state",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_norm"
+          },
+          {
+            "id": "pair_bias",
+            "label": "pair bias and mask term",
+            "col": 3,
+            "row": 5,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.pair_bias",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.pair_bias",
+            "kind": "representation",
+            "shape": "4 x N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "4 x N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "b_ij"
+          },
+          {
+            "id": "project_qkv",
+            "label": "Project per-head Q/K/V",
+            "role": "split the normalized activation into per-head queries, keys, and values; the query projection carries a bias term and the key/value projections do not",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_qkv",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "operation": "query_key_value_projection"
+          },
+          {
+            "id": "project_content_gate",
+            "label": "Project the content gate",
+            "role": "a per-query, per-head sigmoid gate read from the query's own normalized activation, applied after the weighted average rather than before it",
+            "col": 4,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_content_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "operation": "content_gate_projection"
+          },
+          {
+            "id": "qkv",
+            "label": "per-head Q/K/V",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.qkv",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+            "kind": "representation",
+            "shape": "q: N_atom x 4 x 32; k: N_atom x 4 x 32; v: N_atom x 4 x 32",
+            "resolved_shape": {
+              "kind": "tuple",
+              "fields": [
+                {
+                  "id": "q",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "query_token",
+                        "dimension": "N_atom"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 4
+                      },
+                      {
+                        "id": "hidden_channel",
+                        "dimension": 32
+                      }
+                    ],
+                    "label": "N_atom x 4 x 32"
+                  }
+                },
+                {
+                  "id": "k",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "key_token",
+                        "dimension": "N_atom"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 4
+                      },
+                      {
+                        "id": "hidden_channel",
+                        "dimension": 32
+                      }
+                    ],
+                    "label": "N_atom x 4 x 32"
+                  }
+                },
+                {
+                  "id": "v",
+                  "shape": {
+                    "kind": "tensor",
+                    "axes": [
+                      {
+                        "id": "key_token",
+                        "dimension": "N_atom"
+                      },
+                      {
+                        "id": "head",
+                        "dimension": 4
+                      },
+                      {
+                        "id": "value_channel",
+                        "dimension": 32
+                      }
+                    ],
+                    "label": "N_atom x 4 x 32"
+                  }
+                }
+              ],
+              "label": "q: N_atom x 4 x 32; k: N_atom x 4 x 32; v: N_atom x 4 x 32"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "qkv"
+          },
+          {
+            "id": "content_gate",
+            "label": "content gate",
+            "col": 5,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.content_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.content_gate",
+            "kind": "representation",
+            "shape": "N_atom x 4 x 32",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "value_channel",
+                  "dimension": 32
+                }
+              ],
+              "label": "N_atom x 4 x 32"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "g_i"
+          },
+          {
+            "id": "form_attention_logits",
+            "label": "Form biased attention logits",
+            "role": "scaled query-key dot products plus the pair bias and mask term",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_attention_logits",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "operation": "biased_attention_logits"
+          },
+          {
+            "id": "combined_logits",
+            "label": "biased attention logits",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.combined_logits",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.combined_logits",
+            "kind": "representation",
+            "shape": "4 x N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "4 x N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "l_ij"
+          },
+          {
+            "id": "softmax_attention",
+            "label": "Normalize over keys",
+            "role": "one softmax per head over the key axis, which is where a large negative mask value drives a disallowed pair to zero weight",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.softmax_attention",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "operation": "softmax"
+          },
+          {
+            "id": "attention_weights",
+            "label": "attention weights",
+            "col": 9,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.attention_weights",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.attention_weights",
+            "kind": "representation",
+            "shape": "4 x N_atom x N_atom",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "key_token",
+                  "dimension": "N_atom"
+                }
+              ],
+              "label": "4 x N_atom x N_atom"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "pair",
+            "flow_family": "pair",
+            "notation": "A_ij"
+          },
+          {
+            "id": "aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "role": "average the per-head values under the attention weights, then scale each query's result by its own content gate",
+            "col": 10,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "operation": "gated_value_aggregation"
+          },
+          {
+            "id": "attention_context",
+            "label": "gated per-head context",
+            "col": 11,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.attention_context",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.attention_context",
+            "kind": "representation",
+            "shape": "N_atom x 4 x 32",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "head",
+                  "dimension": 4
+                },
+                {
+                  "id": "value_channel",
+                  "dimension": 32
+                }
+              ],
+              "label": "N_atom x 4 x 32"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "o_i"
+          },
+          {
+            "id": "project_attention_update",
+            "label": "Concatenate heads and project",
+            "role": "concatenate the per-head contexts and project them back to the attended width",
+            "col": 12,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_attention_update",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "operation": "concat_heads_and_project"
+          },
+          {
+            "id": "project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+            "col": 12,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "operation": "adaln_zero_gate_projection"
+          },
+          {
+            "id": "projected_update",
+            "label": "projected attention update",
+            "col": 13,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.projected_update",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.projected_update",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "u_i"
+          },
+          {
+            "id": "output_gate",
+            "label": "AdaLN-Zero output gate",
+            "col": 13,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.values.output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.values.output_gate",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "gamma_i"
+          },
+          {
+            "id": "apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "role": "gate the projected update before returning it",
+            "col": 14,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.apply_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "operation": "adaln_zero_output_gate"
+          },
+          {
+            "id": "attention_output",
+            "label": "attention update",
+            "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+            "col": 15,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.ports.attention_output",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.ports.attention_output",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "b_i",
+            "port_ref": "ports.attention_output"
+          }
+        ],
+        "edges": [
+          {
+            "id": "atom_decoder_attention_pair_bias__adaln_normalize__input_1",
+            "from": "single_state",
+            "to": "adaln_normalize",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.atom_query_enters_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "ports.single_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__adaln_normalize__input_2",
+            "from": "conditioning_signal",
+            "to": "adaln_normalize",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__adaln_normalize__output_1",
+            "from": "adaln_normalize",
+            "to": "normalized_state",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.adaln_normalize",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step output",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_qkv__input_1",
+            "from": "normalized_state",
+            "to": "project_qkv",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_qkv",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Project per-head Q/K/V",
+              "role": "reusable step input",
+              "inside": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_qkv__output_1",
+            "from": "project_qkv",
+            "to": "qkv",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_qkv",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Project per-head Q/K/V",
+              "role": "reusable step output",
+              "inside": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__form_pair_bias_term__input_1",
+            "from": "pair_context",
+            "to": "form_pair_bias_term",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_pair_representation"
+            ],
+            "relation_path": [
+              "relations.pair_skip_biases_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "ports.pair_context",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step input",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__form_pair_bias_term__input_2",
+            "from": "mask_bias",
+            "to": "form_pair_bias_term",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.sequence_local_attention_mask"
+            ],
+            "relation_path": [
+              "relations.locality_mask_restricts_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "ports.mask_bias",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step input",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__form_pair_bias_term__output_1",
+            "from": "form_pair_bias_term",
+            "to": "pair_bias",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_pair_bias_term",
+            "template_data_ref": "values.pair_bias",
+            "connection": {
+              "title": "Form the pair bias and mask term",
+              "role": "reusable step output",
+              "inside": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__form_attention_logits__input_1",
+            "from": "qkv",
+            "to": "form_attention_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step input",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__form_attention_logits__input_2",
+            "from": "pair_bias",
+            "to": "form_attention_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.pair_bias",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step input",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__form_attention_logits__output_1",
+            "from": "form_attention_logits",
+            "to": "combined_logits",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.form_attention_logits",
+            "template_data_ref": "values.combined_logits",
+            "connection": {
+              "title": "Form biased attention logits",
+              "role": "reusable step output",
+              "inside": "combined_logits = dot(q, k) / sqrt(c) + pair_bias"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__softmax_attention__input_1",
+            "from": "combined_logits",
+            "to": "softmax_attention",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.softmax_attention",
+            "template_data_ref": "values.combined_logits",
+            "connection": {
+              "title": "Normalize over keys",
+              "role": "reusable step input",
+              "inside": "attention_weights = softmax(combined_logits, dim=keys)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__softmax_attention__output_1",
+            "from": "softmax_attention",
+            "to": "attention_weights",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.softmax_attention",
+            "template_data_ref": "values.attention_weights",
+            "connection": {
+              "title": "Normalize over keys",
+              "role": "reusable step output",
+              "inside": "attention_weights = softmax(combined_logits, dim=keys)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_content_gate__input_1",
+            "from": "normalized_state",
+            "to": "project_content_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_content_gate",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Project the content gate",
+              "role": "reusable step input",
+              "inside": "content_gate = sigmoid(LinearNoBias(a_norm))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_content_gate__output_1",
+            "from": "project_content_gate",
+            "to": "content_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_content_gate",
+            "template_data_ref": "values.content_gate",
+            "connection": {
+              "title": "Project the content gate",
+              "role": "reusable step output",
+              "inside": "content_gate = sigmoid(LinearNoBias(a_norm))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__aggregate_gated_values__input_1",
+            "from": "attention_weights",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.attention_weights",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__aggregate_gated_values__input_2",
+            "from": "qkv",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.qkv",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__aggregate_gated_values__input_3",
+            "from": "content_gate",
+            "to": "aggregate_gated_values",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.content_gate",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step input",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__aggregate_gated_values__output_1",
+            "from": "aggregate_gated_values",
+            "to": "attention_context",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "template_data_ref": "values.attention_context",
+            "connection": {
+              "title": "Aggregate values and gate",
+              "role": "reusable step output",
+              "inside": "attention_context = content_gate * weighted_sum(attention_weights, v)"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_attention_update__input_1",
+            "from": "attention_context",
+            "to": "project_attention_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_attention_update",
+            "template_data_ref": "values.attention_context",
+            "connection": {
+              "title": "Concatenate heads and project",
+              "role": "reusable step input",
+              "inside": "projected_update = LinearNoBias(concat_heads(attention_context))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_attention_update__output_1",
+            "from": "project_attention_update",
+            "to": "projected_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_attention_update",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Concatenate heads and project",
+              "role": "reusable step output",
+              "inside": "projected_update = LinearNoBias(concat_heads(attention_context))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_output_gate__input_1",
+            "from": "conditioning_signal",
+            "to": "project_output_gate",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_output_gate",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__project_output_gate__output_1",
+            "from": "project_output_gate",
+            "to": "output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.project_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__apply_output_gate__input_1",
+            "from": "projected_update",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__apply_output_gate__input_2",
+            "from": "output_gate",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_decoder_attention_pair_bias__apply_output_gate__output_1",
+            "from": "apply_output_gate",
+            "to": "attention_output",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.decoder_atom_transformer_produces_query"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/attention-pair-bias.yaml",
+            "standard_block_id": "attention_pair_bias",
+            "block_instance_ref": "block_instances.atom_decoder_attention_pair_bias",
+            "template_fact_ref": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_attention_pair_bias.steps.apply_output_gate",
+            "template_data_ref": "ports.attention_output",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "attention_output = output_gate * projected_update"
+            }
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize_and_project",
+            "label": "Normalize, then project",
+            "description": "The conditioning signal decides how the attended activation is normalized. The normalized result feeds the per-head query, key, and value projections and the content gate, while the pair tensor and the caller's additive mask term are folded into one bias term.",
+            "order": 1,
+            "node_ids": [
+              "single_state",
+              "conditioning_signal",
+              "pair_context",
+              "mask_bias",
+              "adaln_normalize",
+              "form_pair_bias_term",
+              "normalized_state",
+              "pair_bias",
+              "project_qkv",
+              "project_content_gate",
+              "qkv",
+              "content_gate"
+            ]
+          },
+          {
+            "id": "attention_weights",
+            "label": "Form and normalize the weights",
+            "description": "Scaled query-key dot products carry the pair bias and mask term into the logits, and one softmax over keys turns them into attention weights. A large negative mask value here is what removes a disallowed pair.",
+            "order": 2,
+            "node_ids": [
+              "form_attention_logits",
+              "combined_logits",
+              "softmax_attention",
+              "attention_weights"
+            ]
+          },
+          {
+            "id": "aggregate_and_gate",
+            "label": "Aggregate, project, gate",
+            "description": "The shared weights average the per-head values, the content gate scales each query's result, the heads are concatenated and projected back to the attended width, and the conditioned path applies one more near-closed gate before returning the update.",
+            "order": 3,
+            "node_ids": [
+              "aggregate_gated_values",
+              "attention_context",
+              "project_attention_update",
+              "projected_update",
+              "project_output_gate",
+              "output_gate",
+              "apply_output_gate",
+              "attention_output"
+            ]
+          }
+        ],
+        "projectionMode": "standard_block_template",
+        "standardBlockRef": "standard_blocks/attention-pair-bias.yaml",
+        "standardBlockId": "attention_pair_bias",
+        "blockInstanceRef": "block_instances.atom_decoder_attention_pair_bias",
+        "variant": "adaln_conditioned",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "Shaped exactly like the encoder's atom-level instance (four heads, three blocks, the same sequence-local mask in the additive slot), but conditioned on the encoder's saved skip tensors rather than on anything this pass computes. The conditioning and pair inputs bound here are c_skip and p_skip, carried across the token bottleneck rather than rebuilt, which is what makes this a U-Net-style skip rather than a second encoder. Parameters are the decoder's own; the reuse is of the routine, not of the weights. The wrapper owns the three-block loop and the residual sum with the transition branch.",
+        "shapeParameters": {
+          "h": 4,
+          "c": 32,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128,
+          "c_z": 16
+        },
+        "shapeParameterSources": {
+          "h": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_heads"
+          },
+          "c": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transformer_head_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          },
+          "c_z": {
+            "kind": "boundary",
+            "portRef": "ports.pair_context",
+            "representationRef": "representations.atom_pair_representation"
+          }
+        },
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.single_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_qkv",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_qkv",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_qkv",
+            "label": "Project per-head Q/K/V",
+            "operation": "query_key_value_projection",
+            "code": "q = Linear(a_norm); k, v = LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.qkv"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "q",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 1
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 21
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "write",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 23,
+                    "end": 24
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 11,
+                    "end": 17
+                  },
+                  {
+                    "start": 40,
+                    "end": 46
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_pair_bias_term",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_pair_bias_term",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.form_pair_bias_term",
+            "label": "Form the pair bias and mask term",
+            "operation": "pair_bias_and_mask_projection",
+            "code": "pair_bias = LinearNoBias(LayerNorm(pair_context)) + mask_bias",
+            "inputs": [
+              "ports.pair_context",
+              "ports.mask_bias"
+            ],
+            "outputs": [
+              "values.pair_bias"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "pair_bias",
+                "access": "write",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 9
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_context",
+                "access": "read",
+                "localRef": "ports.pair_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.pair_context",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.pair_context",
+                "occurrences": [
+                  {
+                    "start": 35,
+                    "end": 47
+                  }
+                ]
+              },
+              {
+                "lexeme": "mask_bias",
+                "access": "read",
+                "localRef": "ports.mask_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.mask_bias",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.mask_bias",
+                "occurrences": [
+                  {
+                    "start": 52,
+                    "end": 61
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "form_attention_logits",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.form_attention_logits",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.form_attention_logits",
+            "label": "Form biased attention logits",
+            "operation": "biased_attention_logits",
+            "code": "combined_logits = dot(q, k) / sqrt(c) + pair_bias",
+            "inputs": [
+              "values.qkv",
+              "values.pair_bias"
+            ],
+            "outputs": [
+              "values.combined_logits"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "combined_logits",
+                "access": "write",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 15
+                  }
+                ]
+              },
+              {
+                "lexeme": "q",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 22,
+                    "end": 23
+                  }
+                ]
+              },
+              {
+                "lexeme": "k",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 25,
+                    "end": 26
+                  }
+                ]
+              },
+              {
+                "lexeme": "pair_bias",
+                "access": "read",
+                "localRef": "values.pair_bias",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.pair_bias",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.pair_bias",
+                "occurrences": [
+                  {
+                    "start": 40,
+                    "end": 49
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "softmax_attention",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.softmax_attention",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.softmax_attention",
+            "label": "Normalize over keys",
+            "operation": "softmax",
+            "code": "attention_weights = softmax(combined_logits, dim=keys)",
+            "inputs": [
+              "values.combined_logits"
+            ],
+            "outputs": [
+              "values.attention_weights"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_weights",
+                "access": "write",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "combined_logits",
+                "access": "read",
+                "localRef": "values.combined_logits",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.combined_logits",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.combined_logits",
+                "occurrences": [
+                  {
+                    "start": 28,
+                    "end": 43
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_content_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_content_gate",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_content_gate",
+            "label": "Project the content gate",
+            "operation": "content_gate_projection",
+            "code": "content_gate = sigmoid(LinearNoBias(a_norm))",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.content_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "content_gate",
+                "access": "write",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 36,
+                    "end": 42
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "aggregate_gated_values",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.aggregate_gated_values",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.aggregate_gated_values",
+            "label": "Aggregate values and gate",
+            "operation": "gated_value_aggregation",
+            "code": "attention_context = content_gate * weighted_sum(attention_weights, v)",
+            "inputs": [
+              "values.attention_weights",
+              "values.qkv",
+              "values.content_gate"
+            ],
+            "outputs": [
+              "values.attention_context"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_context",
+                "access": "write",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_weights",
+                "access": "read",
+                "localRef": "values.attention_weights",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_weights",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_weights",
+                "occurrences": [
+                  {
+                    "start": 48,
+                    "end": 65
+                  }
+                ]
+              },
+              {
+                "lexeme": "v",
+                "access": "read",
+                "localRef": "values.qkv",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.qkv",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.qkv",
+                "occurrences": [
+                  {
+                    "start": 67,
+                    "end": 68
+                  }
+                ]
+              },
+              {
+                "lexeme": "content_gate",
+                "access": "read",
+                "localRef": "values.content_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.content_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.content_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 32
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_attention_update",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_attention_update",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_attention_update",
+            "label": "Concatenate heads and project",
+            "operation": "concat_heads_and_project",
+            "code": "projected_update = LinearNoBias(concat_heads(attention_context))",
+            "inputs": [
+              "values.attention_context"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "attention_context",
+                "access": "read",
+                "localRef": "values.attention_context",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.attention_context",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.attention_context",
+                "occurrences": [
+                  {
+                    "start": 45,
+                    "end": 62
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.attention_pair_bias.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "attention_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.attention_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "attention_output",
+                "access": "write",
+                "localRef": "ports.attention_output",
+                "templateFactRef": "standard_blocks.attention_pair_bias.ports.attention_output",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.ports.attention_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 33,
+                    "end": 49
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.attention_pair_bias.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_attention_pair_bias.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 19,
+                    "end": 30
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atom_decoder_conditioned_transition_internals",
+        "kind": "standard_block_instance",
+        "title": "Decoder Atom Transition Internals",
+        "summary": "The transition branch of the decoder's atom-level blocks, conditioned on the encoder's saved per-atom conditioning. Same shape as the encoder's atom-level transition, separate parameters; what is reused across the three occurrences is the routine, not the weights.",
+        "parent": "atom_attention_decoder_detail",
+        "subject_ref": "modules.atom_decoder_atom_transformer",
+        "expansion_depth": 0,
+        "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+        "grid": {
+          "columns": 9,
+          "rows": 3,
+          "column_sizing": "content",
+          "row_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 36
+        },
+        "nodes": [
+          {
+            "id": "single_state",
+            "label": "block input activation",
+            "role": "the activation this block transforms pointwise, one item at a time",
+            "col": 1,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.single_state",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.ports.single_state",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_i",
+            "port_ref": "ports.single_state"
+          },
+          {
+            "id": "conditioning_signal",
+            "label": "conditioning signal",
+            "role": "per-item conditioning vector that drives Adaptive LayerNorm and the AdaLN-Zero output gate; when a caller supplies nothing here the block falls back to plain LayerNorm and skips the output gate",
+            "col": 1,
+            "row": 3,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.ports.conditioning_signal",
+            "kind": "representation",
+            "rep_ref": "atom_single_conditioning",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "conditioning_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "s_i",
+            "port_ref": "ports.conditioning_signal"
+          },
+          {
+            "id": "adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "role": "normalize the block input with no learned affine of its own, then apply a scale and shift computed fresh from the conditioning signal",
+            "col": 2,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.adaln_normalize",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "operation": "adaptive_layer_norm"
+          },
+          {
+            "id": "normalized_state",
+            "label": "normalized activation",
+            "col": 3,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.normalized_state",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.values.normalized_state",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "a_norm"
+          },
+          {
+            "id": "swiglu_expansion",
+            "label": "Gated expansion",
+            "role": "two independent linear projections of the same normalized activation, one passed through swish and used to gate the other elementwise, so the nonlinearity and the second linear layer are fused rather than stacked",
+            "col": 4,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.swiglu_expansion",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "operation": "swiglu_transition"
+          },
+          {
+            "id": "gated_hidden",
+            "label": "SwiGLU hidden activation",
+            "col": 5,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.values.gated_hidden",
+            "kind": "representation",
+            "shape": "N_atom x 256",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "hidden_channel",
+                  "dimension": 256
+                }
+              ],
+              "label": "N_atom x 256"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "b_i"
+          },
+          {
+            "id": "project_transition_update",
+            "label": "Project back to the block width",
+            "role": "project the expanded hidden activation back down to the width of the block's own input",
+            "col": 6,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.project_transition_update",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "operation": "output_projection"
+          },
+          {
+            "id": "project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "role": "a second, separate conditioning-derived gate whose bias is initialized to -2.0, so the block contributes almost nothing at initialization and opens as training proceeds",
+            "col": 6,
+            "row": 3,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.project_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "operation": "adaln_zero_gate_projection"
+          },
+          {
+            "id": "projected_update",
+            "label": "projected transition update",
+            "col": 7,
+            "row": 1,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.projected_update",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.values.projected_update",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "u_i"
+          },
+          {
+            "id": "output_gate",
+            "label": "AdaLN-Zero output gate",
+            "col": 7,
+            "row": 3,
+            "prominence": "context",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.values.output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.values.output_gate",
+            "kind": "representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "item",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "gamma_i"
+          },
+          {
+            "id": "apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "role": "gate the projected update before returning it",
+            "col": 8,
+            "row": 1,
+            "prominence": "primary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.apply_output_gate",
+            "kind": "operation",
+            "scale": "operation",
+            "detail": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "operation": "adaln_zero_output_gate"
+          },
+          {
+            "id": "transition_output",
+            "label": "transition update",
+            "role": "the block's returned update, before any residual addition owned by the surrounding architecture",
+            "col": 9,
+            "row": 1,
+            "prominence": "secondary",
+            "treatment": "compact",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.ports.transition_output",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.ports.transition_output",
+            "kind": "representation",
+            "rep_ref": "atom_single_representation",
+            "shape": "N_atom x 128",
+            "resolved_shape": {
+              "kind": "tensor",
+              "axes": [
+                {
+                  "id": "query_token",
+                  "dimension": "N_atom"
+                },
+                {
+                  "id": "single_channel",
+                  "dimension": 128
+                }
+              ],
+              "label": "N_atom x 128"
+            },
+            "shape_status": "resolved",
+            "scale": "atom",
+            "glyph": "single",
+            "flow_family": "single",
+            "notation": "t_i",
+            "port_ref": "ports.transition_output"
+          }
+        ],
+        "edges": [
+          {
+            "id": "atom_decoder_conditioned_transition__adaln_normalize__input_1",
+            "from": "single_state",
+            "to": "adaln_normalize",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.atom_query_enters_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "ports.single_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__adaln_normalize__input_2",
+            "from": "conditioning_signal",
+            "to": "adaln_normalize",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step input",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__adaln_normalize__output_1",
+            "from": "adaln_normalize",
+            "to": "normalized_state",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.adaln_normalize",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Adaptive LayerNorm",
+              "role": "reusable step output",
+              "inside": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__swiglu_expansion__input_1",
+            "from": "normalized_state",
+            "to": "swiglu_expansion",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.swiglu_expansion",
+            "template_data_ref": "values.normalized_state",
+            "connection": {
+              "title": "Gated expansion",
+              "role": "reusable step input",
+              "inside": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__swiglu_expansion__output_1",
+            "from": "swiglu_expansion",
+            "to": "gated_hidden",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.swiglu_expansion",
+            "template_data_ref": "values.gated_hidden",
+            "connection": {
+              "title": "Gated expansion",
+              "role": "reusable step output",
+              "inside": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__project_transition_update__input_1",
+            "from": "gated_hidden",
+            "to": "project_transition_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.project_transition_update",
+            "template_data_ref": "values.gated_hidden",
+            "connection": {
+              "title": "Project back to the block width",
+              "role": "reusable step input",
+              "inside": "projected_update = LinearNoBias(gated_hidden)"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__project_transition_update__output_1",
+            "from": "project_transition_update",
+            "to": "projected_update",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.project_transition_update",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Project back to the block width",
+              "role": "reusable step output",
+              "inside": "projected_update = LinearNoBias(gated_hidden)"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__project_output_gate__input_1",
+            "from": "conditioning_signal",
+            "to": "project_output_gate",
+            "kind": "conditioning",
+            "tone": "conditioning",
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "relation_path": [
+              "relations.conditioning_skip_drives_decoder_atom_transformer"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.project_output_gate",
+            "template_data_ref": "ports.conditioning_signal",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__project_output_gate__output_1",
+            "from": "project_output_gate",
+            "to": "output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.project_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Project the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__apply_output_gate__input_1",
+            "from": "projected_update",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "values.projected_update",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__apply_output_gate__input_2",
+            "from": "output_gate",
+            "to": "apply_output_gate",
+            "kind": "data_flow",
+            "carries": [
+
+            ],
+            "grounding": "standard_block_template",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "values.output_gate",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step input",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          },
+          {
+            "id": "atom_decoder_conditioned_transition__apply_output_gate__output_1",
+            "from": "apply_output_gate",
+            "to": "transition_output",
+            "kind": "data_flow",
+            "carries": [
+              "representations.atom_single_representation"
+            ],
+            "relation_path": [
+              "relations.decoder_atom_transformer_produces_query"
+            ],
+            "grounding": "canonical_relation_path",
+            "standard_block_ref": "standard_blocks/conditioned-transition-block.yaml",
+            "standard_block_id": "conditioned_transition_block",
+            "block_instance_ref": "block_instances.atom_decoder_conditioned_transition",
+            "template_fact_ref": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instance_fact_ref": "block_instances.atom_decoder_conditioned_transition.steps.apply_output_gate",
+            "template_data_ref": "ports.transition_output",
+            "connection": {
+              "title": "Apply the AdaLN-Zero gate",
+              "role": "reusable step output",
+              "inside": "transition_output = output_gate * projected_update"
+            }
+          }
+        ],
+        "segments": [
+          {
+            "id": "normalize",
+            "label": "Normalize",
+            "description": "The conditioning signal decides whether the block input is normalized adaptively, with a scale and shift recomputed from that signal at every call, or by a plain LayerNorm with static parameters.",
+            "order": 1,
+            "node_ids": [
+              "single_state",
+              "conditioning_signal",
+              "adaln_normalize",
+              "normalized_state"
+            ]
+          },
+          {
+            "id": "gated_transition",
+            "label": "Gated transition",
+            "description": "One normalized activation feeds two independent projections into the expanded hidden width; swish on one branch gates the other, which is what makes this a SwiGLU transition rather than a plain two-layer feedforward.",
+            "order": 2,
+            "node_ids": [
+              "swiglu_expansion",
+              "gated_hidden"
+            ]
+          },
+          {
+            "id": "project_and_gate",
+            "label": "Project, then gate",
+            "description": "The hidden activation is projected back to the block's own width, and the conditioned path applies one more near-closed gate before returning the update to whatever residual connection the surrounding architecture owns.",
+            "order": 3,
+            "node_ids": [
+              "project_transition_update",
+              "projected_update",
+              "project_output_gate",
+              "output_gate",
+              "apply_output_gate",
+              "transition_output"
+            ]
+          }
+        ],
+        "projectionMode": "standard_block_template",
+        "standardBlockRef": "standard_blocks/conditioned-transition-block.yaml",
+        "standardBlockId": "conditioned_transition_block",
+        "blockInstanceRef": "block_instances.atom_decoder_conditioned_transition",
+        "variant": "adaln_conditioned_transition",
+        "variantLabel": "Conditioned (AdaLN and AdaLN-Zero)",
+        "useScope": "internal_mechanism",
+        "conformance": "wrapped",
+        "differenceSummary": "Shaped exactly like the encoder's atom-level transition instance, expanded over the same 128-channel activation, but conditioned on the encoder's saved c_skip rather than on conditioning computed in this pass. The wrapper owns the three-block loop and the residual sum with the attention branch; this instance covers one transition branch of one block.",
+        "shapeParameters": {
+          "c_hidden": 256,
+          "n": "N_atom",
+          "c_a": 128,
+          "c_s": 128
+        },
+        "shapeParameterSources": {
+          "c_hidden": {
+            "kind": "configuration",
+            "ref": "reference_configuration.atom_transition_hidden_width"
+          },
+          "n": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_a": {
+            "kind": "boundary",
+            "portRef": "ports.single_state",
+            "representationRef": "representations.atom_single_representation"
+          },
+          "c_s": {
+            "kind": "boundary",
+            "portRef": "ports.conditioning_signal",
+            "representationRef": "representations.atom_single_conditioning"
+          }
+        },
+        "pseudocode": [
+          {
+            "id": "adaln_normalize",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.adaln_normalize",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.adaln_normalize",
+            "label": "Adaptive LayerNorm",
+            "operation": "adaptive_layer_norm",
+            "code": "a_norm = sigmoid(Linear(LayerNorm(conditioning_signal))) * LayerNorm(single_state) + LinearNoBias(LayerNorm(conditioning_signal))",
+            "inputs": [
+              "ports.single_state",
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.normalized_state"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "a_norm",
+                "access": "write",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 6
+                  }
+                ]
+              },
+              {
+                "lexeme": "single_state",
+                "access": "read",
+                "localRef": "ports.single_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.single_state",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.single_state",
+                "occurrences": [
+                  {
+                    "start": 69,
+                    "end": 81
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 53
+                  },
+                  {
+                    "start": 108,
+                    "end": 127
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "swiglu_expansion",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.swiglu_expansion",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.swiglu_expansion",
+            "label": "Gated expansion",
+            "operation": "swiglu_transition",
+            "code": "gated_hidden = swish(LinearNoBias(a_norm)) * LinearNoBias(a_norm)",
+            "inputs": [
+              "values.normalized_state"
+            ],
+            "outputs": [
+              "values.gated_hidden"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "gated_hidden",
+                "access": "write",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 12
+                  }
+                ]
+              },
+              {
+                "lexeme": "a_norm",
+                "access": "read",
+                "localRef": "values.normalized_state",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.normalized_state",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.normalized_state",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 40
+                  },
+                  {
+                    "start": 58,
+                    "end": 64
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_transition_update",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_transition_update",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.project_transition_update",
+            "label": "Project back to the block width",
+            "operation": "output_projection",
+            "code": "projected_update = LinearNoBias(gated_hidden)",
+            "inputs": [
+              "values.gated_hidden"
+            ],
+            "outputs": [
+              "values.projected_update"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "projected_update",
+                "access": "write",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 16
+                  }
+                ]
+              },
+              {
+                "lexeme": "gated_hidden",
+                "access": "read",
+                "localRef": "values.gated_hidden",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.gated_hidden",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.gated_hidden",
+                "occurrences": [
+                  {
+                    "start": 32,
+                    "end": 44
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "project_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.project_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.project_output_gate",
+            "label": "Project the AdaLN-Zero gate",
+            "operation": "adaln_zero_gate_projection",
+            "code": "output_gate = sigmoid(Linear(conditioning_signal, bias_init=-2.0))",
+            "inputs": [
+              "ports.conditioning_signal"
+            ],
+            "outputs": [
+              "values.output_gate"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "output_gate",
+                "access": "write",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 11
+                  }
+                ]
+              },
+              {
+                "lexeme": "conditioning_signal",
+                "access": "read",
+                "localRef": "ports.conditioning_signal",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.conditioning_signal",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.conditioning_signal",
+                "occurrences": [
+                  {
+                    "start": 29,
+                    "end": 48
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "apply_output_gate",
+            "templateFactRef": "standard_blocks.conditioned_transition_block.steps.apply_output_gate",
+            "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.steps.apply_output_gate",
+            "label": "Apply the AdaLN-Zero gate",
+            "operation": "adaln_zero_output_gate",
+            "code": "transition_output = output_gate * projected_update",
+            "inputs": [
+              "values.projected_update",
+              "values.output_gate"
+            ],
+            "outputs": [
+              "ports.transition_output"
+            ],
+            "codeBindings": [
+              {
+                "lexeme": "transition_output",
+                "access": "write",
+                "localRef": "ports.transition_output",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.ports.transition_output",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.ports.transition_output",
+                "occurrences": [
+                  {
+                    "start": 0,
+                    "end": 17
+                  }
+                ]
+              },
+              {
+                "lexeme": "projected_update",
+                "access": "read",
+                "localRef": "values.projected_update",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.projected_update",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.projected_update",
+                "occurrences": [
+                  {
+                    "start": 34,
+                    "end": 50
+                  }
+                ]
+              },
+              {
+                "lexeme": "output_gate",
+                "access": "read",
+                "localRef": "values.output_gate",
+                "templateFactRef": "standard_blocks.conditioned_transition_block.values.output_gate",
+                "instanceFactRef": "block_instances.atom_decoder_conditioned_transition.values.output_gate",
+                "occurrences": [
+                  {
+                    "start": 20,
+                    "end": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   }

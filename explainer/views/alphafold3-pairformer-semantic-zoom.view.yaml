@@ -7,12 +7,12 @@ root_board: pairformer_overview
 boards:
   - id: pairformer_overview
     title: AlphaFold 3
-    summary: AF3 replaces AF2's fixed one-hot residue vocabulary with real per-atom self-attention over each token's own reference-conformer geometry, letting one architecture handle standard residues, modified residues, and arbitrary ligands uniformly while building the single and pair representations. The Template module then reads raw per-template structural evidence (masked distograms, unit vectors, and residue types from homologous templates) and writes a pooled contribution into the pair representation before anything else touches it. The MSA module reads the raw per-row MSA next and folds evolutionary coupling, correlated variation across aligned sequences, into that same pair representation -- structural template evidence and evolutionary coupling are the only two places new external evidence enters the pair representation each cycle, template evidence first. Forty-eight independently parameterized Pairformer blocks then refine both tracks and return them to downstream AF3 modules.
+    summary: Reference-conformer geometry, template structures, and MSA evidence build the single and pair representations, which 48 Pairformer blocks refine. The Diffusion Module then uses those trunk representations to predict atom coordinates, one noise-conditioned denoising step at a time; the outer sampling loop is not shown here.
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 13
-      rows: 7
+      columns: 16
+      rows: 9
       column_sizing: content
       col_gap: 36
       row_gap: 24
@@ -194,6 +194,22 @@ boards:
       col: 11
       row: 4
       board_ref: pairformer_block
+    - id: entity_id
+      ref: value_sites.entity_id
+      label: entity id
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 12
+      row: 1
+    - id: residue_index
+      ref: value_sites.residue_index
+      label: residue index
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 12
+      row: 2
     - id: single_state_output
       ref: value_sites.single_state_output
       label: trunk singles
@@ -201,7 +217,7 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 13
+      col: 12
       row: 3
     - id: pair_state_output
       ref: value_sites.pair_state_output
@@ -210,8 +226,90 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 13
+      col: 12
       row: 5
+    - id: sym_id
+      ref: value_sites.sym_id
+      label: chain copy id
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 12
+      row: 6
+    - id: token_index
+      ref: value_sites.token_index
+      label: token index
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 12
+      row: 7
+    - id: noise_level
+      ref: value_sites.noise_level
+      label: noise level
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 13
+      row: 2
+    - id: noisy_atom_positions
+      ref: value_sites.noisy_atom_positions
+      label: noisy atom coordinates
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 13
+      row: 6
+    - id: scaled_noisy_atom_positions
+      ref: value_sites.scaled_noisy_atom_positions
+      label: scaled noisy atoms
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 13
+      row: 7
+    - id: diffusion_module
+      ref: modules.diffusion_module
+      label: Diffusion Module
+      prominence: primary
+      treatment: compact
+      density: compact
+      col: 14
+      row: 4
+      board_ref: diffusion_module_detail
+    - id: relative_position_encoding
+      ref: modules.relative_position_encoding
+      label: relative positions
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 13
+      row: 1
+      board_ref: relative_position_encoding_detail
+    - id: fourier_embedding
+      ref: modules.fourier_embedding
+      label: noise embedding
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 14
+      row: 2
+    - id: denoised_atom_positions
+      ref: value_sites.denoised_atom_positions
+      label: denoised atom coordinates
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 16
+      row: 4
+    - id: atom_position_update
+      ref: value_sites.atom_attention_decoder_position_update
+      label: predicted atom update
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 15
+      row: 4
     edge_overrides:
     - match:
         relation_ref: relations.final_single_block_state_becomes_output
@@ -231,6 +329,26 @@ boards:
     - ref: value_sites.single_state_input
     - ref: value_sites.pair_state_input
     - ref: value_sites.z_init
+    - ref: value_sites.relative_position_encoding_output
+    exclude:
+    - ref: value_sites.diffusion_conditioned_pair
+      reason: Internal pair conditioning is expanded on the diffusion module's child boards; the root shows the collapsed module.
+    - ref: value_sites.diffusion_conditioned_single
+      reason: Internal single conditioning is expanded on the diffusion module's child boards; the root shows the collapsed module.
+    - ref: value_sites.sequence_local_atom_attention_mask
+      reason: The atom locality mask is shared by the encoder and decoder inside the collapsed diffusion module.
+    - ref: value_sites.atom_attention_encoder_token_output
+      reason: Pooled token activations are shown on the diffusion module detail boards, not the root.
+    - ref: value_sites.atom_attention_encoder_query_skip
+      reason: The atom query skip is an internal encoder-to-decoder handoff within the collapsed diffusion module.
+    - ref: value_sites.atom_attention_encoder_single_conditioning_skip
+      reason: The atom conditioning skip is an internal encoder-to-decoder handoff within the collapsed diffusion module.
+    - ref: value_sites.atom_attention_encoder_pair_skip
+      reason: The atom pair skip is an internal encoder-to-decoder handoff within the collapsed diffusion module.
+    - ref: value_sites.diffusion_token_activation_conditioned
+      reason: The token bottleneck activation is expanded on the diffusion module detail boards.
+    - ref: value_sites.diffusion_token_activation_normalized
+      reason: The token transformer's normalized output is expanded on the diffusion module detail boards.
 
   - id: pairformer_block
     title: One Pairformer Block, Repeated 48 Times
@@ -1744,6 +1862,157 @@ boards:
           title: Average and project
           role: module output
           inside: The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution.
+
+  - id: diffusion_module_detail
+    title: One Diffusion Module Denoising Step
+    summary: Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. The root board shows the raw noise input and final blend into denoised coordinates.
+    parent: pairformer_overview
+    subject_ref: modules.diffusion_module
+    expansion_depth: 1
+    grid: { columns: 7, rows: 6, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: step_trunk_singles, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: step_trunk_pairs, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: step_relative_output, ref: value_sites.relative_position_encoding_output, label: relative pair encoding, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
+      - { id: step_fourier_output, ref: value_sites.fourier_time_embedding, label: Fourier noise features, prominence: context, treatment: chip, density: micro, col: 2, row: 3 }
+      - { id: step_raw_input_embedding, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
+      - { id: step_scaled_noisy_atoms, ref: value_sites.scaled_noisy_atom_positions, label: scaled noisy atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: step_reference_atoms, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 6 }
+      - { id: step_conditioning, ref: modules.diffusion_conditioning, label: diffusion conditioning, prominence: primary, treatment: compact, density: compact, col: 3, row: 2, board_ref: diffusion_conditioning_detail }
+      - { id: step_conditioned_pair, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: step_conditioned_single, ref: value_sites.diffusion_conditioned_single, label: conditioned singles, prominence: secondary, treatment: compact, density: compact, col: 4, row: 1 }
+      - { id: step_atom_encoder, ref: modules.atom_attention_encoder_conditioned, label: atom encoder, prominence: primary, treatment: compact, density: compact, col: 4, row: 4, board_ref: atom_attention_encoder_detail }
+      - { id: step_encoder_tokens, ref: value_sites.atom_attention_encoder_token_output, label: pooled atom tokens, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
+      - { id: step_token_with_singles, ref: value_sites.diffusion_token_activation_conditioned, label: token input plus singles, prominence: secondary, treatment: compact, density: compact, col: 5, row: 2 }
+      - { id: step_token_transformer, ref: modules.diffusion_transformer_token_level, label: 24 token blocks, prominence: primary, treatment: compact, density: compact, col: 5, row: 4, board_ref: diffusion_transformer_token_detail }
+      - { id: step_token_output, ref: value_sites.diffusion_token_activation_normalized, label: refined tokens, prominence: secondary, treatment: compact, density: compact, col: 6, row: 3 }
+      - { id: step_atom_decoder, ref: modules.atom_attention_decoder, label: atom decoder, prominence: primary, treatment: compact, density: compact, col: 6, row: 4, board_ref: atom_attention_decoder_detail }
+      - { id: step_position_update, ref: value_sites.atom_attention_decoder_position_update, label: atom position update, prominence: secondary, treatment: compact, density: compact, col: 7, row: 4 }
+      - { id: step_locality_mask, ref: modules.sequence_local_attention_mask, label: local atom mask, prominence: context, treatment: chip, density: micro, col: 3, row: 5 }
+      - { id: step_locality_mask_value, ref: value_sites.sequence_local_atom_attention_mask, label: sequence-local mask, prominence: context, treatment: chip, density: micro, col: 4, row: 6 }
+    elide:
+      - ref: value_sites.atom_attention_encoder_query_skip
+    exclude:
+      - ref: value_sites.atom_attention_encoder_single_conditioning_skip
+        reason: The encoder and decoder detail boards show the saved single-conditioning tensor; the overview keeps the main coordinate path legible.
+      - ref: value_sites.atom_attention_encoder_pair_skip
+        reason: The encoder and decoder detail boards show the saved pair-conditioning tensor; the overview keeps the main coordinate path legible.
+
+  - id: relative_position_encoding_detail
+    title: Relative Position Encoding
+    summary: Five raw token identifiers construct four pairwise signals. Residue and token offsets are gated by physical-chain identity, entity equality is a separate Boolean, and chain-copy offset uses the paper's stated gate. Their concatenation is projected once to the pair width.
+    parent: pairformer_overview
+    subject_ref: modules.relative_position_encoding
+    expansion_depth: 1
+    grid: { columns: 4, rows: 5, column_sizing: content, col_gap: 26, row_gap: 22 }
+    nodes:
+      - { id: rpe_asym_id, ref: value_sites.asym_id, label: physical chain id, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: rpe_entity_id, ref: value_sites.entity_id, label: entity id, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: rpe_residue_index, ref: value_sites.residue_index, label: residue index, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
+      - { id: rpe_token_index, ref: value_sites.token_index, label: token index, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
+      - { id: rpe_sym_id, ref: value_sites.sym_id, label: chain copy id, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: rpe_module, ref: modules.relative_position_encoding, label: build pair offsets, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: rpe_residue_offset, ref: value_sites.relative_residue_offset, label: residue offset, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: rpe_token_offset, ref: value_sites.relative_token_offset, label: token offset, prominence: secondary, treatment: compact, density: compact, col: 3, row: 2 }
+      - { id: rpe_same_entity, ref: value_sites.same_entity_signal, label: same entity, prominence: secondary, treatment: compact, density: compact, col: 3, row: 4 }
+      - { id: rpe_chain_offset, ref: value_sites.relative_chain_offset, label: chain-copy offset, prominence: secondary, treatment: compact, density: compact, col: 3, row: 5 }
+      - { id: rpe_output, ref: value_sites.relative_position_encoding_output, label: projected pair encoding, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
+
+  - id: diffusion_conditioning_detail
+    title: Diffusion Conditioning
+    summary: Pair conditioning joins the trunk pair tensor with a fresh relative-position encoding. Single conditioning joins trunk singles with raw input embeddings, adds a Fourier noise embedding, and then refines both branches through two Transition rounds.
+    parent: diffusion_module_detail
+    subject_ref: modules.diffusion_conditioning
+    expansion_depth: 1
+    grid: { columns: 5, rows: 5, column_sizing: content, col_gap: 26, row_gap: 22 }
+    nodes:
+      - { id: cond_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: cond_relative_position, ref: value_sites.relative_position_encoding_output, label: relative positions, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: cond_trunk_single, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
+      - { id: cond_input_single, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: cond_module, ref: modules.diffusion_conditioning, label: concatenate and project, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: cond_pair_projected, ref: value_sites.diffusion_pair_conditioning_projected, label: pair projection, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: cond_pair_final, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, prominence: secondary, treatment: compact, density: compact, col: 5, row: 1 }
+      - { id: cond_single_projected, ref: value_sites.diffusion_single_conditioning_projected, label: single projection, prominence: secondary, treatment: compact, density: compact, col: 3, row: 4 }
+      - { id: cond_fourier_value, ref: value_sites.fourier_time_embedding, label: time embedding, prominence: secondary, treatment: compact, density: compact, col: 3, row: 5 }
+      - { id: cond_single_injected, ref: value_sites.diffusion_single_conditioning_fourier_injected, label: noise added, prominence: secondary, treatment: compact, density: compact, col: 4, row: 4 }
+      - { id: cond_single_final, ref: value_sites.diffusion_conditioned_single, label: conditioned singles, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
+
+  - id: diffusion_transformer_token_detail
+    title: Token-Level Diffusion Transformer
+    summary: Twenty-four identical blocks update the pooled token activations. Each block reads the same input in parallel through attention with pair bias and a conditioned SwiGLU transition; their updates combine before the next block.
+    parent: diffusion_module_detail
+    subject_ref: modules.diffusion_transformer_token_level
+    expansion_depth: 1
+    grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: token_conditioned_activation, ref: value_sites.diffusion_token_activation_conditioned, label: token input plus singles, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
+      - { id: token_conditioned_singles, ref: value_sites.diffusion_conditioned_single, label: single conditioning, prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
+      - { id: token_conditioned_pairs, ref: value_sites.diffusion_conditioned_pair, label: pair conditioning, prominence: context, treatment: chip, density: micro, col: 3, row: 1 }
+      - { id: token_block_input, ref: value_sites.diffusion_token_block_input, label: block input, prominence: secondary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: token_attention, ref: modules.token_attention_pair_bias, label: attention branch, prominence: primary, treatment: compact, density: compact, col: 3, row: 2, board_ref: token_attention_pair_bias_internals }
+      - { id: token_transition, ref: modules.token_conditioned_transition, label: transition branch, prominence: primary, treatment: compact, density: compact, col: 3, row: 4, board_ref: token_conditioned_transition_internals }
+      - { id: token_attention_update, ref: value_sites.diffusion_token_attention_branch, label: attention update, prominence: secondary, treatment: compact, density: compact, col: 4, row: 2 }
+      - { id: token_transition_update, ref: value_sites.diffusion_token_transition_branch, label: transition update, prominence: secondary, treatment: compact, density: compact, col: 4, row: 4 }
+      - { id: token_block_output, ref: value_sites.diffusion_token_block_output, label: block output, prominence: secondary, treatment: compact, density: compact, col: 5, row: 3 }
+      - { id: token_final_output, ref: value_sites.diffusion_token_activation_normalized, label: normalized token output, prominence: secondary, treatment: compact, density: compact, col: 5, row: 1 }
+
+  - id: atom_attention_encoder_detail
+    title: Conditioned Atom Attention Encoder
+    summary: Atom reference geometry, raw trunk singles, conditioned pairs, and scaled noisy coordinates form per-atom queries and conditioning. The two AtomTransformer boxes are drilldown handles into one three-block call, not two sequential calls; its combined result is pooled to tokens while three atom tensors are saved for the decoder.
+    parent: diffusion_module_detail
+    subject_ref: modules.atom_attention_encoder_conditioned
+    expansion_depth: 1
+    grid: { columns: 6, rows: 7, column_sizing: content, col_gap: 26, row_gap: 22 }
+    nodes:
+      - { id: enc_reference, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: enc_trunk_single, ref: value_sites.single_state_output, label: raw trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: enc_conditioned_pair, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
+      - { id: enc_scaled_positions, ref: value_sites.scaled_noisy_atom_positions, label: scaled noisy atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: enc_local_mask, ref: value_sites.sequence_local_atom_attention_mask, label: local attention mask, prominence: context, treatment: chip, density: micro, col: 1, row: 7 }
+      - { id: enc_module, ref: modules.atom_attention_encoder_conditioned, label: embed and broadcast, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: enc_atom_conditioning, ref: value_sites.atom_single_conditioning_trunk_broadcast, label: atom conditioning, prominence: secondary, treatment: compact, density: compact, col: 3, row: 2 }
+      - { id: enc_atom_pair, ref: value_sites.atom_pair_conditioning_refined, label: atom pair context, prominence: secondary, treatment: compact, density: compact, col: 3, row: 4 }
+      - { id: enc_atom_query, ref: value_sites.atom_query_with_noisy_position, label: noisy atom query, prominence: secondary, treatment: compact, density: compact, col: 3, row: 6 }
+      - { id: enc_attention_branch, ref: modules.atom_encoder_atom_transformer, label: local attention branch, prominence: primary, treatment: compact, density: compact, col: 4, row: 3, board_ref: atom_encoder_attention_pair_bias_internals }
+      - { id: enc_transition_branch, ref: modules.atom_encoder_atom_transformer, label: conditioned transition branch, prominence: primary, treatment: compact, density: compact, col: 4, row: 5, board_ref: atom_encoder_conditioned_transition_internals }
+      - { id: enc_attended_query, ref: value_sites.atom_query_after_encoder_transformer, label: attended atom query, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
+      - { id: enc_token_output, ref: value_sites.atom_attention_encoder_token_output, label: pooled token activation, prominence: secondary, treatment: compact, density: compact, col: 6, row: 1 }
+      - { id: enc_query_skip, ref: value_sites.atom_attention_encoder_query_skip, label: query skip, prominence: context, treatment: chip, density: micro, col: 6, row: 3 }
+      - { id: enc_conditioning_skip, ref: value_sites.atom_attention_encoder_single_conditioning_skip, label: conditioning skip, prominence: context, treatment: chip, density: micro, col: 6, row: 5 }
+      - { id: enc_pair_skip, ref: value_sites.atom_attention_encoder_pair_skip, label: pair skip, prominence: context, treatment: chip, density: micro, col: 6, row: 7 }
+    occurrence_bindings:
+      - { match: { relation_ref: relations.atom_query_enters_encoder_atom_transformer }, from_occurrence: enc_atom_query, to_occurrence: enc_attention_branch }
+      - { match: { relation_ref: relations.atom_conditioning_drives_encoder_atom_transformer }, from_occurrence: enc_atom_conditioning, to_occurrence: enc_transition_branch }
+      - { match: { relation_ref: relations.atom_pair_biases_encoder_atom_transformer }, from_occurrence: enc_atom_pair, to_occurrence: enc_attention_branch }
+      - { match: { relation_ref: relations.locality_mask_restricts_encoder_atom_transformer }, from_occurrence: enc_local_mask, to_occurrence: enc_attention_branch }
+      - { match: { relation_ref: relations.encoder_atom_transformer_produces_query }, from_occurrence: enc_transition_branch, to_occurrence: enc_attended_query }
+
+  - id: atom_attention_decoder_detail
+    title: Atom Attention Decoder
+    summary: The token update is broadcast back to atoms and added to the saved query skip. The two AtomTransformer boxes open different internals of one three-block call, which reads the saved conditioning and pair skip tensors; its combined result is projected to a position update.
+    parent: diffusion_module_detail
+    subject_ref: modules.atom_attention_decoder
+    expansion_depth: 1
+    grid: { columns: 5, rows: 6, column_sizing: content, col_gap: 26, row_gap: 22 }
+    nodes:
+      - { id: dec_token_input, ref: value_sites.diffusion_token_activation_normalized, label: refined tokens, prominence: context, treatment: compact, density: compact, col: 1, row: 1 }
+      - { id: dec_query_skip, ref: value_sites.atom_attention_encoder_query_skip, label: query skip, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: dec_conditioning_skip, ref: value_sites.atom_attention_encoder_single_conditioning_skip, label: conditioning skip, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
+      - { id: dec_pair_skip, ref: value_sites.atom_attention_encoder_pair_skip, label: pair skip, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: dec_local_mask, ref: value_sites.sequence_local_atom_attention_mask, label: local attention mask, prominence: context, treatment: chip, density: micro, col: 1, row: 6 }
+      - { id: dec_module, ref: modules.atom_attention_decoder, label: broadcast token update, prominence: primary, treatment: compact, density: compact, col: 2, row: 2 }
+      - { id: dec_query_with_skip, ref: value_sites.atom_query_broadcast_with_skip, label: token plus query skip, prominence: secondary, treatment: compact, density: compact, col: 3, row: 2 }
+      - { id: dec_attention_branch, ref: modules.atom_decoder_atom_transformer, label: local attention branch, prominence: primary, treatment: compact, density: compact, col: 4, row: 2, board_ref: atom_decoder_attention_pair_bias_internals }
+      - { id: dec_transition_branch, ref: modules.atom_decoder_atom_transformer, label: conditioned transition branch, prominence: primary, treatment: compact, density: compact, col: 4, row: 4, board_ref: atom_decoder_conditioned_transition_internals }
+      - { id: dec_attended_query, ref: value_sites.atom_query_after_decoder_transformer, label: reconciled atom query, prominence: secondary, treatment: compact, density: compact, col: 5, row: 2 }
+      - { id: dec_position_update, ref: value_sites.atom_attention_decoder_position_update, label: position update, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
+    occurrence_bindings:
+      - { match: { relation_ref: relations.atom_query_enters_decoder_atom_transformer }, from_occurrence: dec_query_with_skip, to_occurrence: dec_attention_branch }
+      - { match: { relation_ref: relations.conditioning_skip_drives_decoder_atom_transformer }, from_occurrence: dec_conditioning_skip, to_occurrence: dec_transition_branch }
+      - { match: { relation_ref: relations.pair_skip_biases_decoder_atom_transformer }, from_occurrence: dec_pair_skip, to_occurrence: dec_attention_branch }
+      - { match: { relation_ref: relations.locality_mask_restricts_decoder_atom_transformer }, from_occurrence: dec_local_mask, to_occurrence: dec_attention_branch }
+      - { match: { relation_ref: relations.decoder_atom_transformer_produces_query }, from_occurrence: dec_transition_branch, to_occurrence: dec_attended_query }
 
   - id: token_attention_pair_bias_internals
     kind: standard_block_instance

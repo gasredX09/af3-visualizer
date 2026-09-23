@@ -3,7 +3,7 @@ export const manifest = {
   "build": {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
-      "references/bibliography.yaml": "d5e315f0a115362ffe834d79d83c3880b315f95fecf06f1d5f56372aecec555f",
+      "references/bibliography.yaml": "8ea36a3baf67328b8505219a53ff89fa20ecba3fdff75bdf63142d8fbcf2cea6",
       "architectures/diffusion-transformer.yaml": "62b1a3f47c1b0891d242c49ca269a5f1e856672fbd080a07e7eebf718a8a8965",
       "views/dit-semantic-zoom.view.yaml": "ebca6fefd29f612792b8957db940cc3237132140722d52b76999194823dbc5eb",
       "pseudocode/diffusion-transformer.yaml": "c30de43fb5cb70827e520b7f60c410d348de1c10d72646ab68e6b4a2d6064c65",
@@ -3772,6 +3772,39 @@ export const manifest = {
         "path": "src/alphafold3/model/network/template_modules.py",
         "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py",
         "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/template_modules.py"
+      },
+      {
+        "id": "af3_atom_cross_attention_code",
+        "kind": "code",
+        "title": "AlphaFold 3 atom attention encoder and decoder implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/atom_cross_attention.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/atom_cross_attention.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/atom_cross_attention.py"
+      },
+      {
+        "id": "af3_diffusion_head_code",
+        "kind": "code",
+        "title": "AlphaFold 3 diffusion module and sampler implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/diffusion_head.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_head.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/diffusion_head.py"
+      },
+      {
+        "id": "af3_featurization_code",
+        "kind": "code",
+        "title": "AlphaFold 3 input feature construction, including relative position encoding",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "f3e86f27dfac16559d16f470bb2f9323eb357f1f",
+        "path": "src/alphafold3/model/network/featurization.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py"
       },
       {
         "id": "genie2_2024",
