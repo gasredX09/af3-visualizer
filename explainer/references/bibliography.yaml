@@ -292,6 +292,33 @@ sources:
     path: src/alphafold3/model/network/featurization.py
     url: https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py
 
+  - id: af3_confidence_head_code
+    kind: code
+    title: AlphaFold 3 confidence head implementation
+    organization: Google DeepMind
+    repository: google-deepmind/alphafold3
+    revision: b2f3d45fbfcacc5183bd5345d15df93571b8437f
+    path: src/alphafold3/model/network/confidence_head.py
+    url: https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/confidence_head.py
+
+  - id: af3_model_code
+    kind: code
+    title: AlphaFold 3 sampler and confidence head handoff
+    organization: Google DeepMind
+    repository: google-deepmind/alphafold3
+    revision: b2f3d45fbfcacc5183bd5345d15df93571b8437f
+    path: src/alphafold3/model/model.py
+    url: https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/model.py
+
+  - id: af3_sampler_code
+    kind: code
+    title: AlphaFold 3 inference sampler implementation
+    organization: Google DeepMind
+    repository: google-deepmind/alphafold3
+    revision: b2f3d45fbfcacc5183bd5345d15df93571b8437f
+    path: src/alphafold3/model/network/diffusion_head.py
+    url: https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/diffusion_head.py
+
   - id: genie2_2024
     kind: paper
     title: "Out of Many, One: Designing and Scaffolding Proteins at the Scale of the Structural Universe with Genie 2"

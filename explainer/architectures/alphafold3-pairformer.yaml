@@ -7,6 +7,9 @@ task_modes:
   - prediction
 
 reference_configuration:
+  confidence_pairformer_blocks: 4
+  inference_diffusion_steps: 200
+  inference_samples: 5
   diffusion_token_channels: 768
   diffusion_token_transformer_blocks: 24
   diffusion_token_transformer_heads: 16
@@ -32,6 +35,12 @@ reference_configuration:
       - source_ref: af3_atom_cross_attention_code
         role: configuration_evidence
         locator: "atom_cross_attention.py AtomCrossAttEncoderConfig (per_token_channels=768, per_atom_channels=128, per_atom_pair_channels=16, atom_transformer num_blocks=3 and num_intermediate_factor=2) and AtomCrossAttDecoderConfig (per_atom_channels=128, same atom_transformer settings)"
+      - source_ref: af3_sampler_code
+        role: configuration_evidence
+        locator: "diffusion_head.py:101-127 (SampleConfig and DiffusionHead.Config.eval, steps=200 and num_samples=5)"
+      - source_ref: af3_confidence_head_code
+        role: configuration_evidence
+        locator: "confidence_head.py:48-52 (ConfidenceHead.Config.pairformer.num_layer=4)"
 
 sources:
   - source_ref: af3_2024
@@ -63,6 +72,38 @@ decomposition:
 
 execution:
   loops:
+    - id: sample_diffusion
+      repeats: 200
+      reruns:
+        - modules.diffusion_module
+        - modules.sampler_update
+      cached:
+        - value_sites.s_inputs
+        - value_sites.single_state_output
+        - value_sites.pair_state_output
+      notes:
+        - The released inference configuration generates five independent samples with 200 calls to the same denoiser per sample.
+        - The sampler's pose augmentation, noise schedule, and update equation are deferred to the sampler pass; this loop records the call boundary only.
+      evidence:
+        status: confirmed_from_code
+        refs:
+          - source_ref: af3_sampler_code
+            role: implementation_evidence
+            locator: "diffusion_head.py:333-378 (apply_denoising_step, hk.scan, final atom_positions) and :124-127 (steps=200, num_samples=5)"
+    - id: confidence_pairformer
+      repeats: 4
+      reruns:
+        - modules.confidence_pairformer_stack
+      cached:
+        - value_sites.final_sampled_atom_positions
+      notes:
+        - Four full PairFormerIteration blocks refine the confidence head's own single and pair states; this is separate from the trunk's 48-block stack.
+      evidence:
+        status: confirmed_from_code
+        refs:
+          - source_ref: af3_confidence_head_code
+            role: implementation_evidence
+            locator: "confidence_head.py:48-52,142-162 (num_layer=4, with_single=True, layer_stack)"
     - id: pairformer_stack
       repeats: 48
       reruns:
@@ -227,21 +268,31 @@ training_inference:
   objective:
     kind: component_only
     notes:
-      - The Pairformer is trained as part of the complete AlphaFold 3 system; this bounded diagram does not assign it a standalone loss.
+      - The Pairformer and Confidence Head are components of the complete AlphaFold 3 system; this inference diagram does not assign either a standalone loss.
   schedule:
-    kind: none
+    kind: diffusion_noise_level
+    steps: 200
   sampler:
-    kind: none
+    kind: af3_diffusion
+    steps: 200
+    initial_state: gaussian_atom_coordinates
   teacher_forcing: not_applicable
   self_conditioning: none
   checkpoint_notes:
-    - The released implementation applies the same deterministic Pairformer computation in training and inference; upstream recycling is outside this diagram.
+    - The released inference configuration generates five independently sampled structures, each with 200 denoiser calls; the Confidence Head evaluates each completed structure.
+    - The sampler's schedule and update arithmetic, upstream recycling, and confidence training mini rollout are outside these boards.
   evidence:
     status: confirmed_from_code
     refs:
       - source_ref: af3_evoformer_code
         role: implementation_evidence
         locator: Evoformer.__call__ pairformer_stack
+      - source_ref: af3_sampler_code
+        role: implementation_evidence
+        locator: "diffusion_head.py:101-127,333-378 (200-step, five-sample inference config; noise schedule, Gaussian initial coordinates, scanned denoiser calls)"
+      - source_ref: af3_model_code
+        role: implementation_evidence
+        locator: "model.py:321-339 (full diffusion samples passed to ConfidenceHead per sample)"
 
 representations:
   - id: single_state
@@ -964,6 +1015,132 @@ representations:
           role: paper_evidence
           locator: Supplementary Algorithm 20 line 8 (x_l^out = sigma_data^2/(sigma_data^2+t_hat^2) * x_l^noisy + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update) and line 9 (return {x_l^out}); consumed as {x_l^denoised} by Algorithm 18 line 8, the sampler's call site
 
+  - id: sampler_updated_positions
+    scale: atom
+    semantic_role: one sampler iteration's updated atom coordinates after using the denoiser estimate, distinct from the estimate itself
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries: [updated coordinates for the next sampling iteration]
+    evidence: &sampler_update_evidence
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)" }
+  - id: final_sampled_atom_positions
+    scale: atom
+    semantic_role: one completed diffusion sample after all sampler updates, supplied to the confidence head
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries: [predicted atom coordinates of one completed sample]
+    evidence: &final_sample_evidence
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:373-378 (scan output positions_out returned as atom_positions)" }
+        - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:321-339 (samples['atom_positions'] mapped through ConfidenceHead per sample)" }
+  - id: confidence_representative_distances
+    scale: token_pair
+    semantic_role: distance between representative atoms of token i and token j in the predicted sample, before one-hot binning
+    shape: "N_token x N_token"
+    glyph: pair
+    carries: [predicted-structure pair distances in angstroms]
+    evidence: &confidence_distance_evidence
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 lines 2-3 (representative-atom distance d_ij and binned injection into pair state)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:82-98 (_embed_features converts sampled positions to token representative atoms and builds dgram)" }
+  - id: confidence_pair_state
+    scale: token_pair
+    semantic_role: the confidence head's own 128-channel pair state, seeded from the trunk pair state and augmented with input and sampled-geometry features
+    shape: "N_token x N_token x 128"
+    glyph: pair
+    carries: [trunk pair context augmented for judging this sampled structure]
+    evidence: &confidence_pair_evidence
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)" }
+  - id: confidence_single_state
+    scale: token
+    semantic_role: the confidence head's own 384-channel single state after four full Pairformer blocks
+    shape: "N_token x 384"
+    glyph: single
+    carries: [refined token context for atom-wise confidence projections]
+    evidence: &confidence_single_evidence
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 lines 4, 7-8 (refined single state feeds pLDDT and resolved projections)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:142-162,247-271 (full Pairformer then atom-channel projections)" }
+  - id: predicted_lddt_distribution
+    scale: atom
+    semantic_role: 50-bin learned distribution over each atom's local distance difference score
+    shape: "N_atom x 50"
+    glyph: matrix
+    carries: [probability per predicted local score bin]
+    evidence: &plddt_evidence
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)" }
+  - id: predicted_lddt
+    scale: atom
+    semantic_role: per-atom predicted local distance difference score, an expectation over learned bins rather than measured agreement
+    shape: "N_atom"
+    glyph: vector
+    carries: [predicted local score from 0 to 100]
+    evidence: *plddt_evidence
+  - id: predicted_aligned_error_distribution
+    scale: token_pair
+    semantic_role: directional 64-bin learned distribution for token j's alignment error in token i's reference frame
+    shape: "N_token x N_token x 64"
+    glyph: pair
+    carries: [directional predicted aligned-error bin probabilities]
+    evidence: &pae_evidence
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)" }
+  - id: predicted_aligned_error
+    scale: token_pair
+    semantic_role: directional expected PAE in angstroms, with row token i as frame anchor and column token j as evaluated token
+    shape: "N_token x N_token"
+    glyph: pair
+    carries: [predicted aligned error in angstroms]
+    evidence: *pae_evidence
+  - id: predicted_distance_error_distribution
+    scale: token_pair
+    semantic_role: symmetric 64-bin learned distribution over representative-atom distance error
+    shape: "N_token x N_token x 64"
+    glyph: pair
+    carries: [symmetric predicted distance-error bin probabilities]
+    evidence: &pde_evidence
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)" }
+  - id: predicted_distance_error
+    scale: token_pair
+    semantic_role: symmetric expected PDE in angstroms for the representative-atom distance between token i and token j
+    shape: "N_token x N_token"
+    glyph: pair
+    carries: [predicted distance error in angstroms]
+    evidence: *pde_evidence
+  - id: predicted_resolved_distribution
+    scale: atom
+    semantic_role: two-class learned distribution over whether each atom would be experimentally resolved
+    shape: "N_atom x 2"
+    glyph: matrix
+    carries: [resolved and unresolved class probabilities]
+    evidence: &resolved_evidence
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)" }
+  - id: predicted_experimentally_resolved
+    scale: atom
+    semantic_role: predicted probability that each atom would be observed in experimental structure data
+    shape: "N_atom"
+    glyph: vector
+    carries: [predicted probability of experimental resolution]
+    evidence: *resolved_evidence
+
 value_sites:
   - id: single_state_input
     representation_ref: representations.single_state
@@ -1569,9 +1746,8 @@ value_sites:
           locator: "template_modules.py lines 198-204 (embedding = summed_template_embeddings / (1e-7 + num_templates); embedding = jax.nn.relu(embedding); embedding = hm.Linear(query_num_channels, initializer='relu', name='output_linear')(embedding); assert embedding.shape == (num_residues, num_residues, query_num_channels)) -- confirms the final LinearNoBias(ReLU(...)) projection widens from the module's own 64-channel width to query_num_channels, which equals the trunk's c_z=128, matching representations.pair_state; the paper's own Algorithm 16 line 13 shape annotation (u_ij in R^c, c=64) does not show this widening explicitly"
   - id: noise_level
     representation_ref: representations.noise_level
-    scope_ref: architecture
-    boundary: input
-    role: raw_noise_level_input
+    scope_ref: modules.sample_diffusion
+    role: sampler_step_noise_level
     evidence:
       status: confirmed_from_paper
       refs:
@@ -1600,7 +1776,7 @@ value_sites:
           locator: Supplementary Algorithm 21 lines 1-2 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})]); z_ij <- LinearNoBias(LayerNorm(z_ij)), z_ij in R^c_z) -- the input to the two-round Transition refinement loop at lines 3-5
   - id: diffusion_conditioned_pair
     representation_ref: representations.diffusion_pair_conditioning
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: final_diffusion_pair_conditioning_output
     evidence:
       status: confirmed_from_paper
@@ -1630,7 +1806,7 @@ value_sites:
           locator: Supplementary Algorithm 21 line 9 (s_i += LinearNoBias(LayerNorm(n))) -- the Fourier time embedding gets its own separate LayerNorm+LinearNoBias projection into c_s and is added directly into the already-projected s_i, distinct from line 6's concatenation; this is the input to the two-round Transition refinement loop at lines 10-12
   - id: diffusion_conditioned_single
     representation_ref: representations.diffusion_single_conditioning
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: final_diffusion_single_conditioning_output
     evidence:
       status: confirmed_from_paper
@@ -1640,9 +1816,8 @@ value_sites:
           locator: Supplementary Algorithm 21 lines 10-13 (for all b in [1,2] do s_i += Transition(s_i, n=2); return {s_i}, {z_ij}) -- the single branch's final returned tensor, which drives Adaptive LayerNorm scale/shift at every block of the token-level DiffusionTransformer and is also injected once additively at Algorithm 20 line 4
   - id: noisy_atom_positions
     representation_ref: representations.noisy_atom_positions
-    scope_ref: architecture
-    boundary: input
-    role: raw_noisy_atom_positions_input
+    scope_ref: modules.sample_diffusion
+    role: sampler_step_noisy_positions
     evidence:
       status: confirmed_from_paper
       refs:
@@ -1651,7 +1826,7 @@ value_sites:
           locator: Supplementary Algorithm 20 signature ({x_l^noisy} passed into DiffusionModule), the raw per-atom coordinates this denoising step starts from, fixed by this plan as this exact id
   - id: scaled_noisy_atom_positions
     representation_ref: representations.scaled_noisy_atom_positions
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: dimensionless_scaled_noisy_positions
     evidence:
       status: confirmed_from_paper
@@ -1741,7 +1916,7 @@ value_sites:
           locator: Supplementary Algorithm 5 line 15 ({q_l} = AtomTransformer({q_l}, {c_l}, {p_lm}, N_block=3, N_head=4)), the per-atom activation as it stands after sequence-local attention and before mean-pooling to tokens
   - id: atom_attention_encoder_token_output
     representation_ref: representations.diffusion_token_activation
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: mean_pooled_per_token_atom_encoding
     evidence:
       status: confirmed_from_paper
@@ -1751,7 +1926,7 @@ value_sites:
           locator: Supplementary Algorithm 5 line 16 (a_i = mean over the atoms of token i of relu(LinearNoBias(q_l))), the encoder's aggregated per-token output and the tensor the token-level transformer works on, fixed by this plan as this exact id
   - id: atom_attention_encoder_query_skip
     representation_ref: representations.atom_single_representation
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: encoder_query_skip_tensor
     evidence:
       status: confirmed_from_paper
@@ -1761,7 +1936,7 @@ value_sites:
           locator: Supplementary Algorithm 5 line 17 (q_l^skip = q_l), discarded by the bare-mode call in Algorithm 2 line 1 and used here as the decoder's starting point rather than recomputing per-atom detail
   - id: atom_attention_encoder_single_conditioning_skip
     representation_ref: representations.atom_single_conditioning
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: encoder_single_conditioning_skip_tensor
     evidence:
       status: confirmed_from_paper
@@ -1771,7 +1946,7 @@ value_sites:
           locator: Supplementary Algorithm 5 line 17 (c_l^skip = c_l), reused unchanged by the decoder at Algorithm 6 line 2; atom identity and the trunk broadcast do not change within one denoising step, so nothing here is recomputed
   - id: atom_attention_encoder_pair_skip
     representation_ref: representations.atom_pair_representation
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: encoder_pair_skip_tensor
     evidence:
       status: confirmed_from_paper
@@ -1781,7 +1956,7 @@ value_sites:
           locator: Supplementary Algorithm 5 line 17 (p_lm^skip = p_lm), reused unchanged as the decoder's pair bias at Algorithm 6 line 2
   - id: sequence_local_atom_attention_mask
     representation_ref: representations.sequence_local_attention_mask
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: sequence_local_attention_mask_term
     evidence:
       status: confirmed_from_paper
@@ -1791,7 +1966,7 @@ value_sites:
           locator: Supplementary Algorithm 7 line 1, computed identically for every AtomTransformer call and modeled here as one shared value site because it depends only on flat atom indexing and the fixed window sizes, not on any activation
   - id: diffusion_token_activation_conditioned
     representation_ref: representations.diffusion_token_activation
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: token_activation_after_additive_conditioning_injection
     evidence:
       status: confirmed_from_paper
@@ -1841,7 +2016,7 @@ value_sites:
           locator: Supplementary Algorithm 23 line 3 (a_i <- b_i + ConditionedTransitionBlock(a_i, s_i)), the block's single combined update; see open_questions.diffusion_transformer_block_residual_paper_code_divergence
   - id: diffusion_token_activation_normalized
     representation_ref: representations.diffusion_token_activation
-    scope_ref: architecture
+    scope_ref: modules.diffusion_module
     role: token_activation_after_output_layer_norm
     evidence:
       status: confirmed_from_paper
@@ -1871,7 +2046,7 @@ value_sites:
           locator: Supplementary Algorithm 6 line 2 ({q_l} = AtomTransformer({q_l}, {c_l^skip}, {p_lm^skip}, N_block=3, N_head=4)), local reconciliation of the just-broadcast token update against each atom's own saved fine context
   - id: atom_attention_decoder_position_update
     representation_ref: representations.atom_position_update
-    scope_ref: architecture
+    scope_ref: modules.atom_attention_decoder
     role: per_atom_position_update_output
     evidence:
       status: confirmed_from_paper
@@ -1881,15 +2056,94 @@ value_sites:
           locator: Supplementary Algorithm 6 line 3 (r_l^update = LinearNoBias(LayerNorm(q_l))), the decoder's returned per-atom update, consumed by Algorithm 20 line 8's blending step, fixed by this plan as this exact id
   - id: denoised_atom_positions
     representation_ref: representations.denoised_atom_positions
-    scope_ref: architecture
-    boundary: output
+    scope_ref: modules.diffusion_module
     role: diffusion_module_denoised_output
     evidence:
       status: confirmed_from_paper
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 20 line 9 (return {x_l^out}), the module's own returned coordinates for this denoising step; this architecture's new terminal output, fixed by this task as this exact id
+          locator: Supplementary Algorithm 20 line 9 (return {x_l^out}), the module's own returned coordinates for this denoising step, consumed within Algorithm 18 rather than being the completed sample
+  - id: sampler_updated_positions
+    representation_ref: representations.sampler_updated_positions
+    scope_ref: modules.sample_diffusion
+    role: coordinates_after_one_sampler_update
+    evidence: *sampler_update_evidence
+  - id: final_sampled_atom_positions
+    representation_ref: representations.final_sampled_atom_positions
+    scope_ref: architecture
+    boundary: output
+    role: completed_sample_and_confidence_input
+    evidence: *final_sample_evidence
+  - id: confidence_representative_distances
+    representation_ref: representations.confidence_representative_distances
+    scope_ref: modules.confidence_pair_embedding
+    role: predicted_sample_representative_atom_distances
+    evidence: *confidence_distance_evidence
+  - id: confidence_pair_after_input_embedding
+    representation_ref: representations.confidence_pair_state
+    scope_ref: modules.confidence_pair_embedding
+    role: pair_state_after_input_embedding_injection
+    evidence: *confidence_pair_evidence
+  - id: confidence_pair_after_geometry_embedding
+    representation_ref: representations.confidence_pair_state
+    scope_ref: modules.confidence_pair_embedding
+    role: pair_state_after_sample_distance_injection
+    evidence: *confidence_pair_evidence
+  - id: confidence_single_after_stack
+    representation_ref: representations.confidence_single_state
+    scope_ref: modules.confidence_pairformer_stack
+    role: confidence_stack_refined_single_state
+    evidence: *confidence_single_evidence
+  - id: confidence_pair_after_stack
+    representation_ref: representations.confidence_pair_state
+    scope_ref: modules.confidence_pairformer_stack
+    role: confidence_stack_refined_pair_state
+    evidence: *confidence_pair_evidence
+  - id: predicted_lddt_distribution
+    representation_ref: representations.predicted_lddt_distribution
+    scope_ref: modules.confidence_plddt_head
+    role: per_atom_plddt_bin_probabilities
+    evidence: *plddt_evidence
+  - id: predicted_lddt
+    representation_ref: representations.predicted_lddt
+    scope_ref: architecture
+    boundary: output
+    role: expected_per_atom_plddt
+    evidence: *plddt_evidence
+  - id: predicted_aligned_error_distribution
+    representation_ref: representations.predicted_aligned_error_distribution
+    scope_ref: modules.confidence_pae_head
+    role: directional_pae_bin_probabilities
+    evidence: *pae_evidence
+  - id: predicted_aligned_error
+    representation_ref: representations.predicted_aligned_error
+    scope_ref: architecture
+    boundary: output
+    role: expected_directional_pae
+    evidence: *pae_evidence
+  - id: predicted_distance_error_distribution
+    representation_ref: representations.predicted_distance_error_distribution
+    scope_ref: modules.confidence_pde_head
+    role: symmetric_pde_bin_probabilities
+    evidence: *pde_evidence
+  - id: predicted_distance_error
+    representation_ref: representations.predicted_distance_error
+    scope_ref: architecture
+    boundary: output
+    role: expected_symmetric_pde
+    evidence: *pde_evidence
+  - id: predicted_resolved_distribution
+    representation_ref: representations.predicted_resolved_distribution
+    scope_ref: modules.confidence_resolved_head
+    role: per_atom_resolvability_class_probabilities
+    evidence: *resolved_evidence
+  - id: predicted_experimentally_resolved
+    representation_ref: representations.predicted_experimentally_resolved
+    scope_ref: architecture
+    boundary: output
+    role: per_atom_predicted_resolvability_probability
+    evidence: *resolved_evidence
 
 modules:
   - id: pairformer_stack
@@ -2512,8 +2766,131 @@ modules:
         - source_ref: af3_template_code
           role: implementation_evidence
           locator: "template_modules.py TemplateEmbedding.Config (template_stack = PairFormerIteration.Config(num_layer=2, pair_transition=TransitionBlock.Config(num_intermediate_factor=2))) -- overrides TransitionBlock.Config's num_intermediate_factor default of 4 (modules.py) to 2 for this stack's transition only, the one place in the architecture this factor is not 4"
-  - id: diffusion_module
+  - id: sample_diffusion
     parent_ref: architecture
+    decomposition:
+      status: partial
+      reason: This pass accounts for the repeated denoiser call and its output boundary. The schedule, pose augmentation, noise injection, and update arithmetic remain for the sampler pass.
+    label: Diffusion Sampler
+    kind: sampler
+    mechanisms: [iterative_denoising, sampler_state_update]
+    role: generate completed atom coordinates by repeatedly calling the one-step Diffusion Module and updating the current positions; one denoiser return is an estimate used by the sampler, not the final sample or the next step's coordinates
+    scale: atom_and_token
+    repeats: 200
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 18 lines 2, 8-13 (repeated DiffusionModule calls, sampler update, final coordinates)" }
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-378 (apply_denoising_step scanned over 200 configured levels, returning final atom_positions)" }
+  - id: sampler_update
+    parent_ref: modules.sample_diffusion
+    decomposition: { status: opaque, reason: The sampler update arithmetic and stochastic pose steps are reserved for the later sampler pass. }
+    label: Sampler State Update
+    kind: operator
+    mechanisms: [sampler_state_update]
+    role: use the current noisy positions and the denoiser's clean-coordinate estimate to form the next sampler state; the last state is the completed sample
+    scale: atom
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-354 (positions_denoised and positions_noisy enter the update that returns positions_out)" }
+  - id: confidence_head
+    parent_ref: architecture
+    decomposition: { status: complete }
+    label: Confidence Head
+    kind: prediction_head
+    mechanisms: [sample_geometry_embedding, pairformer_refinement, confidence_readouts]
+    role: judge one completed predicted structure using raw input features, trunk single and pair states, and representative-atom distances extracted from the sample, then predict four confidence quantities
+    scale: atom_and_token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Section 4.3.5 and Algorithm 31, full ConfidenceHead signature and lines 1-9" }
+        - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:321-339 (completed samples and trunk embeddings passed to ConfidenceHead per sample)" }
+  - id: confidence_pair_embedding
+    parent_ref: modules.confidence_head
+    decomposition: { status: partial, reason: The input-feature outer sum and predicted-geometry distance injection are represented by distinct value-site transitions. }
+    label: Predicted Geometry Embedding
+    kind: adapter
+    mechanisms: [input_feature_outer_sum, representative_atom_distance_embedding]
+    role: add two projections of the raw input embedding and a binned representative-atom distance map from the predicted sample to the trunk pair state
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 lines 1-3 (input outer sum and predicted representative-atom distance injection)" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:76-98,125-140 (_embed_features uses target_feat and sampled positions)" }
+  - id: confidence_pairformer_stack
+    parent_ref: modules.confidence_head
+    decomposition: { status: leaf }
+    label: Four-Block Confidence Pairformer
+    kind: refiner
+    mechanisms: [pair_reasoning, pair_biased_single_attention]
+    role: refine the confidence head's augmented pair state and trunk single state with four full PairFormerIteration blocks, using the same block mechanism as the separate 48-block trunk stack
+    scale: token_and_token_pair
+    repeats: 4
+    depth: { blocks: 4 }
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 line 4 (PairformerStack with N_block=4), referring to Algorithm 17" }
+        - { source_ref: af3_confidence_head_code, role: implementation_evidence, locator: "confidence_head.py:48-52,142-162 (num_layer=4 and with_single=True PairFormerIteration layer_stack)" }
+  - id: confidence_pair_readouts
+    parent_ref: modules.confidence_head
+    decomposition: { status: complete }
+    label: Pairwise Confidence Readouts
+    kind: prediction_head
+    role: project refined pair states into directional PAE and symmetric PDE distributions and expected errors
+    scale: token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 lines 5-6 (PAE and PDE pair projections)" }
+  - id: confidence_atom_readouts
+    parent_ref: modules.confidence_head
+    decomposition: { status: complete }
+    label: Per-Atom Confidence Readouts
+    kind: prediction_head
+    role: project the refined single state to separate per-atom pLDDT and experimental-resolvability predictions
+    scale: atom
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 lines 7-8 (distinct per-atom pLDDT and resolved projections)" }
+  - id: confidence_pae_head
+    parent_ref: modules.confidence_pair_readouts
+    decomposition: { status: leaf }
+    label: Predicted Aligned Error
+    kind: prediction_head
+    role: predict the error of token j relative to token i's local frame without symmetrizing the ordered pair
+    scale: token_pair
+    evidence: *pae_evidence
+  - id: confidence_pde_head
+    parent_ref: modules.confidence_pair_readouts
+    decomposition: { status: leaf }
+    label: Predicted Distance Error
+    kind: prediction_head
+    role: predict representative-atom distance error with symmetric pair logits
+    scale: token_pair
+    evidence: *pde_evidence
+  - id: confidence_plddt_head
+    parent_ref: modules.confidence_atom_readouts
+    decomposition: { status: leaf }
+    label: Predicted Local Distance Difference
+    kind: prediction_head
+    role: predict per-atom local distance agreement through a dedicated 50-bin projection of the refined single state
+    scale: atom
+    evidence: *plddt_evidence
+  - id: confidence_resolved_head
+    parent_ref: modules.confidence_atom_readouts
+    decomposition: { status: leaf }
+    label: Predicted Experimental Resolvability
+    kind: prediction_head
+    role: predict each atom's experimentally resolved probability through a separate two-class projection of the refined single state
+    scale: atom
+    evidence: *resolved_evidence
+  - id: diffusion_module
+    parent_ref: modules.sample_diffusion
     decomposition:
       status: complete
       reason: Every real sub-step is either a named child module or, for the two single-line housekeeping steps with no internal structure of their own (line 2's position rescale and line 8's output blend), an architecture-scope value-site relation rather than a further child -- the same treatment already given to modules.pairformer_stack's own scale-transition relations. Nothing is left unmodeled at this level.
@@ -4634,6 +5011,232 @@ relations:
         - source_ref: af3_diffusion_head_code
           role: implementation_evidence
           locator: "diffusion_head.py DiffusionHead.__call__ (out_scaling = noise_level * SIGMA_DATA / jnp.sqrt(noise_level**2 + SIGMA_DATA**2)), the coefficient applied to position_update, the atom decoder's own returned tensor, immediately before the two terms are summed and masked"
+
+  - id: sampler_produces_step_noise_level
+    from: modules.sample_diffusion
+    to: value_sites.noise_level
+    kind: control
+    carries: [representations.noise_level]
+    operation: select_current_denoiser_noise_level
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-348,358-373 (scheduled level and t_hat passed into denoising_step)" }
+  - id: sampler_produces_step_noisy_positions
+    from: modules.sample_diffusion
+    to: value_sites.noisy_atom_positions
+    kind: data_flow
+    carries: [representations.noisy_atom_positions]
+    operation: provide_noisy_positions_for_one_denoising_call
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:337-349 (augment current positions, add noise, call denoising_step with positions_noisy)" }
+  - id: sampler_noise_level_sets_denoiser_rescaling
+    from: value_sites.noise_level
+    to: value_sites.scaled_noisy_atom_positions
+    kind: conditioning
+    carries: [representations.noise_level]
+    operation: rescale_noisy_positions_with_current_noise_level
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 20 line 2 (r_noisy = x_noisy / sqrt(t_hat^2 + sigma_data^2))" }
+  - id: denoised_estimate_enters_sampler_update
+    from: value_sites.denoised_atom_positions
+    to: modules.sampler_update
+    kind: data_flow
+    carries: [representations.denoised_atom_positions]
+    operation: use_one_step_clean_coordinate_estimate
+    evidence: *sampler_update_evidence
+  - id: noisy_positions_enter_sampler_update
+    from: value_sites.noisy_atom_positions
+    to: modules.sampler_update
+    kind: data_flow
+    carries: [representations.noisy_atom_positions]
+    operation: retain_current_noisy_positions_for_update
+    evidence: *sampler_update_evidence
+  - id: sampler_update_produces_next_positions
+    from: modules.sampler_update
+    to: value_sites.sampler_updated_positions
+    kind: state_update
+    carries: [representations.sampler_updated_positions]
+    operation: compute_next_sampler_coordinates
+    evidence: *sampler_update_evidence
+  - id: last_sampler_update_becomes_final_sample
+    from: value_sites.sampler_updated_positions
+    to: value_sites.final_sampled_atom_positions
+    kind: data_flow
+    carries: [representations.final_sampled_atom_positions]
+    operation: return_coordinates_after_last_sampler_step
+    evidence: *final_sample_evidence
+  - id: raw_input_features_update_confidence_pair_state
+    from: value_sites.s_inputs
+    to: value_sites.confidence_pair_after_input_embedding
+    kind: state_update
+    carries: [representations.s_inputs]
+    operation: add_two_raw_input_projections_to_trunk_pair_state
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 line 1 (two projections of s_inputs added to z_ij)" }
+  - id: trunk_pair_enters_confidence_pair_embedding
+    from: value_sites.pair_state_output
+    to: value_sites.confidence_pair_after_input_embedding
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: initialize_confidence_pair_state_from_trunk_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 31 line 1 (z_ij is the incoming trunk pair state before s_inputs is added)" }
+  - id: final_sample_enters_confidence_pair_embedding
+    from: value_sites.final_sampled_atom_positions
+    to: modules.confidence_pair_embedding
+    kind: data_flow
+    carries: [representations.final_sampled_atom_positions]
+    operation: provide_completed_sample_for_geometry_embedding
+    evidence: *final_sample_evidence
+  - id: confidence_pair_embedding_produces_representative_distances
+    from: modules.confidence_pair_embedding
+    to: value_sites.confidence_representative_distances
+    kind: data_flow
+    carries: [representations.confidence_representative_distances]
+    operation: compute_predicted_representative_atom_pair_distances
+    evidence: *confidence_distance_evidence
+  - id: input_augmented_pair_enters_geometry_injection
+    from: value_sites.confidence_pair_after_input_embedding
+    to: value_sites.confidence_pair_after_geometry_embedding
+    kind: state_update
+    carries: [representations.confidence_pair_state]
+    operation: retain_pair_state_before_distance_injection
+    evidence: *confidence_pair_evidence
+  - id: representative_distances_enter_geometry_injection
+    from: value_sites.confidence_representative_distances
+    to: value_sites.confidence_pair_after_geometry_embedding
+    kind: state_update
+    carries: [representations.confidence_representative_distances]
+    operation: bin_and_project_predicted_distances_into_pair_state
+    evidence: *confidence_distance_evidence
+  - id: confidence_pair_embedding_produces_augmented_pair
+    from: modules.confidence_pair_embedding
+    to: value_sites.confidence_pair_after_geometry_embedding
+    kind: state_update
+    carries: [representations.confidence_pair_state]
+    operation: add_binned_geometry_to_input_augmented_pair_state
+    evidence: *confidence_pair_evidence
+  - id: trunk_single_enters_confidence_pairformer
+    from: value_sites.single_state_output
+    to: modules.confidence_pairformer_stack
+    kind: data_flow
+    carries: [representations.single_state]
+    operation: provide_trunk_single_state_for_confidence_refinement
+    evidence: *confidence_single_evidence
+  - id: geometry_augmented_pair_enters_confidence_pairformer
+    from: value_sites.confidence_pair_after_geometry_embedding
+    to: modules.confidence_pairformer_stack
+    kind: data_flow
+    carries: [representations.confidence_pair_state]
+    operation: provide_geometry_augmented_pair_state_for_refinement
+    evidence: *confidence_pair_evidence
+  - id: confidence_pairformer_produces_refined_single
+    from: modules.confidence_pairformer_stack
+    to: value_sites.confidence_single_after_stack
+    kind: data_flow
+    carries: [representations.confidence_single_state]
+    operation: return_four_block_refined_single_state
+    evidence: *confidence_single_evidence
+  - id: confidence_pairformer_produces_refined_pair
+    from: modules.confidence_pairformer_stack
+    to: value_sites.confidence_pair_after_stack
+    kind: data_flow
+    carries: [representations.confidence_pair_state]
+    operation: return_four_block_refined_pair_state
+    evidence: *confidence_pair_evidence
+  - id: refined_pair_enters_pae_head
+    from: value_sites.confidence_pair_after_stack
+    to: modules.confidence_pae_head
+    kind: data_flow
+    carries: [representations.confidence_pair_state]
+    operation: project_ordered_pair_state_to_pae_bins
+    evidence: *pae_evidence
+  - id: refined_pair_enters_pde_head
+    from: value_sites.confidence_pair_after_stack
+    to: modules.confidence_pde_head
+    kind: data_flow
+    carries: [representations.confidence_pair_state]
+    operation: project_symmetrized_pair_logits_to_pde_bins
+    evidence: *pde_evidence
+  - id: refined_single_enters_plddt_head
+    from: value_sites.confidence_single_after_stack
+    to: modules.confidence_plddt_head
+    kind: data_flow
+    carries: [representations.confidence_single_state]
+    operation: select_atom_channel_and_project_plddt_logits
+    evidence: *plddt_evidence
+  - id: refined_single_enters_resolved_head
+    from: value_sites.confidence_single_after_stack
+    to: modules.confidence_resolved_head
+    kind: data_flow
+    carries: [representations.confidence_single_state]
+    operation: select_atom_channel_and_project_resolved_logits
+    evidence: *resolved_evidence
+  - id: pae_head_produces_distribution
+    from: modules.confidence_pae_head
+    to: value_sites.predicted_aligned_error_distribution
+    kind: data_flow
+    carries: [representations.predicted_aligned_error_distribution]
+    operation: softmax_directional_pae_logits
+    evidence: *pae_evidence
+  - id: pae_distribution_produces_expected_error
+    from: value_sites.predicted_aligned_error_distribution
+    to: value_sites.predicted_aligned_error
+    kind: data_flow
+    carries: [representations.predicted_aligned_error]
+    operation: expected_pae_from_bin_centers
+    evidence: *pae_evidence
+  - id: pde_head_produces_distribution
+    from: modules.confidence_pde_head
+    to: value_sites.predicted_distance_error_distribution
+    kind: data_flow
+    carries: [representations.predicted_distance_error_distribution]
+    operation: softmax_symmetric_pde_logits
+    evidence: *pde_evidence
+  - id: pde_distribution_produces_expected_error
+    from: value_sites.predicted_distance_error_distribution
+    to: value_sites.predicted_distance_error
+    kind: data_flow
+    carries: [representations.predicted_distance_error]
+    operation: expected_pde_from_bin_centers
+    evidence: *pde_evidence
+  - id: plddt_head_produces_distribution
+    from: modules.confidence_plddt_head
+    to: value_sites.predicted_lddt_distribution
+    kind: data_flow
+    carries: [representations.predicted_lddt_distribution]
+    operation: softmax_per_atom_plddt_logits
+    evidence: *plddt_evidence
+  - id: plddt_distribution_produces_expected_score
+    from: value_sites.predicted_lddt_distribution
+    to: value_sites.predicted_lddt
+    kind: data_flow
+    carries: [representations.predicted_lddt]
+    operation: expected_plddt_scaled_to_hundred
+    evidence: *plddt_evidence
+  - id: resolved_head_produces_distribution
+    from: modules.confidence_resolved_head
+    to: value_sites.predicted_resolved_distribution
+    kind: data_flow
+    carries: [representations.predicted_resolved_distribution]
+    operation: softmax_experimental_resolvability_logits
+    evidence: *resolved_evidence
+  - id: resolved_distribution_produces_positive_probability
+    from: value_sites.predicted_resolved_distribution
+    to: value_sites.predicted_experimentally_resolved
+    kind: data_flow
+    carries: [representations.predicted_experimentally_resolved]
+    operation: select_resolved_class_probability
+    evidence: *resolved_evidence
 
 claims:
   - id: pairformer_has_no_msa_state

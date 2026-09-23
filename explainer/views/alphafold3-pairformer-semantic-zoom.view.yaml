@@ -7,11 +7,11 @@ root_board: pairformer_overview
 boards:
   - id: pairformer_overview
     title: AlphaFold 3
-    summary: Reference-conformer geometry, template structures, and MSA evidence build the single and pair representations, which 48 Pairformer blocks refine. The Diffusion Module then uses those trunk representations to predict atom coordinates, one noise-conditioned denoising step at a time; the outer sampling loop is not shown here.
+    summary: Input features, templates, and MSA evidence build the single and pair representations for the Pairformer. A diffusion sampler repeatedly calls the one-step denoiser to produce a completed structure; the Confidence Head then judges that specific sample through four predicted confidence outputs.
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 16
+      columns: 19
       rows: 9
       column_sizing: content
       col_gap: 36
@@ -244,39 +244,15 @@ boards:
       density: micro
       col: 12
       row: 7
-    - id: noise_level
-      ref: value_sites.noise_level
-      label: noise level
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 13
-      row: 2
-    - id: noisy_atom_positions
-      ref: value_sites.noisy_atom_positions
-      label: noisy atom coordinates
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 13
-      row: 6
-    - id: scaled_noisy_atom_positions
-      ref: value_sites.scaled_noisy_atom_positions
-      label: scaled noisy atoms
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 13
-      row: 7
-    - id: diffusion_module
-      ref: modules.diffusion_module
-      label: Diffusion Module
+    - id: sample_diffusion
+      ref: modules.sample_diffusion
+      label: Diffusion Sampler
       prominence: primary
       treatment: compact
       density: compact
       col: 14
       row: 4
-      board_ref: diffusion_module_detail
+      board_ref: sample_diffusion_detail
     - id: relative_position_encoding
       ref: modules.relative_position_encoding
       label: relative positions
@@ -294,22 +270,27 @@ boards:
       density: micro
       col: 14
       row: 2
-    - id: denoised_atom_positions
-      ref: value_sites.denoised_atom_positions
-      label: denoised atom coordinates
-      prominence: secondary
-      treatment: compact
-      density: compact
-      col: 16
-      row: 4
-    - id: atom_position_update
-      ref: value_sites.atom_attention_decoder_position_update
-      label: predicted atom update
+    - id: final_sampled_atom_positions
+      ref: value_sites.final_sampled_atom_positions
+      label: completed structure sample
       prominence: secondary
       treatment: compact
       density: compact
       col: 15
       row: 4
+    - id: confidence_head
+      ref: modules.confidence_head
+      label: Confidence Head
+      prominence: primary
+      treatment: compact
+      density: compact
+      col: 16
+      row: 4
+      board_ref: confidence_head_detail
+    - { id: predicted_lddt, ref: value_sites.predicted_lddt, label: predicted local score, prominence: secondary, treatment: compact, density: compact, col: 18, row: 2 }
+    - { id: predicted_aligned_error, ref: value_sites.predicted_aligned_error, label: directional PAE, prominence: secondary, treatment: compact, density: compact, col: 18, row: 4 }
+    - { id: predicted_distance_error, ref: value_sites.predicted_distance_error, label: symmetric PDE, prominence: secondary, treatment: compact, density: compact, col: 18, row: 6 }
+    - { id: predicted_experimentally_resolved, ref: value_sites.predicted_experimentally_resolved, label: predicted resolved probability, prominence: secondary, treatment: compact, density: compact, col: 18, row: 8 }
     edge_overrides:
     - match:
         relation_ref: relations.final_single_block_state_becomes_output
@@ -1863,16 +1844,117 @@ boards:
           role: module output
           inside: The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution.
 
+  - id: sample_diffusion_detail
+    title: Diffusion Sampling Boundary
+    summary: The sampler repeatedly asks the same Diffusion Module for a clean-coordinate estimate, then updates its current atom positions. Only the coordinates after the last update are a completed sample for confidence prediction. The schedule and update arithmetic are left for the sampler lesson.
+    parent: pairformer_overview
+    subject_ref: modules.sample_diffusion
+    expansion_depth: 1
+    grid: { columns: 6, rows: 5, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: sampler_s_inputs, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: sampler_trunk_single, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: sampler_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
+      - { id: sampler_reference_atoms, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
+      - { id: sampler_controller, ref: modules.sample_diffusion, label: sampler state, prominence: context, treatment: chip, density: micro, col: 2, row: 2 }
+      - { id: sampler_noise_level, ref: value_sites.noise_level, label: current noise level, prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
+      - { id: sampler_noisy_positions, ref: value_sites.noisy_atom_positions, label: current noisy atoms, prominence: secondary, treatment: compact, density: compact, col: 2, row: 4 }
+      - { id: sampler_denoiser, ref: modules.diffusion_module, label: one denoising call, prominence: primary, treatment: compact, density: compact, col: 3, row: 3, board_ref: diffusion_module_detail }
+      - { id: sampler_estimate, ref: value_sites.denoised_atom_positions, label: one-step estimate, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
+      - { id: sampler_update, ref: modules.sampler_update, label: sampler update, prominence: primary, treatment: compact, density: compact, col: 5, row: 3 }
+      - { id: sampler_updated_positions, ref: value_sites.sampler_updated_positions, label: updated positions, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
+      - { id: sampler_final_positions, ref: value_sites.final_sampled_atom_positions, label: completed sample, prominence: secondary, treatment: compact, density: compact, col: 6, row: 3 }
+    exclude:
+      - { ref: modules.relative_position_encoding, reason: Relative-position internals are shown on their own board; this sampler board focuses on the repeated coordinate call. }
+      - { ref: value_sites.relative_position_encoding_output, reason: The positional prior is expanded on the one-step Diffusion Module board. }
+      - { ref: modules.fourier_embedding, reason: Noise embedding is expanded inside the one-step Diffusion Module boards. }
+
+  - id: confidence_head_detail
+    title: Confidence Head for One Completed Sample
+    summary: The head sees the sampled structure itself, adds its geometry to the trunk pair state, refines single and pair states through four Pairformer blocks, and makes four distinct predictions. These are learned estimates of quality, not errors measured against a known structure.
+    parent: pairformer_overview
+    subject_ref: modules.confidence_head
+    expansion_depth: 1
+    grid: { columns: 5, rows: 5, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: confidence_raw_input, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: confidence_trunk_single, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: confidence_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
+      - { id: confidence_sample, ref: value_sites.final_sampled_atom_positions, label: completed coordinates, prominence: context, treatment: compact, density: compact, col: 1, row: 5 }
+      - { id: confidence_geometry, ref: modules.confidence_pair_embedding, label: embed sample geometry, prominence: primary, treatment: compact, density: compact, col: 2, row: 3, board_ref: confidence_pair_embedding_detail }
+      - { id: confidence_stack, ref: modules.confidence_pairformer_stack, label: four full Pairformer blocks, prominence: primary, treatment: compact, density: compact, col: 3, row: 3 }
+      - { id: confidence_refined_pair, ref: value_sites.confidence_pair_after_stack, label: refined pairs, prominence: secondary, treatment: compact, density: compact, col: 4, row: 2 }
+      - { id: confidence_refined_single, ref: value_sites.confidence_single_after_stack, label: refined singles, prominence: secondary, treatment: compact, density: compact, col: 4, row: 4 }
+      - { id: confidence_pair_outputs, ref: modules.confidence_pair_readouts, label: PAE and PDE, prominence: primary, treatment: compact, density: compact, col: 5, row: 2, board_ref: confidence_pair_readouts_detail }
+      - { id: confidence_atom_outputs, ref: modules.confidence_atom_readouts, label: pLDDT and resolved, prominence: primary, treatment: compact, density: compact, col: 5, row: 4, board_ref: confidence_atom_readouts_detail }
+    exclude:
+      - { ref: value_sites.predicted_lddt, reason: The root and atom readout board show this output; this board keeps the shared head path legible. }
+      - { ref: value_sites.predicted_aligned_error, reason: The root and pair readout board show this output; this board keeps the shared head path legible. }
+      - { ref: value_sites.predicted_distance_error, reason: The root and pair readout board show this output; this board keeps the shared head path legible. }
+      - { ref: value_sites.predicted_experimentally_resolved, reason: The root and atom readout board show this output; this board keeps the shared head path legible. }
+
+  - id: confidence_pair_embedding_detail
+    title: Predicted Geometry Enters the Pair State
+    summary: The head adds raw input features to trunk pairs, measures representative-atom distances in the completed predicted sample, bins those distances, and injects them into the same pair state. It judges this structure, not just its input sequence.
+    parent: confidence_head_detail
+    subject_ref: modules.confidence_pair_embedding
+    expansion_depth: 1
+    grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: embed_raw_input, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: embed_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: embed_sample, ref: value_sites.final_sampled_atom_positions, label: sampled atoms, prominence: context, treatment: compact, density: compact, col: 1, row: 4 }
+      - { id: embed_module, ref: modules.confidence_pair_embedding, label: embed input and geometry, prominence: primary, treatment: compact, density: compact, col: 2, row: 2 }
+      - { id: embed_input_pair, ref: value_sites.confidence_pair_after_input_embedding, label: input-augmented pairs, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: embed_distances, ref: value_sites.confidence_representative_distances, label: sampled pair distances, prominence: secondary, treatment: compact, density: compact, col: 3, row: 4 }
+      - { id: embed_geometry_pair, ref: value_sites.confidence_pair_after_geometry_embedding, label: geometry-augmented pairs, prominence: secondary, treatment: compact, density: compact, col: 5, row: 2 }
+    exclude:
+      - { ref: modules.confidence_pairformer_stack, reason: The next board stage owns the four-block refinement after geometry injection. }
+
+  - id: confidence_pair_readouts_detail
+    title: Directional PAE and Symmetric PDE
+    summary: PAE[i,j] predicts the error of token j with token i's frame as anchor, so swapping i and j changes the question. PDE predicts a plain pair distance error, and its logits are symmetrized. Both are learned distributions summarized as expected errors in angstroms.
+    parent: confidence_head_detail
+    subject_ref: modules.confidence_pair_readouts
+    expansion_depth: 1
+    grid: { columns: 4, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: pair_readout_input, ref: value_sites.confidence_pair_after_stack, label: refined pair state, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
+      - { id: pae_head, ref: modules.confidence_pae_head, label: ordered PAE projection, prominence: primary, treatment: compact, density: compact, col: 2, row: 1 }
+      - { id: pde_head, ref: modules.confidence_pde_head, label: symmetric PDE projection, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: pae_distribution, ref: value_sites.predicted_aligned_error_distribution, label: 64 PAE bins, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: pde_distribution, ref: value_sites.predicted_distance_error_distribution, label: 64 PDE bins, prominence: secondary, treatment: compact, density: compact, col: 3, row: 3 }
+      - { id: pae_expected, ref: value_sites.predicted_aligned_error, label: expected PAE in angstroms, prominence: secondary, treatment: compact, density: compact, col: 4, row: 1 }
+      - { id: pde_expected, ref: value_sites.predicted_distance_error, label: expected PDE in angstroms, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
+
+  - id: confidence_atom_readouts_detail
+    title: Per-Atom pLDDT and Experimental Resolvability
+    summary: The refined token single vector supplies two separate atom-channel projections. One predicts a local distance agreement score from 50 bins; the other predicts whether each atom would be experimentally resolved. A ligand atom's pLDDT target uses polymer contacts, not internal ligand distances.
+    parent: confidence_head_detail
+    subject_ref: modules.confidence_atom_readouts
+    expansion_depth: 1
+    grid: { columns: 4, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: atom_readout_input, ref: value_sites.confidence_single_after_stack, label: refined single state, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
+      - { id: plddt_head, ref: modules.confidence_plddt_head, label: local score projection, prominence: primary, treatment: compact, density: compact, col: 2, row: 1 }
+      - { id: resolved_head, ref: modules.confidence_resolved_head, label: resolvability projection, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: plddt_distribution, ref: value_sites.predicted_lddt_distribution, label: 50 local-score bins, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: resolved_distribution, ref: value_sites.predicted_resolved_distribution, label: two resolution classes, prominence: secondary, treatment: compact, density: compact, col: 3, row: 3 }
+      - { id: plddt_expected, ref: value_sites.predicted_lddt, label: predicted score from 0 to 100, prominence: secondary, treatment: compact, density: compact, col: 4, row: 1 }
+      - { id: resolved_probability, ref: value_sites.predicted_experimentally_resolved, label: predicted resolved probability, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
+
   - id: diffusion_module_detail
     title: One Diffusion Module Denoising Step
-    summary: Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. The root board shows the raw noise input and final blend into denoised coordinates.
-    parent: pairformer_overview
+    summary: Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. This one-step denoised estimate returns to the sampler for its own update.
+    parent: sample_diffusion_detail
     subject_ref: modules.diffusion_module
     expansion_depth: 1
-    grid: { columns: 7, rows: 6, column_sizing: content, col_gap: 28, row_gap: 24 }
+    grid: { columns: 8, rows: 7, column_sizing: content, col_gap: 28, row_gap: 24 }
     nodes:
       - { id: step_trunk_singles, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
       - { id: step_trunk_pairs, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: step_noise_level, ref: value_sites.noise_level, label: current noise level, prominence: context, treatment: chip, density: micro, col: 1, row: 7 }
+      - { id: step_noisy_atoms, ref: value_sites.noisy_atom_positions, label: current noisy atoms, prominence: context, treatment: chip, density: micro, col: 2, row: 6 }
       - { id: step_relative_output, ref: value_sites.relative_position_encoding_output, label: relative pair encoding, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
       - { id: step_fourier_output, ref: value_sites.fourier_time_embedding, label: Fourier noise features, prominence: context, treatment: chip, density: micro, col: 2, row: 3 }
       - { id: step_raw_input_embedding, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
@@ -1888,6 +1970,7 @@ boards:
       - { id: step_token_output, ref: value_sites.diffusion_token_activation_normalized, label: refined tokens, prominence: secondary, treatment: compact, density: compact, col: 6, row: 3 }
       - { id: step_atom_decoder, ref: modules.atom_attention_decoder, label: atom decoder, prominence: primary, treatment: compact, density: compact, col: 6, row: 4, board_ref: atom_attention_decoder_detail }
       - { id: step_position_update, ref: value_sites.atom_attention_decoder_position_update, label: atom position update, prominence: secondary, treatment: compact, density: compact, col: 7, row: 4 }
+      - { id: step_denoised_estimate, ref: value_sites.denoised_atom_positions, label: one-step estimate, prominence: secondary, treatment: compact, density: compact, col: 8, row: 4 }
       - { id: step_locality_mask, ref: modules.sequence_local_attention_mask, label: local atom mask, prominence: context, treatment: chip, density: micro, col: 3, row: 5 }
       - { id: step_locality_mask_value, ref: value_sites.sequence_local_atom_attention_mask, label: sequence-local mask, prominence: context, treatment: chip, density: micro, col: 4, row: 6 }
     elide:
@@ -1897,6 +1980,8 @@ boards:
         reason: The encoder and decoder detail boards show the saved single-conditioning tensor; the overview keeps the main coordinate path legible.
       - ref: value_sites.atom_attention_encoder_pair_skip
         reason: The encoder and decoder detail boards show the saved pair-conditioning tensor; the overview keeps the main coordinate path legible.
+      - ref: modules.sampler_update
+        reason: The enclosing sampler board shows how this one-step estimate enters the sampler update.
 
   - id: relative_position_encoding_detail
     title: Relative Position Encoding
@@ -2013,6 +2098,8 @@ boards:
       - { match: { relation_ref: relations.pair_skip_biases_decoder_atom_transformer }, from_occurrence: dec_pair_skip, to_occurrence: dec_attention_branch }
       - { match: { relation_ref: relations.locality_mask_restricts_decoder_atom_transformer }, from_occurrence: dec_local_mask, to_occurrence: dec_attention_branch }
       - { match: { relation_ref: relations.decoder_atom_transformer_produces_query }, from_occurrence: dec_transition_branch, to_occurrence: dec_attended_query }
+    exclude:
+      - { ref: value_sites.denoised_atom_positions, reason: "The final blend of the atom update with noisy coordinates belongs to the parent Diffusion Module board, after the decoder returns." }
 
   - id: token_attention_pair_bias_internals
     kind: standard_block_instance

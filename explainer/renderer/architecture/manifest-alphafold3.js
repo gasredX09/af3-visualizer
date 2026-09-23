@@ -3,9 +3,9 @@ export const manifest = {
   "build": {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
-      "references/bibliography.yaml": "8ea36a3baf67328b8505219a53ff89fa20ecba3fdff75bdf63142d8fbcf2cea6",
-      "architectures/alphafold3-pairformer.yaml": "114956aecbd0d04cb823fd5d5d85dc74be683c9e0b5b11bc0c1f8bf26c67ebc7",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "5854fca85383bf23dfff17c2821d361f6078633169a9a5d588bf539acf6bd75c",
+      "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
+      "architectures/alphafold3-pairformer.yaml": "2cd1090ace5a32d452c562372a4cd3ed3bc5f2a73962e56c3fd8f013c71cf830",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4124c0545b6916512721cc4c239e9d2722f0dbbfaf55d0f80c9a084a5b748d39",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
@@ -21,6 +21,9 @@ export const manifest = {
       "prediction"
     ],
     "referenceConfiguration": {
+      "confidence_pairformer_blocks": 4,
+      "inference_diffusion_steps": 200,
+      "inference_samples": 5,
       "diffusion_token_channels": 768,
       "diffusion_token_transformer_blocks": 24,
       "diffusion_token_transformer_heads": 16,
@@ -51,6 +54,16 @@ export const manifest = {
             "source_ref": "af3_atom_cross_attention_code",
             "role": "configuration_evidence",
             "locator": "atom_cross_attention.py AtomCrossAttEncoderConfig (per_token_channels=768, per_atom_channels=128, per_atom_pair_channels=16, atom_transformer num_blocks=3 and num_intermediate_factor=2) and AtomCrossAttDecoderConfig (per_atom_channels=128, same atom_transformer settings)"
+          },
+          {
+            "source_ref": "af3_sampler_code",
+            "role": "configuration_evidence",
+            "locator": "diffusion_head.py:101-127 (SampleConfig and DiffusionHead.Config.eval, steps=200 and num_samples=5)"
+          },
+          {
+            "source_ref": "af3_confidence_head_code",
+            "role": "configuration_evidence",
+            "locator": "confidence_head.py:48-52 (ConfidenceHead.Config.pairformer.num_layer=4)"
           }
         ]
       }
@@ -104,7 +117,7 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 9,
+          "immediateModuleCount": 10,
           "immediateModuleRefs": [
             "modules.pairformer_stack",
             "modules.input_feature_embedder",
@@ -113,7 +126,8 @@ export const manifest = {
             "modules.relative_position_encoding",
             "modules.msa_module",
             "modules.template_module",
-            "modules.diffusion_module",
+            "modules.sample_diffusion",
+            "modules.confidence_head",
             "modules.fourier_embedding"
           ]
         },
@@ -440,10 +454,107 @@ export const manifest = {
 
           ]
         },
+        "modules.sample_diffusion": {
+          "status": "partial",
+          "reason": "This pass accounts for the repeated denoiser call and its output boundary. The schedule, pose augmentation, noise injection, and update arithmetic remain for the sampler pass.",
+          "depth": 1,
+          "immediateModuleCount": 2,
+          "immediateModuleRefs": [
+            "modules.sampler_update",
+            "modules.diffusion_module"
+          ]
+        },
+        "modules.sampler_update": {
+          "status": "opaque",
+          "reason": "The sampler update arithmetic and stochastic pose steps are reserved for the later sampler pass.",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.confidence_head": {
+          "status": "complete",
+          "depth": 1,
+          "immediateModuleCount": 4,
+          "immediateModuleRefs": [
+            "modules.confidence_pair_embedding",
+            "modules.confidence_pairformer_stack",
+            "modules.confidence_pair_readouts",
+            "modules.confidence_atom_readouts"
+          ]
+        },
+        "modules.confidence_pair_embedding": {
+          "status": "partial",
+          "reason": "The input-feature outer sum and predicted-geometry distance injection are represented by distinct value-site transitions.",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.confidence_pairformer_stack": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.confidence_pair_readouts": {
+          "status": "complete",
+          "depth": 2,
+          "immediateModuleCount": 2,
+          "immediateModuleRefs": [
+            "modules.confidence_pae_head",
+            "modules.confidence_pde_head"
+          ]
+        },
+        "modules.confidence_atom_readouts": {
+          "status": "complete",
+          "depth": 2,
+          "immediateModuleCount": 2,
+          "immediateModuleRefs": [
+            "modules.confidence_plddt_head",
+            "modules.confidence_resolved_head"
+          ]
+        },
+        "modules.confidence_pae_head": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.confidence_pde_head": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.confidence_plddt_head": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.confidence_resolved_head": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
         "modules.diffusion_module": {
           "status": "complete",
           "reason": "Every real sub-step is either a named child module or, for the two single-line housekeeping steps with no internal structure of their own (line 2's position rescale and line 8's output blend), an architecture-scope value-site relation rather than a further child -- the same treatment already given to modules.pairformer_stack's own scale-transition relations. Nothing is left unmodeled at this level.",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.diffusion_conditioning",
@@ -456,7 +567,7 @@ export const manifest = {
         "modules.diffusion_conditioning": {
           "status": "partial",
           "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being \"used inside\" this module's pair branch.",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -472,7 +583,7 @@ export const manifest = {
         },
         "modules.sequence_local_attention_mask": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -481,7 +592,7 @@ export const manifest = {
         "modules.atom_attention_encoder_conditioned": {
           "status": "partial",
           "reason": "The per-atom embedding, the two trunk broadcasts, the noisy-position injection, and the mean-pooling to tokens are modeled at value-site granularity, matching the depth already given to modules.diffusion_conditioning and modules.relative_position_encoding. Only the AtomTransformer call at Algorithm 5 line 15 gets its own child module, because that call is where the architecture's shared attention and transition blocks are actually instantiated and therefore needs a subject its block_instances can bind ports against.",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 1,
           "immediateModuleRefs": [
             "modules.atom_encoder_atom_transformer"
@@ -489,7 +600,7 @@ export const manifest = {
         },
         "modules.atom_encoder_atom_transformer": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -497,7 +608,7 @@ export const manifest = {
         },
         "modules.diffusion_transformer_token_level": {
           "status": "complete",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 2,
           "immediateModuleRefs": [
             "modules.token_attention_pair_bias",
@@ -506,7 +617,7 @@ export const manifest = {
         },
         "modules.token_attention_pair_bias": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -514,7 +625,7 @@ export const manifest = {
         },
         "modules.token_conditioned_transition": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -523,7 +634,7 @@ export const manifest = {
         "modules.atom_attention_decoder": {
           "status": "partial",
           "reason": "The broadcast plus skip addition and the final projection to a 3D update are modeled at value-site granularity, matching the treatment of modules.atom_attention_encoder_conditioned. Only the AtomTransformer call at Algorithm 6 line 2 gets its own child module, because that call is where the shared attention and transition blocks are instantiated and therefore needs a subject its block_instances can bind ports against.",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 1,
           "immediateModuleRefs": [
             "modules.atom_decoder_atom_transformer"
@@ -531,7 +642,7 @@ export const manifest = {
         },
         "modules.atom_decoder_atom_transformer": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -539,23 +650,26 @@ export const manifest = {
         }
       },
       "summary": {
-        "scopeCount": 49,
-        "expandedScopeCount": 13,
-        "completeExpandedScopeCount": 11,
-        "partialScopeCount": 7,
-        "leafFrontierCount": 30,
-        "opaqueFrontierCount": 1,
-        "partialFrontierCount": 5,
-        "maximumAuthoredDepth": 3
+        "scopeCount": 60,
+        "expandedScopeCount": 17,
+        "completeExpandedScopeCount": 14,
+        "partialScopeCount": 9,
+        "leafFrontierCount": 35,
+        "opaqueFrontierCount": 2,
+        "partialFrontierCount": 6,
+        "maximumAuthoredDepth": 4
       },
       "opaqueFrontierRefs": [
-        "modules.atom_attention_encoder_bare"
+        "modules.atom_attention_encoder_bare",
+        "modules.sampler_update"
       ],
       "partialScopeRefs": [
         "modules.relative_position_encoding",
         "modules.outer_product_mean",
         "modules.msa_pair_weighted_averaging",
         "modules.template_pair_conditioning",
+        "modules.sample_diffusion",
+        "modules.confidence_pair_embedding",
         "modules.diffusion_conditioning",
         "modules.atom_attention_encoder_conditioned",
         "modules.atom_attention_decoder"
@@ -1662,8 +1776,302 @@ export const manifest = {
         }
       },
       {
-        "id": "diffusion_module",
+        "id": "sample_diffusion",
         "parent_ref": "architecture",
+        "decomposition": {
+          "status": "partial",
+          "reason": "This pass accounts for the repeated denoiser call and its output boundary. The schedule, pose augmentation, noise injection, and update arithmetic remain for the sampler pass."
+        },
+        "label": "Diffusion Sampler",
+        "kind": "sampler",
+        "mechanisms": [
+          "iterative_denoising",
+          "sampler_state_update"
+        ],
+        "role": "generate completed atom coordinates by repeatedly calling the one-step Diffusion Module and updating the current positions; one denoiser return is an estimate used by the sampler, not the final sample or the next step's coordinates",
+        "scale": "atom_and_token",
+        "repeats": 200,
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 18 lines 2, 8-13 (repeated DiffusionModule calls, sampler update, final coordinates)"
+            },
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-378 (apply_denoising_step scanned over 200 configured levels, returning final atom_positions)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_update",
+        "parent_ref": "modules.sample_diffusion",
+        "decomposition": {
+          "status": "opaque",
+          "reason": "The sampler update arithmetic and stochastic pose steps are reserved for the later sampler pass."
+        },
+        "label": "Sampler State Update",
+        "kind": "operator",
+        "mechanisms": [
+          "sampler_state_update"
+        ],
+        "role": "use the current noisy positions and the denoiser's clean-coordinate estimate to form the next sampler state; the last state is the completed sample",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised and positions_noisy enter the update that returns positions_out)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_head",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Confidence Head",
+        "kind": "prediction_head",
+        "mechanisms": [
+          "sample_geometry_embedding",
+          "pairformer_refinement",
+          "confidence_readouts"
+        ],
+        "role": "judge one completed predicted structure using raw input features, trunk single and pair states, and representative-atom distances extracted from the sample, then predict four confidence quantities",
+        "scale": "atom_and_token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.5 and Algorithm 31, full ConfidenceHead signature and lines 1-9"
+            },
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:321-339 (completed samples and trunk embeddings passed to ConfidenceHead per sample)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_embedding",
+        "parent_ref": "modules.confidence_head",
+        "decomposition": {
+          "status": "partial",
+          "reason": "The input-feature outer sum and predicted-geometry distance injection are represented by distinct value-site transitions."
+        },
+        "label": "Predicted Geometry Embedding",
+        "kind": "adapter",
+        "mechanisms": [
+          "input_feature_outer_sum",
+          "representative_atom_distance_embedding"
+        ],
+        "role": "add two projections of the raw input embedding and a binned representative-atom distance map from the predicted sample to the trunk pair state",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-3 (input outer sum and predicted representative-atom distance injection)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:76-98,125-140 (_embed_features uses target_feat and sampled positions)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pairformer_stack",
+        "parent_ref": "modules.confidence_head",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Four-Block Confidence Pairformer",
+        "kind": "refiner",
+        "mechanisms": [
+          "pair_reasoning",
+          "pair_biased_single_attention"
+        ],
+        "role": "refine the confidence head's augmented pair state and trunk single state with four full PairFormerIteration blocks, using the same block mechanism as the separate 48-block trunk stack",
+        "scale": "token_and_token_pair",
+        "repeats": 4,
+        "depth": {
+          "blocks": 4
+        },
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 4 (PairformerStack with N_block=4), referring to Algorithm 17"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:48-52,142-162 (num_layer=4 and with_single=True PairFormerIteration layer_stack)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_readouts",
+        "parent_ref": "modules.confidence_head",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Pairwise Confidence Readouts",
+        "kind": "prediction_head",
+        "role": "project refined pair states into directional PAE and symmetric PDE distributions and expected errors",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 5-6 (PAE and PDE pair projections)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_atom_readouts",
+        "parent_ref": "modules.confidence_head",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Per-Atom Confidence Readouts",
+        "kind": "prediction_head",
+        "role": "project the refined single state to separate per-atom pLDDT and experimental-resolvability predictions",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 7-8 (distinct per-atom pLDDT and resolved projections)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pae_head",
+        "parent_ref": "modules.confidence_pair_readouts",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Predicted Aligned Error",
+        "kind": "prediction_head",
+        "role": "predict the error of token j relative to token i's local frame without symmetrizing the ordered pair",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pde_head",
+        "parent_ref": "modules.confidence_pair_readouts",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Predicted Distance Error",
+        "kind": "prediction_head",
+        "role": "predict representative-atom distance error with symmetric pair logits",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_plddt_head",
+        "parent_ref": "modules.confidence_atom_readouts",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Predicted Local Distance Difference",
+        "kind": "prediction_head",
+        "role": "predict per-atom local distance agreement through a dedicated 50-bin projection of the refined single state",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_resolved_head",
+        "parent_ref": "modules.confidence_atom_readouts",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Predicted Experimental Resolvability",
+        "kind": "prediction_head",
+        "role": "predict each atom's experimentally resolved probability through a separate two-class projection of the refined single state",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "diffusion_module",
+        "parent_ref": "modules.sample_diffusion",
         "decomposition": {
           "status": "complete",
           "reason": "Every real sub-step is either a named child module or, for the two single-line housekeeping steps with no internal structure of their own (line 2's position rescale and line 8's output blend), an architecture-scope value-site relation rather than a further child -- the same treatment already given to modules.pairformer_stack's own scale-transition relations. Nothing is left unmodeled at this level."
@@ -6300,6 +6708,316 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "sampler_updated_positions",
+        "scale": "atom",
+        "semantic_role": "one sampler iteration's updated atom coordinates after using the denoiser estimate, distinct from the estimate itself",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "updated coordinates for the next sampling iteration"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "final_sampled_atom_positions",
+        "scale": "atom",
+        "semantic_role": "one completed diffusion sample after all sampler updates, supplied to the confidence head",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "predicted atom coordinates of one completed sample"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:373-378 (scan output positions_out returned as atom_positions)"
+            },
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:321-339 (samples['atom_positions'] mapped through ConfidenceHead per sample)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_representative_distances",
+        "scale": "token_pair",
+        "semantic_role": "distance between representative atoms of token i and token j in the predicted sample, before one-hot binning",
+        "shape": "N_token x N_token",
+        "glyph": "pair",
+        "carries": [
+          "predicted-structure pair distances in angstroms"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 2-3 (representative-atom distance d_ij and binned injection into pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:82-98 (_embed_features converts sampled positions to token representative atoms and builds dgram)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_state",
+        "scale": "token_pair",
+        "semantic_role": "the confidence head's own 128-channel pair state, seeded from the trunk pair state and augmented with input and sampled-geometry features",
+        "shape": "N_token x N_token x 128",
+        "glyph": "pair",
+        "carries": [
+          "trunk pair context augmented for judging this sampled structure"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_single_state",
+        "scale": "token",
+        "semantic_role": "the confidence head's own 384-channel single state after four full Pairformer blocks",
+        "shape": "N_token x 384",
+        "glyph": "single",
+        "carries": [
+          "refined token context for atom-wise confidence projections"
+        ],
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 4, 7-8 (refined single state feeds pLDDT and resolved projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:142-162,247-271 (full Pairformer then atom-channel projections)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_lddt_distribution",
+        "scale": "atom",
+        "semantic_role": "50-bin learned distribution over each atom's local distance difference score",
+        "shape": "N_atom x 50",
+        "glyph": "matrix",
+        "carries": [
+          "probability per predicted local score bin"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_lddt",
+        "scale": "atom",
+        "semantic_role": "per-atom predicted local distance difference score, an expectation over learned bins rather than measured agreement",
+        "shape": "N_atom",
+        "glyph": "vector",
+        "carries": [
+          "predicted local score from 0 to 100"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_aligned_error_distribution",
+        "scale": "token_pair",
+        "semantic_role": "directional 64-bin learned distribution for token j's alignment error in token i's reference frame",
+        "shape": "N_token x N_token x 64",
+        "glyph": "pair",
+        "carries": [
+          "directional predicted aligned-error bin probabilities"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_aligned_error",
+        "scale": "token_pair",
+        "semantic_role": "directional expected PAE in angstroms, with row token i as frame anchor and column token j as evaluated token",
+        "shape": "N_token x N_token",
+        "glyph": "pair",
+        "carries": [
+          "predicted aligned error in angstroms"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_distance_error_distribution",
+        "scale": "token_pair",
+        "semantic_role": "symmetric 64-bin learned distribution over representative-atom distance error",
+        "shape": "N_token x N_token x 64",
+        "glyph": "pair",
+        "carries": [
+          "symmetric predicted distance-error bin probabilities"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_distance_error",
+        "scale": "token_pair",
+        "semantic_role": "symmetric expected PDE in angstroms for the representative-atom distance between token i and token j",
+        "shape": "N_token x N_token",
+        "glyph": "pair",
+        "carries": [
+          "predicted distance error in angstroms"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_resolved_distribution",
+        "scale": "atom",
+        "semantic_role": "two-class learned distribution over whether each atom would be experimentally resolved",
+        "shape": "N_atom x 2",
+        "glyph": "matrix",
+        "carries": [
+          "resolved and unresolved class probabilities"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_experimentally_resolved",
+        "scale": "atom",
+        "semantic_role": "predicted probability that each atom would be observed in experimental structure data",
+        "shape": "N_atom",
+        "glyph": "vector",
+        "carries": [
+          "predicted probability of experimental resolution"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
       }
     ],
     "valueSites": [
@@ -7431,9 +8149,8 @@ export const manifest = {
       {
         "id": "noise_level",
         "representation_ref": "representations.noise_level",
-        "scope_ref": "architecture",
-        "boundary": "input",
-        "role": "raw_noise_level_input",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "sampler_step_noise_level",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
@@ -7480,7 +8197,7 @@ export const manifest = {
       {
         "id": "diffusion_conditioned_pair",
         "representation_ref": "representations.diffusion_pair_conditioning",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "final_diffusion_pair_conditioning_output",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7528,7 +8245,7 @@ export const manifest = {
       {
         "id": "diffusion_conditioned_single",
         "representation_ref": "representations.diffusion_single_conditioning",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "final_diffusion_single_conditioning_output",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7544,9 +8261,8 @@ export const manifest = {
       {
         "id": "noisy_atom_positions",
         "representation_ref": "representations.noisy_atom_positions",
-        "scope_ref": "architecture",
-        "boundary": "input",
-        "role": "raw_noisy_atom_positions_input",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "sampler_step_noisy_positions",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
@@ -7561,7 +8277,7 @@ export const manifest = {
       {
         "id": "scaled_noisy_atom_positions",
         "representation_ref": "representations.scaled_noisy_atom_positions",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "dimensionless_scaled_noisy_positions",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7705,7 +8421,7 @@ export const manifest = {
       {
         "id": "atom_attention_encoder_token_output",
         "representation_ref": "representations.diffusion_token_activation",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "mean_pooled_per_token_atom_encoding",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7721,7 +8437,7 @@ export const manifest = {
       {
         "id": "atom_attention_encoder_query_skip",
         "representation_ref": "representations.atom_single_representation",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "encoder_query_skip_tensor",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7737,7 +8453,7 @@ export const manifest = {
       {
         "id": "atom_attention_encoder_single_conditioning_skip",
         "representation_ref": "representations.atom_single_conditioning",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "encoder_single_conditioning_skip_tensor",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7753,7 +8469,7 @@ export const manifest = {
       {
         "id": "atom_attention_encoder_pair_skip",
         "representation_ref": "representations.atom_pair_representation",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "encoder_pair_skip_tensor",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7769,7 +8485,7 @@ export const manifest = {
       {
         "id": "sequence_local_atom_attention_mask",
         "representation_ref": "representations.sequence_local_attention_mask",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "sequence_local_attention_mask_term",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7785,7 +8501,7 @@ export const manifest = {
       {
         "id": "diffusion_token_activation_conditioned",
         "representation_ref": "representations.diffusion_token_activation",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "token_activation_after_additive_conditioning_injection",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7865,7 +8581,7 @@ export const manifest = {
       {
         "id": "diffusion_token_activation_normalized",
         "representation_ref": "representations.diffusion_token_activation",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.diffusion_module",
         "role": "token_activation_after_output_layer_norm",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7913,7 +8629,7 @@ export const manifest = {
       {
         "id": "atom_attention_decoder_position_update",
         "representation_ref": "representations.atom_position_update",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.atom_attention_decoder",
         "role": "per_atom_position_update_output",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7929,8 +8645,7 @@ export const manifest = {
       {
         "id": "denoised_atom_positions",
         "representation_ref": "representations.denoised_atom_positions",
-        "scope_ref": "architecture",
-        "boundary": "output",
+        "scope_ref": "modules.diffusion_module",
         "role": "diffusion_module_denoised_output",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7938,7 +8653,312 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 20 line 9 (return {x_l^out}), the module's own returned coordinates for this denoising step; this architecture's new terminal output, fixed by this task as this exact id"
+              "locator": "Supplementary Algorithm 20 line 9 (return {x_l^out}), the module's own returned coordinates for this denoising step, consumed within Algorithm 18 rather than being the completed sample"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_updated_positions",
+        "representation_ref": "representations.sampler_updated_positions",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "coordinates_after_one_sampler_update",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "final_sampled_atom_positions",
+        "representation_ref": "representations.final_sampled_atom_positions",
+        "scope_ref": "architecture",
+        "boundary": "output",
+        "role": "completed_sample_and_confidence_input",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:373-378 (scan output positions_out returned as atom_positions)"
+            },
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:321-339 (samples['atom_positions'] mapped through ConfidenceHead per sample)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_representative_distances",
+        "representation_ref": "representations.confidence_representative_distances",
+        "scope_ref": "modules.confidence_pair_embedding",
+        "role": "predicted_sample_representative_atom_distances",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 2-3 (representative-atom distance d_ij and binned injection into pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:82-98 (_embed_features converts sampled positions to token representative atoms and builds dgram)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_after_input_embedding",
+        "representation_ref": "representations.confidence_pair_state",
+        "scope_ref": "modules.confidence_pair_embedding",
+        "role": "pair_state_after_input_embedding_injection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_after_geometry_embedding",
+        "representation_ref": "representations.confidence_pair_state",
+        "scope_ref": "modules.confidence_pair_embedding",
+        "role": "pair_state_after_sample_distance_injection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_single_after_stack",
+        "representation_ref": "representations.confidence_single_state",
+        "scope_ref": "modules.confidence_pairformer_stack",
+        "role": "confidence_stack_refined_single_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 4, 7-8 (refined single state feeds pLDDT and resolved projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:142-162,247-271 (full Pairformer then atom-channel projections)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_after_stack",
+        "representation_ref": "representations.confidence_pair_state",
+        "scope_ref": "modules.confidence_pairformer_stack",
+        "role": "confidence_stack_refined_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_lddt_distribution",
+        "representation_ref": "representations.predicted_lddt_distribution",
+        "scope_ref": "modules.confidence_plddt_head",
+        "role": "per_atom_plddt_bin_probabilities",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_lddt",
+        "representation_ref": "representations.predicted_lddt",
+        "scope_ref": "architecture",
+        "boundary": "output",
+        "role": "expected_per_atom_plddt",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_aligned_error_distribution",
+        "representation_ref": "representations.predicted_aligned_error_distribution",
+        "scope_ref": "modules.confidence_pae_head",
+        "role": "directional_pae_bin_probabilities",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_aligned_error",
+        "representation_ref": "representations.predicted_aligned_error",
+        "scope_ref": "architecture",
+        "boundary": "output",
+        "role": "expected_directional_pae",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_distance_error_distribution",
+        "representation_ref": "representations.predicted_distance_error_distribution",
+        "scope_ref": "modules.confidence_pde_head",
+        "role": "symmetric_pde_bin_probabilities",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_distance_error",
+        "representation_ref": "representations.predicted_distance_error",
+        "scope_ref": "architecture",
+        "boundary": "output",
+        "role": "expected_symmetric_pde",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_resolved_distribution",
+        "representation_ref": "representations.predicted_resolved_distribution",
+        "scope_ref": "modules.confidence_resolved_head",
+        "role": "per_atom_resolvability_class_probabilities",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "predicted_experimentally_resolved",
+        "representation_ref": "representations.predicted_experimentally_resolved",
+        "scope_ref": "architecture",
+        "boundary": "output",
+        "role": "per_atom_predicted_resolvability_probability",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
             }
           ]
         }
@@ -8075,7 +9095,8 @@ export const manifest = {
           "relations.s_inputs_enters_single_state_projection",
           "relations.s_inputs_enters_pair_state_projection",
           "relations.s_inputs_enters_msa_row_embedding",
-          "relations.s_inputs_enters_diffusion_conditioning"
+          "relations.s_inputs_enters_diffusion_conditioning",
+          "relations.raw_input_features_update_confidence_pair_state"
         ],
         "producerRefs": [
           "modules.input_feature_concatenation"
@@ -8084,7 +9105,8 @@ export const manifest = {
           "modules.single_state_input_projection",
           "modules.pair_state_input_projection",
           "modules.msa_row_embedding",
-          "modules.diffusion_conditioning"
+          "modules.diffusion_conditioning",
+          "value_sites.confidence_pair_after_input_embedding"
         ]
       },
       "z_init": {
@@ -8257,14 +9279,16 @@ export const manifest = {
         ],
         "outgoingRelationRefs": [
           "relations.single_state_output_enters_diffusion_conditioning",
-          "relations.raw_trunk_single_broadcasts_onto_atoms"
+          "relations.raw_trunk_single_broadcasts_onto_atoms",
+          "relations.trunk_single_enters_confidence_pairformer"
         ],
         "producerRefs": [
           "value_sites.single_after_transition"
         ],
         "consumerRefs": [
           "modules.diffusion_conditioning",
-          "modules.atom_attention_encoder_conditioned"
+          "modules.atom_attention_encoder_conditioned",
+          "modules.confidence_pairformer_stack"
         ]
       },
       "pair_state_output": {
@@ -8272,13 +9296,15 @@ export const manifest = {
           "relations.final_pair_block_state_becomes_output"
         ],
         "outgoingRelationRefs": [
-          "relations.pair_state_output_enters_diffusion_conditioning"
+          "relations.pair_state_output_enters_diffusion_conditioning",
+          "relations.trunk_pair_enters_confidence_pair_embedding"
         ],
         "producerRefs": [
           "value_sites.pair_after_transition"
         ],
         "consumerRefs": [
-          "modules.diffusion_conditioning"
+          "modules.diffusion_conditioning",
+          "value_sites.confidence_pair_after_input_embedding"
         ]
       },
       "msa_input": {
@@ -8907,16 +9933,18 @@ export const manifest = {
       },
       "noise_level": {
         "incomingRelationRefs": [
-
+          "relations.sampler_produces_step_noise_level"
         ],
         "outgoingRelationRefs": [
-          "relations.noise_level_enters_fourier_embedding"
+          "relations.noise_level_enters_fourier_embedding",
+          "relations.sampler_noise_level_sets_denoiser_rescaling"
         ],
         "producerRefs": [
-
+          "modules.sample_diffusion"
         ],
         "consumerRefs": [
-          "modules.fourier_embedding"
+          "modules.fourier_embedding",
+          "value_sites.scaled_noisy_atom_positions"
         ]
       },
       "fourier_time_embedding": {
@@ -9013,29 +10041,33 @@ export const manifest = {
       },
       "noisy_atom_positions": {
         "incomingRelationRefs": [
-
+          "relations.sampler_produces_step_noisy_positions"
         ],
         "outgoingRelationRefs": [
           "relations.noisy_positions_scaled_to_unit_variance",
-          "relations.noisy_positions_weighted_into_denoised_output"
+          "relations.noisy_positions_weighted_into_denoised_output",
+          "relations.noisy_positions_enter_sampler_update"
         ],
         "producerRefs": [
-
+          "modules.sample_diffusion"
         ],
         "consumerRefs": [
           "value_sites.scaled_noisy_atom_positions",
-          "value_sites.denoised_atom_positions"
+          "value_sites.denoised_atom_positions",
+          "modules.sampler_update"
         ]
       },
       "scaled_noisy_atom_positions": {
         "incomingRelationRefs": [
-          "relations.noisy_positions_scaled_to_unit_variance"
+          "relations.noisy_positions_scaled_to_unit_variance",
+          "relations.sampler_noise_level_sets_denoiser_rescaling"
         ],
         "outgoingRelationRefs": [
           "relations.scaled_noisy_positions_enter_atom_encoder"
         ],
         "producerRefs": [
-          "value_sites.noisy_atom_positions"
+          "value_sites.noisy_atom_positions",
+          "value_sites.noise_level"
         ],
         "consumerRefs": [
           "modules.atom_attention_encoder_conditioned"
@@ -9375,11 +10407,231 @@ export const manifest = {
           "relations.position_update_weighted_into_denoised_output"
         ],
         "outgoingRelationRefs": [
-
+          "relations.denoised_estimate_enters_sampler_update"
         ],
         "producerRefs": [
           "value_sites.noisy_atom_positions",
           "value_sites.atom_attention_decoder_position_update"
+        ],
+        "consumerRefs": [
+          "modules.sampler_update"
+        ]
+      },
+      "sampler_updated_positions": {
+        "incomingRelationRefs": [
+          "relations.sampler_update_produces_next_positions"
+        ],
+        "outgoingRelationRefs": [
+          "relations.last_sampler_update_becomes_final_sample"
+        ],
+        "producerRefs": [
+          "modules.sampler_update"
+        ],
+        "consumerRefs": [
+          "value_sites.final_sampled_atom_positions"
+        ]
+      },
+      "final_sampled_atom_positions": {
+        "incomingRelationRefs": [
+          "relations.last_sampler_update_becomes_final_sample"
+        ],
+        "outgoingRelationRefs": [
+          "relations.final_sample_enters_confidence_pair_embedding"
+        ],
+        "producerRefs": [
+          "value_sites.sampler_updated_positions"
+        ],
+        "consumerRefs": [
+          "modules.confidence_pair_embedding"
+        ]
+      },
+      "confidence_representative_distances": {
+        "incomingRelationRefs": [
+          "relations.confidence_pair_embedding_produces_representative_distances"
+        ],
+        "outgoingRelationRefs": [
+          "relations.representative_distances_enter_geometry_injection"
+        ],
+        "producerRefs": [
+          "modules.confidence_pair_embedding"
+        ],
+        "consumerRefs": [
+          "value_sites.confidence_pair_after_geometry_embedding"
+        ]
+      },
+      "confidence_pair_after_input_embedding": {
+        "incomingRelationRefs": [
+          "relations.raw_input_features_update_confidence_pair_state",
+          "relations.trunk_pair_enters_confidence_pair_embedding"
+        ],
+        "outgoingRelationRefs": [
+          "relations.input_augmented_pair_enters_geometry_injection"
+        ],
+        "producerRefs": [
+          "value_sites.s_inputs",
+          "value_sites.pair_state_output"
+        ],
+        "consumerRefs": [
+          "value_sites.confidence_pair_after_geometry_embedding"
+        ]
+      },
+      "confidence_pair_after_geometry_embedding": {
+        "incomingRelationRefs": [
+          "relations.input_augmented_pair_enters_geometry_injection",
+          "relations.representative_distances_enter_geometry_injection",
+          "relations.confidence_pair_embedding_produces_augmented_pair"
+        ],
+        "outgoingRelationRefs": [
+          "relations.geometry_augmented_pair_enters_confidence_pairformer"
+        ],
+        "producerRefs": [
+          "value_sites.confidence_pair_after_input_embedding",
+          "value_sites.confidence_representative_distances",
+          "modules.confidence_pair_embedding"
+        ],
+        "consumerRefs": [
+          "modules.confidence_pairformer_stack"
+        ]
+      },
+      "confidence_single_after_stack": {
+        "incomingRelationRefs": [
+          "relations.confidence_pairformer_produces_refined_single"
+        ],
+        "outgoingRelationRefs": [
+          "relations.refined_single_enters_plddt_head",
+          "relations.refined_single_enters_resolved_head"
+        ],
+        "producerRefs": [
+          "modules.confidence_pairformer_stack"
+        ],
+        "consumerRefs": [
+          "modules.confidence_plddt_head",
+          "modules.confidence_resolved_head"
+        ]
+      },
+      "confidence_pair_after_stack": {
+        "incomingRelationRefs": [
+          "relations.confidence_pairformer_produces_refined_pair"
+        ],
+        "outgoingRelationRefs": [
+          "relations.refined_pair_enters_pae_head",
+          "relations.refined_pair_enters_pde_head"
+        ],
+        "producerRefs": [
+          "modules.confidence_pairformer_stack"
+        ],
+        "consumerRefs": [
+          "modules.confidence_pae_head",
+          "modules.confidence_pde_head"
+        ]
+      },
+      "predicted_lddt_distribution": {
+        "incomingRelationRefs": [
+          "relations.plddt_head_produces_distribution"
+        ],
+        "outgoingRelationRefs": [
+          "relations.plddt_distribution_produces_expected_score"
+        ],
+        "producerRefs": [
+          "modules.confidence_plddt_head"
+        ],
+        "consumerRefs": [
+          "value_sites.predicted_lddt"
+        ]
+      },
+      "predicted_lddt": {
+        "incomingRelationRefs": [
+          "relations.plddt_distribution_produces_expected_score"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "value_sites.predicted_lddt_distribution"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "predicted_aligned_error_distribution": {
+        "incomingRelationRefs": [
+          "relations.pae_head_produces_distribution"
+        ],
+        "outgoingRelationRefs": [
+          "relations.pae_distribution_produces_expected_error"
+        ],
+        "producerRefs": [
+          "modules.confidence_pae_head"
+        ],
+        "consumerRefs": [
+          "value_sites.predicted_aligned_error"
+        ]
+      },
+      "predicted_aligned_error": {
+        "incomingRelationRefs": [
+          "relations.pae_distribution_produces_expected_error"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "value_sites.predicted_aligned_error_distribution"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "predicted_distance_error_distribution": {
+        "incomingRelationRefs": [
+          "relations.pde_head_produces_distribution"
+        ],
+        "outgoingRelationRefs": [
+          "relations.pde_distribution_produces_expected_error"
+        ],
+        "producerRefs": [
+          "modules.confidence_pde_head"
+        ],
+        "consumerRefs": [
+          "value_sites.predicted_distance_error"
+        ]
+      },
+      "predicted_distance_error": {
+        "incomingRelationRefs": [
+          "relations.pde_distribution_produces_expected_error"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "value_sites.predicted_distance_error_distribution"
+        ],
+        "consumerRefs": [
+
+        ]
+      },
+      "predicted_resolved_distribution": {
+        "incomingRelationRefs": [
+          "relations.resolved_head_produces_distribution"
+        ],
+        "outgoingRelationRefs": [
+          "relations.resolved_distribution_produces_positive_probability"
+        ],
+        "producerRefs": [
+          "modules.confidence_resolved_head"
+        ],
+        "consumerRefs": [
+          "value_sites.predicted_experimentally_resolved"
+        ]
+      },
+      "predicted_experimentally_resolved": {
+        "incomingRelationRefs": [
+          "relations.resolved_distribution_produces_positive_probability"
+        ],
+        "outgoingRelationRefs": [
+
+        ],
+        "producerRefs": [
+          "value_sites.predicted_resolved_distribution"
         ],
         "consumerRefs": [
 
@@ -9388,6 +10640,56 @@ export const manifest = {
     },
     "execution": {
       "loops": [
+        {
+          "id": "sample_diffusion",
+          "repeats": 200,
+          "reruns": [
+            "modules.diffusion_module",
+            "modules.sampler_update"
+          ],
+          "cached": [
+            "value_sites.s_inputs",
+            "value_sites.single_state_output",
+            "value_sites.pair_state_output"
+          ],
+          "notes": [
+            "The released inference configuration generates five independent samples with 200 calls to the same denoiser per sample.",
+            "The sampler's pose augmentation, noise schedule, and update equation are deferred to the sampler pass; this loop records the call boundary only."
+          ],
+          "evidence": {
+            "status": "confirmed_from_code",
+            "refs": [
+              {
+                "source_ref": "af3_sampler_code",
+                "role": "implementation_evidence",
+                "locator": "diffusion_head.py:333-378 (apply_denoising_step, hk.scan, final atom_positions) and :124-127 (steps=200, num_samples=5)"
+              }
+            ]
+          }
+        },
+        {
+          "id": "confidence_pairformer",
+          "repeats": 4,
+          "reruns": [
+            "modules.confidence_pairformer_stack"
+          ],
+          "cached": [
+            "value_sites.final_sampled_atom_positions"
+          ],
+          "notes": [
+            "Four full PairFormerIteration blocks refine the confidence head's own single and pair states; this is separate from the trunk's 48-block stack."
+          ],
+          "evidence": {
+            "status": "confirmed_from_code",
+            "refs": [
+              {
+                "source_ref": "af3_confidence_head_code",
+                "role": "implementation_evidence",
+                "locator": "confidence_head.py:48-52,142-162 (num_layer=4, with_single=True, layer_stack)"
+              }
+            ]
+          }
+        },
         {
           "id": "pairformer_stack",
           "repeats": 48,
@@ -10095,19 +11397,23 @@ export const manifest = {
       "objective": {
         "kind": "component_only",
         "notes": [
-          "The Pairformer is trained as part of the complete AlphaFold 3 system; this bounded diagram does not assign it a standalone loss."
+          "The Pairformer and Confidence Head are components of the complete AlphaFold 3 system; this inference diagram does not assign either a standalone loss."
         ]
       },
       "schedule": {
-        "kind": "none"
+        "kind": "diffusion_noise_level",
+        "steps": 200
       },
       "sampler": {
-        "kind": "none"
+        "kind": "af3_diffusion",
+        "steps": 200,
+        "initial_state": "gaussian_atom_coordinates"
       },
       "teacher_forcing": "not_applicable",
       "self_conditioning": "none",
       "checkpoint_notes": [
-        "The released implementation applies the same deterministic Pairformer computation in training and inference; upstream recycling is outside this diagram."
+        "The released inference configuration generates five independently sampled structures, each with 200 denoiser calls; the Confidence Head evaluates each completed structure.",
+        "The sampler's schedule and update arithmetic, upstream recycling, and confidence training mini rollout are outside these boards."
       ],
       "evidence": {
         "status": "confirmed_from_code",
@@ -10116,6 +11422,16 @@ export const manifest = {
             "source_ref": "af3_evoformer_code",
             "role": "implementation_evidence",
             "locator": "Evoformer.__call__ pairformer_stack"
+          },
+          {
+            "source_ref": "af3_sampler_code",
+            "role": "implementation_evidence",
+            "locator": "diffusion_head.py:101-127,333-378 (200-step, five-sample inference config; noise schedule, Gaussian initial coordinates, scanned denoiser calls)"
+          },
+          {
+            "source_ref": "af3_model_code",
+            "role": "implementation_evidence",
+            "locator": "model.py:321-339 (full diffusion samples passed to ConfidenceHead per sample)"
           }
         ]
       }
@@ -13560,6 +14876,701 @@ export const manifest = {
             }
           ]
         }
+      },
+      {
+        "id": "sampler_produces_step_noise_level",
+        "from": "modules.sample_diffusion",
+        "to": "value_sites.noise_level",
+        "kind": "control",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "select_current_denoiser_noise_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-348,358-373 (scheduled level and t_hat passed into denoising_step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_produces_step_noisy_positions",
+        "from": "modules.sample_diffusion",
+        "to": "value_sites.noisy_atom_positions",
+        "kind": "data_flow",
+        "carries": [
+          "representations.noisy_atom_positions"
+        ],
+        "operation": "provide_noisy_positions_for_one_denoising_call",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:337-349 (augment current positions, add noise, call denoising_step with positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_noise_level_sets_denoiser_rescaling",
+        "from": "value_sites.noise_level",
+        "to": "value_sites.scaled_noisy_atom_positions",
+        "kind": "conditioning",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "rescale_noisy_positions_with_current_noise_level",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 20 line 2 (r_noisy = x_noisy / sqrt(t_hat^2 + sigma_data^2))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "denoised_estimate_enters_sampler_update",
+        "from": "value_sites.denoised_atom_positions",
+        "to": "modules.sampler_update",
+        "kind": "data_flow",
+        "carries": [
+          "representations.denoised_atom_positions"
+        ],
+        "operation": "use_one_step_clean_coordinate_estimate",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "noisy_positions_enter_sampler_update",
+        "from": "value_sites.noisy_atom_positions",
+        "to": "modules.sampler_update",
+        "kind": "data_flow",
+        "carries": [
+          "representations.noisy_atom_positions"
+        ],
+        "operation": "retain_current_noisy_positions_for_update",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_update_produces_next_positions",
+        "from": "modules.sampler_update",
+        "to": "value_sites.sampler_updated_positions",
+        "kind": "state_update",
+        "carries": [
+          "representations.sampler_updated_positions"
+        ],
+        "operation": "compute_next_sampler_coordinates",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "last_sampler_update_becomes_final_sample",
+        "from": "value_sites.sampler_updated_positions",
+        "to": "value_sites.final_sampled_atom_positions",
+        "kind": "data_flow",
+        "carries": [
+          "representations.final_sampled_atom_positions"
+        ],
+        "operation": "return_coordinates_after_last_sampler_step",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:373-378 (scan output positions_out returned as atom_positions)"
+            },
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:321-339 (samples['atom_positions'] mapped through ConfidenceHead per sample)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "raw_input_features_update_confidence_pair_state",
+        "from": "value_sites.s_inputs",
+        "to": "value_sites.confidence_pair_after_input_embedding",
+        "kind": "state_update",
+        "carries": [
+          "representations.s_inputs"
+        ],
+        "operation": "add_two_raw_input_projections_to_trunk_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 1 (two projections of s_inputs added to z_ij)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "trunk_pair_enters_confidence_pair_embedding",
+        "from": "value_sites.pair_state_output",
+        "to": "value_sites.confidence_pair_after_input_embedding",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "initialize_confidence_pair_state_from_trunk_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 1 (z_ij is the incoming trunk pair state before s_inputs is added)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "final_sample_enters_confidence_pair_embedding",
+        "from": "value_sites.final_sampled_atom_positions",
+        "to": "modules.confidence_pair_embedding",
+        "kind": "data_flow",
+        "carries": [
+          "representations.final_sampled_atom_positions"
+        ],
+        "operation": "provide_completed_sample_for_geometry_embedding",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:373-378 (scan output positions_out returned as atom_positions)"
+            },
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:321-339 (samples['atom_positions'] mapped through ConfidenceHead per sample)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_embedding_produces_representative_distances",
+        "from": "modules.confidence_pair_embedding",
+        "to": "value_sites.confidence_representative_distances",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_representative_distances"
+        ],
+        "operation": "compute_predicted_representative_atom_pair_distances",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 2-3 (representative-atom distance d_ij and binned injection into pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:82-98 (_embed_features converts sampled positions to token representative atoms and builds dgram)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "input_augmented_pair_enters_geometry_injection",
+        "from": "value_sites.confidence_pair_after_input_embedding",
+        "to": "value_sites.confidence_pair_after_geometry_embedding",
+        "kind": "state_update",
+        "carries": [
+          "representations.confidence_pair_state"
+        ],
+        "operation": "retain_pair_state_before_distance_injection",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "representative_distances_enter_geometry_injection",
+        "from": "value_sites.confidence_representative_distances",
+        "to": "value_sites.confidence_pair_after_geometry_embedding",
+        "kind": "state_update",
+        "carries": [
+          "representations.confidence_representative_distances"
+        ],
+        "operation": "bin_and_project_predicted_distances_into_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 2-3 (representative-atom distance d_ij and binned injection into pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:82-98 (_embed_features converts sampled positions to token representative atoms and builds dgram)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pair_embedding_produces_augmented_pair",
+        "from": "modules.confidence_pair_embedding",
+        "to": "value_sites.confidence_pair_after_geometry_embedding",
+        "kind": "state_update",
+        "carries": [
+          "representations.confidence_pair_state"
+        ],
+        "operation": "add_binned_geometry_to_input_augmented_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "trunk_single_enters_confidence_pairformer",
+        "from": "value_sites.single_state_output",
+        "to": "modules.confidence_pairformer_stack",
+        "kind": "data_flow",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "provide_trunk_single_state_for_confidence_refinement",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 4, 7-8 (refined single state feeds pLDDT and resolved projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:142-162,247-271 (full Pairformer then atom-channel projections)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "geometry_augmented_pair_enters_confidence_pairformer",
+        "from": "value_sites.confidence_pair_after_geometry_embedding",
+        "to": "modules.confidence_pairformer_stack",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_pair_state"
+        ],
+        "operation": "provide_geometry_augmented_pair_state_for_refinement",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pairformer_produces_refined_single",
+        "from": "modules.confidence_pairformer_stack",
+        "to": "value_sites.confidence_single_after_stack",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_single_state"
+        ],
+        "operation": "return_four_block_refined_single_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 4, 7-8 (refined single state feeds pLDDT and resolved projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:142-162,247-271 (full Pairformer then atom-channel projections)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "confidence_pairformer_produces_refined_pair",
+        "from": "modules.confidence_pairformer_stack",
+        "to": "value_sites.confidence_pair_after_stack",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_pair_state"
+        ],
+        "operation": "return_four_block_refined_pair_state",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 lines 1-6 (pair augmentation, four-block refinement, PAE and PDE projections)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:125-164 (pair_act augmentation and four PairFormerIteration blocks)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "refined_pair_enters_pae_head",
+        "from": "value_sites.confidence_pair_after_stack",
+        "to": "modules.confidence_pae_head",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_pair_state"
+        ],
+        "operation": "project_ordered_pair_state_to_pae_bins",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "refined_pair_enters_pde_head",
+        "from": "value_sites.confidence_pair_after_stack",
+        "to": "modules.confidence_pde_head",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_pair_state"
+        ],
+        "operation": "project_symmetrized_pair_logits_to_pde_bins",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "refined_single_enters_plddt_head",
+        "from": "value_sites.confidence_single_after_stack",
+        "to": "modules.confidence_plddt_head",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_single_state"
+        ],
+        "operation": "select_atom_channel_and_project_plddt_logits",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "refined_single_enters_resolved_head",
+        "from": "value_sites.confidence_single_after_stack",
+        "to": "modules.confidence_resolved_head",
+        "kind": "data_flow",
+        "carries": [
+          "representations.confidence_single_state"
+        ],
+        "operation": "select_atom_channel_and_project_resolved_logits",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pae_head_produces_distribution",
+        "from": "modules.confidence_pae_head",
+        "to": "value_sites.predicted_aligned_error_distribution",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_aligned_error_distribution"
+        ],
+        "operation": "softmax_directional_pae_logits",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pae_distribution_produces_expected_error",
+        "from": "value_sites.predicted_aligned_error_distribution",
+        "to": "value_sites.predicted_aligned_error",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_aligned_error"
+        ],
+        "operation": "expected_pae_from_bin_centers",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 30 and Algorithm 31 line 5 (frame-anchored directional PAE)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:203-228 (64-bin pae_logits, softmax, expected error)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pde_head_produces_distribution",
+        "from": "modules.confidence_pde_head",
+        "to": "value_sites.predicted_distance_error_distribution",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_distance_error_distribution"
+        ],
+        "operation": "softmax_symmetric_pde_logits",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pde_distribution_produces_expected_error",
+        "from": "value_sites.predicted_distance_error_distribution",
+        "to": "value_sites.predicted_distance_error",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_distance_error"
+        ],
+        "operation": "expected_pde_from_bin_centers",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 31 line 6 (PDE uses symmetrized pair state)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:169-200 (distance logits symmetrized before softmax and expectation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "plddt_head_produces_distribution",
+        "from": "modules.confidence_plddt_head",
+        "to": "value_sites.predicted_lddt_distribution",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_lddt_distribution"
+        ],
+        "operation": "softmax_per_atom_plddt_logits",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "plddt_distribution_produces_expected_score",
+        "from": "value_sites.predicted_lddt_distribution",
+        "to": "value_sites.predicted_lddt",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_lddt"
+        ],
+        "operation": "expected_plddt_scaled_to_hundred",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:247-259 (50-bin plddt_logits, softmax, expected value scaled to 100)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "resolved_head_produces_distribution",
+        "from": "modules.confidence_resolved_head",
+        "to": "value_sites.predicted_resolved_distribution",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_resolved_distribution"
+        ],
+        "operation": "softmax_experimental_resolvability_logits",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "resolved_distribution_produces_positive_probability",
+        "from": "value_sites.predicted_resolved_distribution",
+        "to": "value_sites.predicted_experimentally_resolved",
+        "kind": "data_flow",
+        "carries": [
+          "representations.predicted_experimentally_resolved"
+        ],
+        "operation": "select_resolved_class_probability",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Section 4.3.4 and Algorithm 31 line 8 (two-class resolved prediction)"
+            },
+            {
+              "source_ref": "af3_confidence_head_code",
+              "role": "implementation_evidence",
+              "locator": "confidence_head.py:261-271 (two-logit per-atom projection and positive-class probability)"
+            }
+          ]
+        }
       }
     ],
     "claims": [
@@ -14105,6 +16116,39 @@ export const manifest = {
         "path": "src/alphafold3/model/network/featurization.py",
         "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py",
         "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py"
+      },
+      {
+        "id": "af3_confidence_head_code",
+        "kind": "code",
+        "title": "AlphaFold 3 confidence head implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "b2f3d45fbfcacc5183bd5345d15df93571b8437f",
+        "path": "src/alphafold3/model/network/confidence_head.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/confidence_head.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/confidence_head.py"
+      },
+      {
+        "id": "af3_model_code",
+        "kind": "code",
+        "title": "AlphaFold 3 sampler and confidence head handoff",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "b2f3d45fbfcacc5183bd5345d15df93571b8437f",
+        "path": "src/alphafold3/model/model.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/model.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/model.py"
+      },
+      {
+        "id": "af3_sampler_code",
+        "kind": "code",
+        "title": "AlphaFold 3 inference sampler implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "b2f3d45fbfcacc5183bd5345d15df93571b8437f",
+        "path": "src/alphafold3/model/network/diffusion_head.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/diffusion_head.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/diffusion_head.py"
       },
       {
         "id": "genie2_2024",
@@ -17955,11 +19999,11 @@ export const manifest = {
       {
         "id": "pairformer_overview",
         "title": "AlphaFold 3",
-        "summary": "Reference-conformer geometry, template structures, and MSA evidence build the single and pair representations, which 48 Pairformer blocks refine. The Diffusion Module then uses those trunk representations to predict atom coordinates, one noise-conditioned denoising step at a time; the outer sampling loop is not shown here.",
+        "summary": "Input features, templates, and MSA evidence build the single and pair representations for the Pairformer. A diffusion sampler repeatedly calls the one-step denoiser to produce a completed structure; the Confidence Head then judges that specific sample through four predicted confidence outputs.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 16,
+          "columns": 19,
           "rows": 9,
           "column_sizing": "content",
           "col_gap": 36,
@@ -18250,45 +20294,15 @@ export const manifest = {
             "row": 7
           },
           {
-            "id": "noise_level",
-            "ref": "value_sites.noise_level",
-            "label": "noise level",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 13,
-            "row": 2
-          },
-          {
-            "id": "noisy_atom_positions",
-            "ref": "value_sites.noisy_atom_positions",
-            "label": "noisy atom coordinates",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 13,
-            "row": 6
-          },
-          {
-            "id": "scaled_noisy_atom_positions",
-            "ref": "value_sites.scaled_noisy_atom_positions",
-            "label": "scaled noisy atoms",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 13,
-            "row": 7
-          },
-          {
-            "id": "diffusion_module",
-            "ref": "modules.diffusion_module",
-            "label": "Diffusion Module",
+            "id": "sample_diffusion",
+            "ref": "modules.sample_diffusion",
+            "label": "Diffusion Sampler",
             "prominence": "primary",
             "treatment": "compact",
             "density": "compact",
             "col": 14,
             "row": 4,
-            "board_ref": "diffusion_module_detail"
+            "board_ref": "sample_diffusion_detail"
           },
           {
             "id": "relative_position_encoding",
@@ -18312,24 +20326,65 @@ export const manifest = {
             "row": 2
           },
           {
-            "id": "denoised_atom_positions",
-            "ref": "value_sites.denoised_atom_positions",
-            "label": "denoised atom coordinates",
-            "prominence": "secondary",
-            "treatment": "compact",
-            "density": "compact",
-            "col": 16,
-            "row": 4
-          },
-          {
-            "id": "atom_position_update",
-            "ref": "value_sites.atom_attention_decoder_position_update",
-            "label": "predicted atom update",
+            "id": "final_sampled_atom_positions",
+            "ref": "value_sites.final_sampled_atom_positions",
+            "label": "completed structure sample",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
             "col": 15,
             "row": 4
+          },
+          {
+            "id": "confidence_head",
+            "ref": "modules.confidence_head",
+            "label": "Confidence Head",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 16,
+            "row": 4,
+            "board_ref": "confidence_head_detail"
+          },
+          {
+            "id": "predicted_lddt",
+            "ref": "value_sites.predicted_lddt",
+            "label": "predicted local score",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 18,
+            "row": 2
+          },
+          {
+            "id": "predicted_aligned_error",
+            "ref": "value_sites.predicted_aligned_error",
+            "label": "directional PAE",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 18,
+            "row": 4
+          },
+          {
+            "id": "predicted_distance_error",
+            "ref": "value_sites.predicted_distance_error",
+            "label": "symmetric PDE",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 18,
+            "row": 6
+          },
+          {
+            "id": "predicted_experimentally_resolved",
+            "ref": "value_sites.predicted_experimentally_resolved",
+            "label": "predicted resolved probability",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 18,
+            "row": 8
           }
         ],
         "edge_overrides": [
@@ -18459,33 +20514,33 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_2a8432650063",
-            "from": "atom_position_update",
-            "to": "denoised_atom_positions",
-            "projection": "direct",
+            "id": "projection_8c664ba9889f",
+            "from": "atom_reference_features_input",
+            "to": "input_feature_embedder",
+            "projection": "boundary",
             "origin": "canonical",
-            "kind": "state_update",
+            "kind": "data_flow",
             "relation_path": [
-              "relations.position_update_weighted_into_denoised_output"
+              "relations.atom_reference_features_enter_atom_attention_encoder"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.position_update_weighted_into_denoised_output"
+                "relation_ref": "relations.atom_reference_features_enter_atom_attention_encoder"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.denoised_atom_positions"
+              "representations.atom_reference_features"
             ],
             "presentation": {
             }
           },
           {
-            "id": "projection_df038c34a7d1",
+            "id": "projection_663b8c5d65c3",
             "from": "atom_reference_features_input",
-            "to": "diffusion_module",
+            "to": "sample_diffusion",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -18507,9 +20562,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_530abf97931d",
+            "id": "projection_a6979cab6adb",
             "from": "atom_reference_features_input",
-            "to": "diffusion_module",
+            "to": "sample_diffusion",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "index_flow",
@@ -18531,25 +20586,97 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_8c664ba9889f",
-            "from": "atom_reference_features_input",
-            "to": "input_feature_embedder",
+            "id": "projection_18d27b899f10",
+            "from": "confidence_head",
+            "to": "predicted_aligned_error",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
             "relation_path": [
-              "relations.atom_reference_features_enter_atom_attention_encoder"
+              "relations.pae_distribution_produces_expected_error"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.atom_reference_features_enter_atom_attention_encoder"
+                "relation_ref": "relations.pae_distribution_produces_expected_error"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.atom_reference_features"
+              "representations.predicted_aligned_error"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a838d7e8face",
+            "from": "confidence_head",
+            "to": "predicted_distance_error",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pde_distribution_produces_expected_error"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pde_distribution_produces_expected_error"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_distance_error"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_249303e5a084",
+            "from": "confidence_head",
+            "to": "predicted_experimentally_resolved",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.resolved_distribution_produces_positive_probability"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.resolved_distribution_produces_positive_probability"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_experimentally_resolved"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_89fc82ed06ec",
+            "from": "confidence_head",
+            "to": "predicted_lddt",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.plddt_distribution_produces_expected_score"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.plddt_distribution_produces_expected_score"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_lddt"
             ],
             "presentation": {
             }
@@ -18603,30 +20730,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_a743ef98d03e",
-            "from": "diffusion_module",
-            "to": "atom_position_update",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.decoder_query_projected_to_position_update"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.decoder_query_projected_to_position_update"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.atom_position_update"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_c3fd8226bcdb",
             "from": "entity_id",
             "to": "relative_position_encoding",
@@ -18651,9 +20754,33 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_e8d904cbe78b",
+            "id": "projection_f2e4cf8bbd58",
+            "from": "final_sampled_atom_positions",
+            "to": "confidence_head",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.final_sample_enters_confidence_pair_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_sample_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.final_sampled_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_5290506dfc92",
             "from": "fourier_embedding",
-            "to": "diffusion_module",
+            "to": "sample_diffusion",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "state_update",
@@ -18770,78 +20897,6 @@ export const manifest = {
             ],
             "carries": [
               "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_5dedbd668c36",
-            "from": "noise_level",
-            "to": "fourier_embedding",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.noise_level_enters_fourier_embedding"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.noise_level_enters_fourier_embedding"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.noise_level"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_dda3473f0cc0",
-            "from": "noisy_atom_positions",
-            "to": "denoised_atom_positions",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.noisy_positions_weighted_into_denoised_output"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.noisy_positions_weighted_into_denoised_output"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.denoised_atom_positions"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_06a8ef12492e",
-            "from": "noisy_atom_positions",
-            "to": "scaled_noisy_atom_positions",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.noisy_positions_scaled_to_unit_variance"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.noisy_positions_scaled_to_unit_variance"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.scaled_noisy_atom_positions"
             ],
             "presentation": {
             }
@@ -18971,9 +21026,33 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_70c7f6953c48",
+            "id": "projection_f9def5efd485",
             "from": "pair_state_output",
-            "to": "diffusion_module",
+            "to": "confidence_head",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_pair_enters_confidence_pair_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_pair_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a14f80ad2bc6",
+            "from": "pair_state_output",
+            "to": "sample_diffusion",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -19079,9 +21158,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_07c3b9cb2a5a",
+            "id": "projection_2dcccf53ffc3",
             "from": "relative_position_encoding",
-            "to": "diffusion_module",
+            "to": "sample_diffusion",
             "projection": "contracted",
             "origin": "canonical",
             "kind": "data_flow",
@@ -19155,18 +21234,18 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_b99fb02de58f",
+            "id": "projection_1c520f22375c",
             "from": "s_inputs",
-            "to": "diffusion_module",
+            "to": "confidence_head",
             "projection": "boundary",
             "origin": "canonical",
-            "kind": "data_flow",
+            "kind": "state_update",
             "relation_path": [
-              "relations.s_inputs_enters_diffusion_conditioning"
+              "relations.raw_input_features_update_confidence_pair_state"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.s_inputs_enters_diffusion_conditioning"
+                "relation_ref": "relations.raw_input_features_update_confidence_pair_state"
               }
             ],
             "hidden_refs": [
@@ -19227,6 +21306,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_c8e9e09d802a",
+            "from": "s_inputs",
+            "to": "sample_diffusion",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_3d1249db30c6",
             "from": "s_inputs",
             "to": "single_state_input_projection",
@@ -19251,25 +21354,49 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_7cc5d893862d",
-            "from": "scaled_noisy_atom_positions",
-            "to": "diffusion_module",
+            "id": "projection_7dd41092fd7f",
+            "from": "sample_diffusion",
+            "to": "final_sampled_atom_positions",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
             "relation_path": [
-              "relations.scaled_noisy_positions_enter_atom_encoder"
+              "relations.last_sampler_update_becomes_final_sample"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.scaled_noisy_positions_enter_atom_encoder"
+                "relation_ref": "relations.last_sampler_update_becomes_final_sample"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.scaled_noisy_atom_positions"
+              "representations.final_sampled_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_2a959956cbf2",
+            "from": "sample_diffusion",
+            "to": "fourier_embedding",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noise_level_enters_fourier_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noise_level_enters_fourier_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
             ],
             "presentation": {
             }
@@ -19303,9 +21430,33 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_8074a02e0131",
+            "id": "projection_c900d293e106",
             "from": "single_state_output",
-            "to": "diffusion_module",
+            "to": "confidence_head",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.trunk_single_enters_confidence_pairformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_single_enters_confidence_pairformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_309dc5445987",
+            "from": "single_state_output",
+            "to": "sample_diffusion",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "conditioning",
@@ -19327,9 +21478,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_c45aebdf2426",
+            "id": "projection_fe4f98ff1578",
             "from": "single_state_output",
-            "to": "diffusion_module",
+            "to": "sample_diffusion",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -19568,13 +21719,19 @@ export const manifest = {
           }
         ],
         "classifications": {
-          "modules.atom_attention_decoder": "collapsed:modules.diffusion_module",
+          "modules.atom_attention_decoder": "collapsed:modules.sample_diffusion",
           "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
-          "modules.atom_attention_encoder_conditioned": "collapsed:modules.diffusion_module",
-          "modules.atom_decoder_atom_transformer": "collapsed:modules.diffusion_module",
-          "modules.atom_encoder_atom_transformer": "collapsed:modules.diffusion_module",
-          "modules.diffusion_conditioning": "collapsed:modules.diffusion_module",
-          "modules.diffusion_module": "visible",
+          "modules.atom_attention_encoder_conditioned": "collapsed:modules.sample_diffusion",
+          "modules.atom_decoder_atom_transformer": "collapsed:modules.sample_diffusion",
+          "modules.atom_encoder_atom_transformer": "collapsed:modules.sample_diffusion",
+          "modules.confidence_head": "visible",
+          "modules.confidence_pae_head": "collapsed:modules.confidence_head",
+          "modules.confidence_pair_embedding": "collapsed:modules.confidence_head",
+          "modules.confidence_pairformer_stack": "collapsed:modules.confidence_head",
+          "modules.confidence_pde_head": "collapsed:modules.confidence_head",
+          "modules.confidence_plddt_head": "collapsed:modules.confidence_head",
+          "modules.confidence_resolved_head": "collapsed:modules.confidence_head",
+          "modules.diffusion_conditioning": "collapsed:modules.sample_diffusion",
           "modules.fourier_embedding": "visible",
           "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_embedder": "visible",
@@ -19594,7 +21751,9 @@ export const manifest = {
           "modules.pair_transition": "collapsed:modules.pairformer_stack",
           "modules.pairformer_stack": "visible",
           "modules.relative_position_encoding": "visible",
-          "modules.sequence_local_attention_mask": "collapsed:modules.diffusion_module",
+          "modules.sample_diffusion": "visible",
+          "modules.sampler_update": "collapsed:modules.sample_diffusion",
+          "modules.sequence_local_attention_mask": "collapsed:modules.sample_diffusion",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
           "modules.single_state_input_projection": "visible",
@@ -19607,44 +21766,50 @@ export const manifest = {
           "modules.template_pair_transition": "collapsed:modules.template_module",
           "modules.template_triangle_multiplication_incoming": "collapsed:modules.template_module",
           "modules.template_triangle_multiplication_outgoing": "collapsed:modules.template_module",
-          "modules.token_attention_pair_bias": "collapsed:modules.diffusion_module",
-          "modules.token_conditioned_transition": "collapsed:modules.diffusion_module",
+          "modules.token_attention_pair_bias": "collapsed:modules.sample_diffusion",
+          "modules.token_conditioned_transition": "collapsed:modules.sample_diffusion",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
           "value_sites.asym_id": "visible",
-          "value_sites.atom_attention_decoder_position_update": "visible",
+          "value_sites.atom_attention_decoder_position_update": "collapsed:modules.sample_diffusion",
           "value_sites.atom_attention_encoder_pair_skip": "excluded",
           "value_sites.atom_attention_encoder_query_skip": "excluded",
           "value_sites.atom_attention_encoder_single_conditioning_skip": "excluded",
           "value_sites.atom_attention_encoder_token_output": "excluded",
-          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.diffusion_module",
-          "value_sites.atom_pair_reference_geometry": "collapsed:modules.diffusion_module",
-          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.diffusion_module",
-          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.diffusion_module",
-          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.diffusion_module",
-          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.diffusion_module",
-          "value_sites.atom_query_initial": "collapsed:modules.diffusion_module",
-          "value_sites.atom_query_with_noisy_position": "collapsed:modules.diffusion_module",
+          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_pair_reference_geometry": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_initial": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_with_noisy_position": "collapsed:modules.sample_diffusion",
           "value_sites.atom_reference_features_input": "visible",
-          "value_sites.atom_single_conditioning_base": "collapsed:modules.diffusion_module",
-          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.diffusion_module",
+          "value_sites.atom_single_conditioning_base": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.sample_diffusion",
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
+          "value_sites.confidence_pair_after_geometry_embedding": "collapsed:modules.confidence_head",
+          "value_sites.confidence_pair_after_input_embedding": "collapsed:modules.confidence_head",
+          "value_sites.confidence_pair_after_stack": "collapsed:modules.confidence_head",
+          "value_sites.confidence_representative_distances": "collapsed:modules.confidence_head",
+          "value_sites.confidence_single_after_stack": "collapsed:modules.confidence_head",
           "value_sites.deletion_mean_input": "visible",
           "value_sites.deletion_value_input": "visible",
-          "value_sites.denoised_atom_positions": "visible",
+          "value_sites.denoised_atom_positions": "collapsed:modules.sample_diffusion",
           "value_sites.diffusion_conditioned_pair": "excluded",
           "value_sites.diffusion_conditioned_single": "excluded",
-          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.diffusion_module",
-          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.diffusion_module",
-          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.sample_diffusion",
           "value_sites.diffusion_token_activation_conditioned": "excluded",
           "value_sites.diffusion_token_activation_normalized": "excluded",
-          "value_sites.diffusion_token_attention_branch": "collapsed:modules.diffusion_module",
-          "value_sites.diffusion_token_block_input": "collapsed:modules.diffusion_module",
-          "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_module",
-          "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_attention_branch": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_block_input": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_block_output": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_transition_branch": "collapsed:modules.sample_diffusion",
           "value_sites.entity_id": "visible",
+          "value_sites.final_sampled_atom_positions": "visible",
           "value_sites.fourier_time_embedding": "collapsed:modules.fourier_embedding",
           "value_sites.has_deletion_input": "visible",
           "value_sites.msa_activations": "collapsed:modules.msa_module",
@@ -19661,8 +21826,8 @@ export const manifest = {
           "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.msa_module",
           "value_sites.msa_pair_weighted_averaging_value": "collapsed:modules.msa_module",
           "value_sites.msa_pair_weighted_averaging_weights": "collapsed:modules.msa_module",
-          "value_sites.noise_level": "visible",
-          "value_sites.noisy_atom_positions": "visible",
+          "value_sites.noise_level": "collapsed:modules.sample_diffusion",
+          "value_sites.noisy_atom_positions": "collapsed:modules.sample_diffusion",
           "value_sites.outer_product_mean_flattened": "collapsed:modules.msa_module",
           "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.msa_module",
           "value_sites.outer_product_mean_projection_a": "collapsed:modules.msa_module",
@@ -19675,6 +21840,14 @@ export const manifest = {
           "value_sites.pair_mask_input": "visible",
           "value_sites.pair_state_input": "elided",
           "value_sites.pair_state_output": "visible",
+          "value_sites.predicted_aligned_error": "visible",
+          "value_sites.predicted_aligned_error_distribution": "collapsed:modules.confidence_head",
+          "value_sites.predicted_distance_error": "visible",
+          "value_sites.predicted_distance_error_distribution": "collapsed:modules.confidence_head",
+          "value_sites.predicted_experimentally_resolved": "visible",
+          "value_sites.predicted_lddt": "visible",
+          "value_sites.predicted_lddt_distribution": "collapsed:modules.confidence_head",
+          "value_sites.predicted_resolved_distribution": "collapsed:modules.confidence_head",
           "value_sites.profile_input": "visible",
           "value_sites.relative_chain_offset": "collapsed:modules.relative_position_encoding",
           "value_sites.relative_position_encoding_output": "elided",
@@ -19684,7 +21857,8 @@ export const manifest = {
           "value_sites.restype_input": "visible",
           "value_sites.s_inputs": "visible",
           "value_sites.same_entity_signal": "collapsed:modules.relative_position_encoding",
-          "value_sites.scaled_noisy_atom_positions": "visible",
+          "value_sites.sampler_updated_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.scaled_noisy_atom_positions": "collapsed:modules.sample_diffusion",
           "value_sites.sequence_local_atom_attention_mask": "excluded",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
@@ -25038,15 +27212,1811 @@ export const manifest = {
         "projectionMode": "derived"
       },
       {
+        "id": "sample_diffusion_detail",
+        "title": "Diffusion Sampling Boundary",
+        "summary": "The sampler repeatedly asks the same Diffusion Module for a clean-coordinate estimate, then updates its current atom positions. Only the coordinates after the last update are a completed sample for confidence prediction. The schedule and update arithmetic are left for the sampler lesson.",
+        "parent": "pairformer_overview",
+        "subject_ref": "modules.sample_diffusion",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 6,
+          "rows": 5,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "sampler_s_inputs",
+            "ref": "value_sites.s_inputs",
+            "label": "raw input embedding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "sampler_trunk_single",
+            "ref": "value_sites.single_state_output",
+            "label": "trunk singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "sampler_trunk_pair",
+            "ref": "value_sites.pair_state_output",
+            "label": "trunk pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "sampler_reference_atoms",
+            "ref": "value_sites.atom_reference_features_input",
+            "label": "reference atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "sampler_controller",
+            "ref": "modules.sample_diffusion",
+            "label": "sampler state",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "sampler_noise_level",
+            "ref": "value_sites.noise_level",
+            "label": "current noise level",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 2,
+            "row": 1
+          },
+          {
+            "id": "sampler_noisy_positions",
+            "ref": "value_sites.noisy_atom_positions",
+            "label": "current noisy atoms",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 4
+          },
+          {
+            "id": "sampler_denoiser",
+            "ref": "modules.diffusion_module",
+            "label": "one denoising call",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 3,
+            "board_ref": "diffusion_module_detail"
+          },
+          {
+            "id": "sampler_estimate",
+            "ref": "value_sites.denoised_atom_positions",
+            "label": "one-step estimate",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 3
+          },
+          {
+            "id": "sampler_update",
+            "ref": "modules.sampler_update",
+            "label": "sampler update",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 3
+          },
+          {
+            "id": "sampler_updated_positions",
+            "ref": "value_sites.sampler_updated_positions",
+            "label": "updated positions",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4
+          },
+          {
+            "id": "sampler_final_positions",
+            "ref": "value_sites.final_sampled_atom_positions",
+            "label": "completed sample",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 3
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "modules.relative_position_encoding",
+            "reason": "Relative-position internals are shown on their own board; this sampler board focuses on the repeated coordinate call."
+          },
+          {
+            "ref": "value_sites.relative_position_encoding_output",
+            "reason": "The positional prior is expanded on the one-step Diffusion Module board."
+          },
+          {
+            "ref": "modules.fourier_embedding",
+            "reason": "Noise embedding is expanded inside the one-step Diffusion Module boards."
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_3c7507af417d",
+            "from": "sampler_controller",
+            "to": "sampler_noise_level",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_produces_step_noise_level"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_produces_step_noise_level"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_23c552ab3f2b",
+            "from": "sampler_controller",
+            "to": "sampler_noisy_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_produces_step_noisy_positions"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_produces_step_noisy_positions"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9f34e15db8e4",
+            "from": "sampler_denoiser",
+            "to": "sampler_estimate",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.position_update_weighted_into_denoised_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.position_update_weighted_into_denoised_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_deff16911868",
+            "from": "sampler_estimate",
+            "to": "sampler_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.denoised_estimate_enters_sampler_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.denoised_estimate_enters_sampler_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f1620dda954c",
+            "from": "sampler_noise_level",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.sampler_noise_level_sets_denoiser_rescaling"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_sets_denoiser_rescaling"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ee9a339d4d7a",
+            "from": "sampler_noisy_positions",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_positions_scaled_to_unit_variance"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_scaled_to_unit_variance"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.scaled_noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_624ea73296cb",
+            "from": "sampler_noisy_positions",
+            "to": "sampler_estimate",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_positions_weighted_into_denoised_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_weighted_into_denoised_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_edcf0d4000d7",
+            "from": "sampler_noisy_positions",
+            "to": "sampler_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noisy_positions_enter_sampler_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_enter_sampler_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_bdbcf37c9535",
+            "from": "sampler_reference_atoms",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.atom_reference_features_enter_conditioned_atom_encoder"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_reference_features_enter_conditioned_atom_encoder"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_52f0209b1315",
+            "from": "sampler_reference_atoms",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "index_flow",
+            "relation_path": [
+              "relations.atom_layout_determines_locality_mask"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_layout_determines_locality_mask"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_reference_features"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_1fc04317adbb",
+            "from": "sampler_s_inputs",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ec8cd7259e16",
+            "from": "sampler_trunk_pair",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pair_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_44147fad2d96",
+            "from": "sampler_trunk_single",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.raw_trunk_single_broadcasts_onto_atoms"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.raw_trunk_single_broadcasts_onto_atoms"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_edbaa00f7eec",
+            "from": "sampler_trunk_single",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.single_state_output_enters_diffusion_conditioning"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_output_enters_diffusion_conditioning"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_58ec49b51092",
+            "from": "sampler_update",
+            "to": "sampler_updated_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.sampler_update_produces_next_positions"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_update_produces_next_positions"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_updated_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_6c574c9bda15",
+            "from": "sampler_updated_positions",
+            "to": "sampler_final_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.last_sampler_update_becomes_final_sample"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.last_sampler_update_becomes_final_sample"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.final_sampled_atom_positions"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.atom_attention_decoder": "collapsed:modules.diffusion_module",
+          "modules.atom_attention_encoder_conditioned": "collapsed:modules.diffusion_module",
+          "modules.atom_decoder_atom_transformer": "collapsed:modules.diffusion_module",
+          "modules.atom_encoder_atom_transformer": "collapsed:modules.diffusion_module",
+          "modules.diffusion_conditioning": "collapsed:modules.diffusion_module",
+          "modules.diffusion_module": "visible",
+          "modules.fourier_embedding": "excluded",
+          "modules.relative_position_encoding": "excluded",
+          "modules.sample_diffusion": "visible",
+          "modules.sampler_update": "visible",
+          "modules.sequence_local_attention_mask": "collapsed:modules.diffusion_module",
+          "modules.token_attention_pair_bias": "collapsed:modules.diffusion_module",
+          "modules.token_conditioned_transition": "collapsed:modules.diffusion_module",
+          "value_sites.atom_attention_decoder_position_update": "collapsed:modules.diffusion_module",
+          "value_sites.atom_attention_encoder_pair_skip": "collapsed:modules.diffusion_module",
+          "value_sites.atom_attention_encoder_query_skip": "collapsed:modules.diffusion_module",
+          "value_sites.atom_attention_encoder_single_conditioning_skip": "collapsed:modules.diffusion_module",
+          "value_sites.atom_attention_encoder_token_output": "collapsed:modules.diffusion_module",
+          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.diffusion_module",
+          "value_sites.atom_pair_reference_geometry": "collapsed:modules.diffusion_module",
+          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_initial": "collapsed:modules.diffusion_module",
+          "value_sites.atom_query_with_noisy_position": "collapsed:modules.diffusion_module",
+          "value_sites.atom_reference_features_input": "visible",
+          "value_sites.atom_single_conditioning_base": "collapsed:modules.diffusion_module",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.diffusion_module",
+          "value_sites.denoised_atom_positions": "visible",
+          "value_sites.diffusion_conditioned_pair": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_conditioned_single": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_activation_conditioned": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_activation_normalized": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_attention_branch": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_block_input": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_module",
+          "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_module",
+          "value_sites.final_sampled_atom_positions": "visible",
+          "value_sites.fourier_time_embedding": "excluded",
+          "value_sites.noise_level": "visible",
+          "value_sites.noisy_atom_positions": "visible",
+          "value_sites.pair_state_output": "visible",
+          "value_sites.relative_chain_offset": "excluded",
+          "value_sites.relative_position_encoding_output": "excluded",
+          "value_sites.relative_residue_offset": "excluded",
+          "value_sites.relative_token_offset": "excluded",
+          "value_sites.s_inputs": "visible",
+          "value_sites.same_entity_signal": "excluded",
+          "value_sites.sampler_updated_positions": "visible",
+          "value_sites.scaled_noisy_atom_positions": "collapsed:modules.diffusion_module",
+          "value_sites.sequence_local_atom_attention_mask": "collapsed:modules.diffusion_module",
+          "value_sites.single_state_output": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "confidence_head_detail",
+        "title": "Confidence Head for One Completed Sample",
+        "summary": "The head sees the sampled structure itself, adds its geometry to the trunk pair state, refines single and pair states through four Pairformer blocks, and makes four distinct predictions. These are learned estimates of quality, not errors measured against a known structure.",
+        "parent": "pairformer_overview",
+        "subject_ref": "modules.confidence_head",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 5,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "confidence_raw_input",
+            "ref": "value_sites.s_inputs",
+            "label": "raw input embedding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "confidence_trunk_single",
+            "ref": "value_sites.single_state_output",
+            "label": "trunk singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "confidence_trunk_pair",
+            "ref": "value_sites.pair_state_output",
+            "label": "trunk pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "confidence_sample",
+            "ref": "value_sites.final_sampled_atom_positions",
+            "label": "completed coordinates",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 5
+          },
+          {
+            "id": "confidence_geometry",
+            "ref": "modules.confidence_pair_embedding",
+            "label": "embed sample geometry",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3,
+            "board_ref": "confidence_pair_embedding_detail"
+          },
+          {
+            "id": "confidence_stack",
+            "ref": "modules.confidence_pairformer_stack",
+            "label": "four full Pairformer blocks",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 3
+          },
+          {
+            "id": "confidence_refined_pair",
+            "ref": "value_sites.confidence_pair_after_stack",
+            "label": "refined pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "confidence_refined_single",
+            "ref": "value_sites.confidence_single_after_stack",
+            "label": "refined singles",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 4
+          },
+          {
+            "id": "confidence_pair_outputs",
+            "ref": "modules.confidence_pair_readouts",
+            "label": "PAE and PDE",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2,
+            "board_ref": "confidence_pair_readouts_detail"
+          },
+          {
+            "id": "confidence_atom_outputs",
+            "ref": "modules.confidence_atom_readouts",
+            "label": "pLDDT and resolved",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4,
+            "board_ref": "confidence_atom_readouts_detail"
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "value_sites.predicted_lddt",
+            "reason": "The root and atom readout board show this output; this board keeps the shared head path legible."
+          },
+          {
+            "ref": "value_sites.predicted_aligned_error",
+            "reason": "The root and pair readout board show this output; this board keeps the shared head path legible."
+          },
+          {
+            "ref": "value_sites.predicted_distance_error",
+            "reason": "The root and pair readout board show this output; this board keeps the shared head path legible."
+          },
+          {
+            "ref": "value_sites.predicted_experimentally_resolved",
+            "reason": "The root and atom readout board show this output; this board keeps the shared head path legible."
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_397243ab64c4",
+            "from": "confidence_geometry",
+            "to": "confidence_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.geometry_augmented_pair_enters_confidence_pairformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.geometry_augmented_pair_enters_confidence_pairformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9bb29e65a89f",
+            "from": "confidence_raw_input",
+            "to": "confidence_geometry",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.raw_input_features_update_confidence_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.raw_input_features_update_confidence_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f7617bcd1c89",
+            "from": "confidence_refined_pair",
+            "to": "confidence_pair_outputs",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_pair_enters_pae_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_pair_enters_pae_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_072271887c0f",
+            "from": "confidence_refined_pair",
+            "to": "confidence_pair_outputs",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_pair_enters_pde_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_pair_enters_pde_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7505c6f93fa2",
+            "from": "confidence_refined_single",
+            "to": "confidence_atom_outputs",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_single_enters_plddt_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_single_enters_plddt_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d6955c1b5b72",
+            "from": "confidence_refined_single",
+            "to": "confidence_atom_outputs",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_single_enters_resolved_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_single_enters_resolved_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4155a73a232a",
+            "from": "confidence_sample",
+            "to": "confidence_geometry",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.final_sample_enters_confidence_pair_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_sample_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.final_sampled_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_37399cebed5b",
+            "from": "confidence_stack",
+            "to": "confidence_refined_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.confidence_pairformer_produces_refined_pair"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.confidence_pairformer_produces_refined_pair"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_54e298acb380",
+            "from": "confidence_stack",
+            "to": "confidence_refined_single",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.confidence_pairformer_produces_refined_single"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.confidence_pairformer_produces_refined_single"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_db9a7e12a6b5",
+            "from": "confidence_trunk_pair",
+            "to": "confidence_geometry",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_pair_enters_confidence_pair_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_pair_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_74a41ef39d60",
+            "from": "confidence_trunk_single",
+            "to": "confidence_stack",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.trunk_single_enters_confidence_pairformer"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_single_enters_confidence_pairformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.confidence_atom_readouts": "visible",
+          "modules.confidence_pae_head": "collapsed:modules.confidence_pair_readouts",
+          "modules.confidence_pair_embedding": "visible",
+          "modules.confidence_pair_readouts": "visible",
+          "modules.confidence_pairformer_stack": "visible",
+          "modules.confidence_pde_head": "collapsed:modules.confidence_pair_readouts",
+          "modules.confidence_plddt_head": "collapsed:modules.confidence_atom_readouts",
+          "modules.confidence_resolved_head": "collapsed:modules.confidence_atom_readouts",
+          "value_sites.confidence_pair_after_geometry_embedding": "collapsed:modules.confidence_pair_embedding",
+          "value_sites.confidence_pair_after_input_embedding": "collapsed:modules.confidence_pair_embedding",
+          "value_sites.confidence_pair_after_stack": "visible",
+          "value_sites.confidence_representative_distances": "collapsed:modules.confidence_pair_embedding",
+          "value_sites.confidence_single_after_stack": "visible",
+          "value_sites.final_sampled_atom_positions": "visible",
+          "value_sites.pair_state_output": "visible",
+          "value_sites.predicted_aligned_error": "excluded",
+          "value_sites.predicted_aligned_error_distribution": "collapsed:modules.confidence_pair_readouts",
+          "value_sites.predicted_distance_error": "excluded",
+          "value_sites.predicted_distance_error_distribution": "collapsed:modules.confidence_pair_readouts",
+          "value_sites.predicted_experimentally_resolved": "excluded",
+          "value_sites.predicted_lddt": "excluded",
+          "value_sites.predicted_lddt_distribution": "collapsed:modules.confidence_atom_readouts",
+          "value_sites.predicted_resolved_distribution": "collapsed:modules.confidence_atom_readouts",
+          "value_sites.s_inputs": "visible",
+          "value_sites.single_state_output": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "confidence_pair_embedding_detail",
+        "title": "Predicted Geometry Enters the Pair State",
+        "summary": "The head adds raw input features to trunk pairs, measures representative-atom distances in the completed predicted sample, bins those distances, and injects them into the same pair state. It judges this structure, not just its input sequence.",
+        "parent": "confidence_head_detail",
+        "subject_ref": "modules.confidence_pair_embedding",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 4,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "embed_raw_input",
+            "ref": "value_sites.s_inputs",
+            "label": "raw input embedding",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "embed_trunk_pair",
+            "ref": "value_sites.pair_state_output",
+            "label": "trunk pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "embed_sample",
+            "ref": "value_sites.final_sampled_atom_positions",
+            "label": "sampled atoms",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 4
+          },
+          {
+            "id": "embed_module",
+            "ref": "modules.confidence_pair_embedding",
+            "label": "embed input and geometry",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "embed_input_pair",
+            "ref": "value_sites.confidence_pair_after_input_embedding",
+            "label": "input-augmented pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "embed_distances",
+            "ref": "value_sites.confidence_representative_distances",
+            "label": "sampled pair distances",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "embed_geometry_pair",
+            "ref": "value_sites.confidence_pair_after_geometry_embedding",
+            "label": "geometry-augmented pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "modules.confidence_pairformer_stack",
+            "reason": "The next board stage owns the four-block refinement after geometry injection."
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_1c78adb87e2e",
+            "from": "embed_distances",
+            "to": "embed_geometry_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.representative_distances_enter_geometry_injection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.representative_distances_enter_geometry_injection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_representative_distances"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c0a805ec528e",
+            "from": "embed_input_pair",
+            "to": "embed_geometry_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.input_augmented_pair_enters_geometry_injection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.input_augmented_pair_enters_geometry_injection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_0386ea10413f",
+            "from": "embed_module",
+            "to": "embed_distances",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.confidence_pair_embedding_produces_representative_distances"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.confidence_pair_embedding_produces_representative_distances"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_representative_distances"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b9d126409871",
+            "from": "embed_module",
+            "to": "embed_geometry_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.confidence_pair_embedding_produces_augmented_pair"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.confidence_pair_embedding_produces_augmented_pair"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_765be71147a6",
+            "from": "embed_raw_input",
+            "to": "embed_input_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.raw_input_features_update_confidence_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.raw_input_features_update_confidence_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f7e32c8e2252",
+            "from": "embed_sample",
+            "to": "embed_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.final_sample_enters_confidence_pair_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_sample_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.final_sampled_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c41dfdcb7ddf",
+            "from": "embed_trunk_pair",
+            "to": "embed_input_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_pair_enters_confidence_pair_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_pair_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.confidence_pair_embedding": "visible",
+          "modules.confidence_pairformer_stack": "excluded",
+          "value_sites.confidence_pair_after_geometry_embedding": "visible",
+          "value_sites.confidence_pair_after_input_embedding": "visible",
+          "value_sites.confidence_pair_after_stack": "excluded",
+          "value_sites.confidence_representative_distances": "visible",
+          "value_sites.confidence_single_after_stack": "excluded",
+          "value_sites.final_sampled_atom_positions": "visible",
+          "value_sites.pair_state_output": "visible",
+          "value_sites.s_inputs": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "confidence_pair_readouts_detail",
+        "title": "Directional PAE and Symmetric PDE",
+        "summary": "PAE[i,j] predicts the error of token j with token i's frame as anchor, so swapping i and j changes the question. PDE predicts a plain pair distance error, and its logits are symmetrized. Both are learned distributions summarized as expected errors in angstroms.",
+        "parent": "confidence_head_detail",
+        "subject_ref": "modules.confidence_pair_readouts",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 4,
+          "rows": 4,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "pair_readout_input",
+            "ref": "value_sites.confidence_pair_after_stack",
+            "label": "refined pair state",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "pae_head",
+            "ref": "modules.confidence_pae_head",
+            "label": "ordered PAE projection",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 1
+          },
+          {
+            "id": "pde_head",
+            "ref": "modules.confidence_pde_head",
+            "label": "symmetric PDE projection",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "pae_distribution",
+            "ref": "value_sites.predicted_aligned_error_distribution",
+            "label": "64 PAE bins",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "pde_distribution",
+            "ref": "value_sites.predicted_distance_error_distribution",
+            "label": "64 PDE bins",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 3
+          },
+          {
+            "id": "pae_expected",
+            "ref": "value_sites.predicted_aligned_error",
+            "label": "expected PAE in angstroms",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "pde_expected",
+            "ref": "value_sites.predicted_distance_error",
+            "label": "expected PDE in angstroms",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 3
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_c38ada9e3af8",
+            "from": "pae_distribution",
+            "to": "pae_expected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pae_distribution_produces_expected_error"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pae_distribution_produces_expected_error"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_aligned_error"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f49a557812f9",
+            "from": "pae_head",
+            "to": "pae_distribution",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pae_head_produces_distribution"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pae_head_produces_distribution"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_aligned_error_distribution"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d81ba93dde25",
+            "from": "pair_readout_input",
+            "to": "pae_head",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_pair_enters_pae_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_pair_enters_pae_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_76f8e6f5328a",
+            "from": "pair_readout_input",
+            "to": "pde_head",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_pair_enters_pde_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_pair_enters_pde_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_1d1233355dab",
+            "from": "pde_distribution",
+            "to": "pde_expected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pde_distribution_produces_expected_error"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pde_distribution_produces_expected_error"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_distance_error"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_0131e8889745",
+            "from": "pde_head",
+            "to": "pde_distribution",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.pde_head_produces_distribution"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pde_head_produces_distribution"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_distance_error_distribution"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.confidence_pae_head": "visible",
+          "modules.confidence_pde_head": "visible",
+          "value_sites.confidence_pair_after_stack": "visible",
+          "value_sites.predicted_aligned_error": "visible",
+          "value_sites.predicted_aligned_error_distribution": "visible",
+          "value_sites.predicted_distance_error": "visible",
+          "value_sites.predicted_distance_error_distribution": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "confidence_atom_readouts_detail",
+        "title": "Per-Atom pLDDT and Experimental Resolvability",
+        "summary": "The refined token single vector supplies two separate atom-channel projections. One predicts a local distance agreement score from 50 bins; the other predicts whether each atom would be experimentally resolved. A ligand atom's pLDDT target uses polymer contacts, not internal ligand distances.",
+        "parent": "confidence_head_detail",
+        "subject_ref": "modules.confidence_atom_readouts",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 4,
+          "rows": 4,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "atom_readout_input",
+            "ref": "value_sites.confidence_single_after_stack",
+            "label": "refined single state",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "plddt_head",
+            "ref": "modules.confidence_plddt_head",
+            "label": "local score projection",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 1
+          },
+          {
+            "id": "resolved_head",
+            "ref": "modules.confidence_resolved_head",
+            "label": "resolvability projection",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 3
+          },
+          {
+            "id": "plddt_distribution",
+            "ref": "value_sites.predicted_lddt_distribution",
+            "label": "50 local-score bins",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "resolved_distribution",
+            "ref": "value_sites.predicted_resolved_distribution",
+            "label": "two resolution classes",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 3
+          },
+          {
+            "id": "plddt_expected",
+            "ref": "value_sites.predicted_lddt",
+            "label": "predicted score from 0 to 100",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "resolved_probability",
+            "ref": "value_sites.predicted_experimentally_resolved",
+            "label": "predicted resolved probability",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 3
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_ab8214d87631",
+            "from": "atom_readout_input",
+            "to": "plddt_head",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_single_enters_plddt_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_single_enters_plddt_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d96c5d02b7c3",
+            "from": "atom_readout_input",
+            "to": "resolved_head",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.refined_single_enters_resolved_head"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.refined_single_enters_resolved_head"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.confidence_single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d584f2141e85",
+            "from": "plddt_distribution",
+            "to": "plddt_expected",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.plddt_distribution_produces_expected_score"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.plddt_distribution_produces_expected_score"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_lddt"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e4cf4b78ec17",
+            "from": "plddt_head",
+            "to": "plddt_distribution",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.plddt_head_produces_distribution"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.plddt_head_produces_distribution"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_lddt_distribution"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_deca80b53b3c",
+            "from": "resolved_distribution",
+            "to": "resolved_probability",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.resolved_distribution_produces_positive_probability"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.resolved_distribution_produces_positive_probability"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_experimentally_resolved"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d50b9a3f0f6d",
+            "from": "resolved_head",
+            "to": "resolved_distribution",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.resolved_head_produces_distribution"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.resolved_head_produces_distribution"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.predicted_resolved_distribution"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.confidence_plddt_head": "visible",
+          "modules.confidence_resolved_head": "visible",
+          "value_sites.confidence_single_after_stack": "visible",
+          "value_sites.predicted_experimentally_resolved": "visible",
+          "value_sites.predicted_lddt": "visible",
+          "value_sites.predicted_lddt_distribution": "visible",
+          "value_sites.predicted_resolved_distribution": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
         "id": "diffusion_module_detail",
         "title": "One Diffusion Module Denoising Step",
-        "summary": "Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. The root board shows the raw noise input and final blend into denoised coordinates.",
-        "parent": "pairformer_overview",
+        "summary": "Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. This one-step denoised estimate returns to the sampler for its own update.",
+        "parent": "sample_diffusion_detail",
         "subject_ref": "modules.diffusion_module",
         "expansion_depth": 1,
         "grid": {
-          "columns": 7,
-          "rows": 6,
+          "columns": 8,
+          "rows": 7,
           "column_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
@@ -25071,6 +29041,26 @@ export const manifest = {
             "density": "micro",
             "col": 1,
             "row": 2
+          },
+          {
+            "id": "step_noise_level",
+            "ref": "value_sites.noise_level",
+            "label": "current noise level",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 7
+          },
+          {
+            "id": "step_noisy_atoms",
+            "ref": "value_sites.noisy_atom_positions",
+            "label": "current noisy atoms",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 2,
+            "row": 6
           },
           {
             "id": "step_relative_output",
@@ -25227,6 +29217,16 @@ export const manifest = {
             "row": 4
           },
           {
+            "id": "step_denoised_estimate",
+            "ref": "value_sites.denoised_atom_positions",
+            "label": "one-step estimate",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 8,
+            "row": 4
+          },
+          {
             "id": "step_locality_mask",
             "ref": "modules.sequence_local_attention_mask",
             "label": "local atom mask",
@@ -25260,6 +29260,10 @@ export const manifest = {
           {
             "ref": "value_sites.atom_attention_encoder_pair_skip",
             "reason": "The encoder and decoder detail boards show the saved pair-conditioning tensor; the overview keeps the main coordinate path legible."
+          },
+          {
+            "ref": "modules.sampler_update",
+            "reason": "The enclosing sampler board shows how this one-step estimate enters the sampler update."
           }
         ],
         "projection_mode": "derived",
@@ -25437,6 +29441,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_722ded9df404",
+            "from": "step_conditioned_single",
+            "to": "step_token_with_singles",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.conditioned_single_injected_into_token_activation"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.conditioned_single_injected_into_token_activation"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_dce236e286d8",
             "from": "step_conditioning",
             "to": "step_conditioned_pair",
@@ -25480,6 +29508,30 @@ export const manifest = {
             ],
             "carries": [
               "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b1da1a753729",
+            "from": "step_encoder_tokens",
+            "to": "step_token_with_singles",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.encoder_token_output_enters_token_bottleneck"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.encoder_token_output_enters_token_bottleneck"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.diffusion_token_activation"
             ],
             "presentation": {
             }
@@ -25576,6 +29628,102 @@ export const manifest = {
             ],
             "carries": [
               "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e1575cd49389",
+            "from": "step_noise_level",
+            "to": "step_scaled_noisy_atoms",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.sampler_noise_level_sets_denoiser_rescaling"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_sets_denoiser_rescaling"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f29dd8e73c05",
+            "from": "step_noisy_atoms",
+            "to": "step_denoised_estimate",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_positions_weighted_into_denoised_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_weighted_into_denoised_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_0874cb82d092",
+            "from": "step_noisy_atoms",
+            "to": "step_scaled_noisy_atoms",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.noisy_positions_scaled_to_unit_variance"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_scaled_to_unit_variance"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.scaled_noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_267c3161ed91",
+            "from": "step_position_update",
+            "to": "step_denoised_estimate",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.position_update_weighted_into_denoised_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.position_update_weighted_into_denoised_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
             ],
             "presentation": {
             }
@@ -25852,6 +30000,7 @@ export const manifest = {
           "modules.atom_encoder_atom_transformer": "collapsed:modules.atom_attention_encoder_conditioned",
           "modules.diffusion_conditioning": "visible",
           "modules.diffusion_transformer_token_level": "visible",
+          "modules.sampler_update": "excluded",
           "modules.sequence_local_attention_mask": "visible",
           "modules.token_attention_pair_bias": "collapsed:modules.diffusion_transformer_token_level",
           "modules.token_conditioned_transition": "collapsed:modules.diffusion_transformer_token_level",
@@ -25871,6 +30020,7 @@ export const manifest = {
           "value_sites.atom_reference_features_input": "visible",
           "value_sites.atom_single_conditioning_base": "collapsed:modules.atom_attention_encoder_conditioned",
           "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.atom_attention_encoder_conditioned",
+          "value_sites.denoised_atom_positions": "visible",
           "value_sites.diffusion_conditioned_pair": "visible",
           "value_sites.diffusion_conditioned_single": "visible",
           "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.diffusion_conditioning",
@@ -25883,6 +30033,8 @@ export const manifest = {
           "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_transformer_token_level",
           "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_transformer_token_level",
           "value_sites.fourier_time_embedding": "visible",
+          "value_sites.noise_level": "visible",
+          "value_sites.noisy_atom_positions": "visible",
           "value_sites.pair_state_output": "visible",
           "value_sites.relative_position_encoding_output": "visible",
           "value_sites.s_inputs": "visible",
@@ -27873,6 +32025,12 @@ export const manifest = {
             "to_occurrence": "dec_attended_query"
           }
         ],
+        "exclude": [
+          {
+            "ref": "value_sites.denoised_atom_positions",
+            "reason": "The final blend of the atom update with noisy coordinates belongs to the parent Diffusion Module board, after the decoder returns."
+          }
+        ],
         "projection_mode": "derived",
         "edges": [
           {
@@ -28101,6 +32259,7 @@ export const manifest = {
           "value_sites.atom_attention_encoder_single_conditioning_skip": "visible",
           "value_sites.atom_query_after_decoder_transformer": "visible",
           "value_sites.atom_query_broadcast_with_skip": "visible",
+          "value_sites.denoised_atom_positions": "excluded",
           "value_sites.diffusion_token_activation_normalized": "visible",
           "value_sites.sequence_local_atom_attention_mask": "visible"
         },

@@ -3,7 +3,7 @@ export const manifest = {
   "build": {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
-      "references/bibliography.yaml": "8ea36a3baf67328b8505219a53ff89fa20ecba3fdff75bdf63142d8fbcf2cea6",
+      "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
       "architectures/genie2.yaml": "dc70626daca21c212b372e601a3a064ee1a1ea01e226b955b21e00e4c308bdb0",
       "views/genie2-semantic-zoom.view.yaml": "e5ed5c07d6c8bc3215aa09b1e2ca261c2861a1dc19bdf8c3968d69c23e28b0d2",
       "pseudocode/genie2.yaml": "b78ca953f8ebed98a688501d7485e3b2e79fb50b2e9434d876012c1ee4289bd0",
@@ -4648,6 +4648,39 @@ export const manifest = {
         "path": "src/alphafold3/model/network/featurization.py",
         "url": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py",
         "href": "https://github.com/google-deepmind/alphafold3/blob/f3e86f27dfac16559d16f470bb2f9323eb357f1f/src/alphafold3/model/network/featurization.py"
+      },
+      {
+        "id": "af3_confidence_head_code",
+        "kind": "code",
+        "title": "AlphaFold 3 confidence head implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "b2f3d45fbfcacc5183bd5345d15df93571b8437f",
+        "path": "src/alphafold3/model/network/confidence_head.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/confidence_head.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/confidence_head.py"
+      },
+      {
+        "id": "af3_model_code",
+        "kind": "code",
+        "title": "AlphaFold 3 sampler and confidence head handoff",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "b2f3d45fbfcacc5183bd5345d15df93571b8437f",
+        "path": "src/alphafold3/model/model.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/model.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/model.py"
+      },
+      {
+        "id": "af3_sampler_code",
+        "kind": "code",
+        "title": "AlphaFold 3 inference sampler implementation",
+        "organization": "Google DeepMind",
+        "repository": "google-deepmind/alphafold3",
+        "revision": "b2f3d45fbfcacc5183bd5345d15df93571b8437f",
+        "path": "src/alphafold3/model/network/diffusion_head.py",
+        "url": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/diffusion_head.py",
+        "href": "https://github.com/google-deepmind/alphafold3/blob/b2f3d45fbfcacc5183bd5345d15df93571b8437f/src/alphafold3/model/network/diffusion_head.py"
       },
       {
         "id": "genie2_2024",
