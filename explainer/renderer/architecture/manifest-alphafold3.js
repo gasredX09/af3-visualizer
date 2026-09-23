@@ -4,9 +4,9 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
-      "architectures/alphafold3-pairformer.yaml": "bd1b6843028f307e7aeefc7cf9808414941a29c19a6fde231259ce2e102139a1",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "7a9f1e9c874481e228736a0da8c52295822ecf30a54c7b9e9ea13a5f074f5686",
-      "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27",
+      "architectures/alphafold3-pairformer.yaml": "2df1b229a1fab2bc8f4b3c15a5336b140b7d7bb68aa1b969dc2f9f134b84a3ca",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "da53bfb10ac37a1b121aae237310fa5b33b945af3eec84c1d562efc513f5a7db",
+      "pseudocode/alphafold3-pairformer.yaml": "fcdf63593c26d4b2b373c11c7c6192318dab2fdb3f456d3463571613640e90c8",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
     }
@@ -117,11 +117,13 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 10,
+          "immediateModuleCount": 12,
           "immediateModuleRefs": [
             "modules.pairformer_stack",
             "modules.input_feature_embedder",
             "modules.single_state_input_projection",
+            "modules.single_recycle_projection",
+            "modules.pair_recycle_projection",
             "modules.pair_state_input_projection",
             "modules.relative_position_encoding",
             "modules.msa_module",
@@ -253,6 +255,22 @@ export const manifest = {
           ]
         },
         "modules.single_state_input_projection": {
+          "status": "leaf",
+          "depth": 1,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.single_recycle_projection": {
+          "status": "leaf",
+          "depth": 1,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.pair_recycle_projection": {
           "status": "leaf",
           "depth": 1,
           "immediateModuleCount": 0,
@@ -455,22 +473,64 @@ export const manifest = {
           ]
         },
         "modules.sample_diffusion": {
-          "status": "partial",
-          "reason": "This pass accounts for the repeated denoiser call and its output boundary. The schedule, pose augmentation, noise injection, and update arithmetic remain for the sampler pass.",
+          "status": "complete",
           "depth": 1,
-          "immediateModuleCount": 2,
+          "immediateModuleCount": 6,
           "immediateModuleRefs": [
+            "modules.sampler_coordinate_initializer",
+            "modules.sampler_schedule",
+            "modules.sampler_pose_augmentation",
+            "modules.sampler_noise_injection",
             "modules.sampler_update",
             "modules.diffusion_module"
           ]
         },
-        "modules.sampler_update": {
-          "status": "opaque",
-          "reason": "The sampler update arithmetic and stochastic pose steps are reserved for the later sampler pass.",
+        "modules.sampler_coordinate_initializer": {
+          "status": "leaf",
           "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
+          ]
+        },
+        "modules.sampler_schedule": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.sampler_pose_augmentation": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.sampler_noise_injection": {
+          "status": "leaf",
+          "depth": 2,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.sampler_gradient": {
+          "status": "leaf",
+          "depth": 3,
+          "immediateModuleCount": 0,
+          "immediateModuleRefs": [
+
+          ]
+        },
+        "modules.sampler_update": {
+          "status": "complete",
+          "depth": 2,
+          "immediateModuleCount": 1,
+          "immediateModuleRefs": [
+            "modules.sampler_gradient"
           ]
         },
         "modules.confidence_head": {
@@ -650,25 +710,23 @@ export const manifest = {
         }
       },
       "summary": {
-        "scopeCount": 60,
-        "expandedScopeCount": 17,
-        "completeExpandedScopeCount": 14,
-        "partialScopeCount": 9,
-        "leafFrontierCount": 35,
-        "opaqueFrontierCount": 2,
+        "scopeCount": 67,
+        "expandedScopeCount": 18,
+        "completeExpandedScopeCount": 16,
+        "partialScopeCount": 8,
+        "leafFrontierCount": 42,
+        "opaqueFrontierCount": 1,
         "partialFrontierCount": 6,
         "maximumAuthoredDepth": 4
       },
       "opaqueFrontierRefs": [
-        "modules.atom_attention_encoder_bare",
-        "modules.sampler_update"
+        "modules.atom_attention_encoder_bare"
       ],
       "partialScopeRefs": [
         "modules.relative_position_encoding",
         "modules.outer_product_mean",
         "modules.msa_pair_weighted_averaging",
         "modules.template_pair_conditioning",
-        "modules.sample_diffusion",
         "modules.confidence_pair_embedding",
         "modules.diffusion_conditioning",
         "modules.atom_attention_encoder_conditioned",
@@ -1092,7 +1150,7 @@ export const manifest = {
         "mechanisms": [
           "linear_projection"
         ],
-        "role": "project s_inputs to the 384-channel single_state_input via one LinearNoBias layer",
+        "role": "project s_inputs to the fixed 384-channel single_init anchor via one LinearNoBias layer",
         "scale": "token",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -1101,6 +1159,56 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_recycle_projection",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Project Previous Single State",
+        "kind": "adapter",
+        "mechanisms": [
+          "layer_normalization",
+          "linear_projection"
+        ],
+        "role": "normalize and project the previous pass's single state before adding it to the fixed single_init anchor; the previous state is zero on the first pass",
+        "scale": "token",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "evoformer.py Evoformer.__call__ (prev_single_embedding_layer_norm and prev_single_embedding added to fresh single_activations)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_recycle_projection",
+        "parent_ref": "architecture",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Project Previous Pair State",
+        "kind": "adapter",
+        "mechanisms": [
+          "layer_normalization",
+          "linear_projection"
+        ],
+        "role": "normalize and project the previous pass's pair state before adding it to the fixed z_init anchor; the previous state is zero on the first pass",
+        "scale": "token_pair",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "evoformer.py Evoformer.__call__ (prev_embedding_layer_norm and prev_embedding added to fresh pair_activations)"
             }
           ]
         }
@@ -1117,7 +1225,7 @@ export const manifest = {
           "linear_projection",
           "outer_sum"
         ],
-        "role": "project s_inputs to 128 channels via two independent LinearNoBias layers, one per token of the pair, and outer-sum them into pair_state_input",
+        "role": "project s_inputs to 128 channels via two independent LinearNoBias layers, one per token of the pair, and outer-sum them into the fixed z_init anchor",
         "scale": "token_pair",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -1175,7 +1283,7 @@ export const manifest = {
           "triangle_multiplication",
           "axial_pair_attention"
         ],
-        "role": "embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation; update the MSA activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; and run the resulting pair state through the module's own pair-stack (triangle multiplication x2, triangle attention x2, transition), architecturally identical to the Pairformer's own pair-stack mechanism but with its own parameters, run N_block=4 times instead of 48; only z_ij is returned, the MSA representation itself is discarded every call; only one representative pass through the module is modeled here, not the N_block=4 loop or the outer per-recycle loop",
+        "role": "embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation; update the MSA activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; and run the resulting pair state through the module's own pair-stack (triangle multiplication x2, triangle attention x2, transition), architecturally identical to the Pairformer's own pair-stack mechanism but with its own parameters, run N_block=4 times instead of 48; only z_ij is returned, the MSA representation itself is discarded every call; this module board shows one representative call while execution.loops.trunk_recycling accounts for repeated calls",
         "scale": "msa",
         "repeats": 4,
         "evidence": {
@@ -1495,7 +1603,7 @@ export const manifest = {
           "transition",
           "cross_template_pooling"
         ],
-        "role": "run once per recycle, immediately before the MSA module (Algorithm 1 line 9 precedes line 10), reading the raw per-template AF3 template features together with the current pair representation z_ij and writing a pooled contribution back into it; for one representative template, mask and concatenate the raw template evidence (the backbone-frame and pseudo-beta AND-gate masks, the distogram and unit-vector pairwise evidence, an asym_id intra-chain gate, and the one-hot restype of both tokens) into a per-template pair feature, outer-sum it with a projection of the current pair state to form that template's own pair-conditioned state at the module's narrower 64-channel width, refine it through the module's own N_block=2 pair-only (with_single=False) Pairformer block, accumulate the LayerNorm'd result across every template, average, and project once more through a plain ReLU (not SwiGLU) into a 128-channel contribution added into the pair representation before the MSA module runs; only one representative pass through the module is modeled here, not the N_templates loop, the N_block=2 pair-stack repeat, or the outer per-recycle loop",
+        "role": "run once per recycle, immediately before the MSA module (Algorithm 1 line 9 precedes line 10), reading the raw per-template AF3 template features together with the current pair representation z_ij and writing a pooled contribution back into it; for one representative template, mask and concatenate the raw template evidence (the backbone-frame and pseudo-beta AND-gate masks, the distogram and unit-vector pairwise evidence, an asym_id intra-chain gate, and the one-hot restype of both tokens) into a per-template pair feature, outer-sum it with a projection of the current pair state to form that template's own pair-conditioned state at the module's narrower 64-channel width, refine it through the module's own N_block=2 pair-only (with_single=False) Pairformer block, accumulate the LayerNorm'd result across every template, average, and project once more through a plain ReLU (not SwiGLU) into a 128-channel contribution added into the pair representation before the MSA module runs; this module board shows one representative template and pass while execution.loops.trunk_recycling accounts for repeated calls",
         "scale": "token_pair",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -1779,8 +1887,7 @@ export const manifest = {
         "id": "sample_diffusion",
         "parent_ref": "architecture",
         "decomposition": {
-          "status": "partial",
-          "reason": "This pass accounts for the repeated denoiser call and its output boundary. The schedule, pose augmentation, noise injection, and update arithmetic remain for the sampler pass."
+          "status": "complete"
         },
         "label": "Diffusion Sampler",
         "kind": "sampler",
@@ -1788,7 +1895,7 @@ export const manifest = {
           "iterative_denoising",
           "sampler_state_update"
         ],
-        "role": "generate completed atom coordinates by repeatedly calling the one-step Diffusion Module and updating the current positions; one denoiser return is an estimate used by the sampler, not the final sample or the next step's coordinates",
+        "role": "initialize five independent Gaussian atom clouds, then for each of 200 scheduled levels rotate and translate the current cloud, optionally churn in Gaussian noise, call the one-step Diffusion Module, and take a scaled step toward its clean-coordinate estimate; return only the state after the final update",
         "scale": "atom_and_token",
         "repeats": 200,
         "evidence": {
@@ -1808,18 +1915,137 @@ export const manifest = {
         }
       },
       {
+        "id": "sampler_coordinate_initializer",
+        "parent_ref": "modules.sample_diffusion",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Initialize Gaussian Atom Cloud",
+        "kind": "operator",
+        "mechanisms": [
+          "gaussian_initialization"
+        ],
+        "role": "draw an independent Gaussian atom cloud for each sample and multiply it by the first scheduled noise level",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:358-365 (initial normal positions scaled by noise_levels[0])"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_schedule",
+        "parent_ref": "modules.sample_diffusion",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Noise Schedule",
+        "kind": "operator",
+        "mechanisms": [
+          "noise_schedule"
+        ],
+        "role": "select the next level from the 200-step power-seven schedule with dimensionless endpoints smax=160 and smin=0.0004 multiplied by sigma_data=16 (actual noise levels 2560 down to 0.0064); set gamma to 0.8 only when that next level exceeds 1.0 and form t_hat from the previous level",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:88-92,101-107,339-345,358-373 (noise_schedule, gamma gate, t_hat and sampled levels)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_pose_augmentation",
+        "parent_ref": "modules.sample_diffusion",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Random Pose Augmentation",
+        "kind": "operator",
+        "mechanisms": [
+          "random_rigid_augmentation"
+        ],
+        "role": "independently rotate and translate the current atom cloud before every denoising step, without changing its internal geometry",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-339 (random_augmentation applied to current positions at every step)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_noise_injection",
+        "parent_ref": "modules.sample_diffusion",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Stochastic Noise Injection",
+        "kind": "operator",
+        "mechanisms": [
+          "gaussian_noise_injection"
+        ],
+        "role": "add Gaussian noise with scale 1.003 times sqrt(t_hat squared minus previous noise level squared) to the augmented positions before the denoiser call",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:344-349 (noise_scale, Gaussian noise, positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_gradient",
+        "parent_ref": "modules.sampler_update",
+        "decomposition": {
+          "status": "leaf"
+        },
+        "label": "Denoising Direction",
+        "kind": "operator",
+        "mechanisms": [
+          "denoising_direction"
+        ],
+        "role": "compute (positions_noisy minus positions_denoised) divided by t_hat; this points away from the denoiser estimate, while the following negative time step moves toward it",
+        "scale": "atom",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:349-352 (grad and d_t)"
+            }
+          ]
+        }
+      },
+      {
         "id": "sampler_update",
         "parent_ref": "modules.sample_diffusion",
         "decomposition": {
-          "status": "opaque",
-          "reason": "The sampler update arithmetic and stochastic pose steps are reserved for the later sampler pass."
+          "status": "complete"
         },
         "label": "Sampler State Update",
         "kind": "operator",
         "mechanisms": [
           "sampler_state_update"
         ],
-        "role": "use the current noisy positions and the denoiser's clean-coordinate estimate to form the next sampler state; the last state is the completed sample",
+        "role": "set the next state to positions_noisy plus 1.5 times (next scheduled level minus t_hat) times the denoising direction; the last updated state is the completed sample",
         "scale": "atom",
         "evidence": {
           "status": "confirmed_from_code",
@@ -6710,6 +6936,46 @@ export const manifest = {
         }
       },
       {
+        "id": "sampler_coordinate_state",
+        "scale": "atom",
+        "semantic_role": "atom coordinates carried between sampler steps, initialized as Gaussian noise and rigidly augmented before each denoiser call",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "current per-atom sampling coordinates"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-378 (initial positions, step carry, random augmentation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_direction",
+        "scale": "atom",
+        "semantic_role": "per-atom difference between noisy coordinates and denoiser estimate divided by t_hat, before the signed schedule step is applied",
+        "shape": "N_atom x 3",
+        "glyph": "coordinates",
+        "carries": [
+          "denoising direction used by the fixed sampler update"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:349-352 (grad = (positions_noisy - positions_denoised) / t_hat)"
+            }
+          ]
+        }
+      },
+      {
         "id": "sampler_updated_positions",
         "scale": "atom",
         "semantic_role": "one sampler iteration's updated atom coordinates after using the denoiser estimate, distinct from the estimate itself",
@@ -7043,6 +7309,70 @@ export const manifest = {
         }
       },
       {
+        "id": "single_init",
+        "representation_ref": "representations.single_state",
+        "scope_ref": "architecture",
+        "role": "fixed_input_derived_single_anchor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 2 (s_init), reused at line 11 of every recycle"
+            }
+          ]
+        }
+      },
+      {
+        "id": "recycled_single_state",
+        "representation_ref": "representations.single_state",
+        "scope_ref": "architecture",
+        "role": "previous_trunk_pass_single_output_zero_on_first_pass",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:289-319 (prev['single'] starts at zero and receives each recycle_body output)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "recycled_pair_state",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "architecture",
+        "role": "previous_trunk_pass_pair_output_zero_on_first_pass",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:289-319 (prev['pair'] starts at zero and receives each recycle_body output)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_recycle_seed",
+        "representation_ref": "representations.pair_state",
+        "scope_ref": "architecture",
+        "role": "fixed_pair_anchor_plus_projected_previous_pair",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "evoformer.py Evoformer.__call__ (pair_activations plus LayerNorm/Linear of prev['pair'] before template and MSA processing)"
+            }
+          ]
+        }
+      },
+      {
         "id": "pair_state_input",
         "representation_ref": "representations.pair_state",
         "scope_ref": "architecture",
@@ -7192,7 +7522,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs)); Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument) -- the pair representation as it exists right after the outer-sum projection of s_inputs, before Template/MSA processing; only one representative pass is modeled, so this value site stands in for what Algorithm 1 line 8 would otherwise reconstruct at the start of every recycle"
+              "locator": "Supplementary Algorithm 1 lines 3-5 (fixed z_init built once from input features, relative positions, and token bonds); line 8 adds a projected previous pair state at the beginning of every recycle"
             }
           ]
         }
@@ -8163,6 +8493,102 @@ export const manifest = {
         }
       },
       {
+        "id": "sampler_previous_level",
+        "representation_ref": "representations.noise_level",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "previous_noise_schedule_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-348,365-373 (noise_level_prev in scan carry)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_next_level",
+        "representation_ref": "representations.noise_level",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "next_noise_schedule_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:339-352,358-373 (selected noise_level, d_t = noise_level - t_hat)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_initial_positions",
+        "representation_ref": "representations.sampler_coordinate_state",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "gaussian_atom_cloud_scaled_by_first_schedule_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:358-365 (normal coordinates multiplied by noise_levels[0])"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_current_positions",
+        "representation_ref": "representations.sampler_coordinate_state",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "sampler_state_before_pose_augmentation",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-339,373 (positions in scan carry)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_augmented_positions",
+        "representation_ref": "representations.sampler_coordinate_state",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "randomly_rotated_and_translated_current_positions",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:337-339 (random_augmentation)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_denoising_direction",
+        "representation_ref": "representations.sampler_direction",
+        "scope_ref": "modules.sample_diffusion",
+        "role": "normalized_noisy_minus_denoised_coordinates",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:349-352 (grad)"
+            }
+          ]
+        }
+      },
+      {
         "id": "fourier_time_embedding",
         "representation_ref": "representations.fourier_time_embedding",
         "scope_ref": "modules.fourier_embedding",
@@ -8967,16 +9393,76 @@ export const manifest = {
     "valueSiteInterfaces": {
       "single_state_input": {
         "incomingRelationRefs": [
-          "relations.single_state_projection_produces_single_state_input"
+          "relations.single_anchor_initializes_recycle_pass",
+          "relations.single_recycle_projection_updates_input"
         ],
         "outgoingRelationRefs": [
           "relations.input_single_state_initializes_block_single_state"
         ],
         "producerRefs": [
-          "modules.single_state_input_projection"
+          "value_sites.single_init",
+          "modules.single_recycle_projection"
         ],
         "consumerRefs": [
           "value_sites.block_single_state"
+        ]
+      },
+      "single_init": {
+        "incomingRelationRefs": [
+          "relations.single_state_projection_produces_single_state_input"
+        ],
+        "outgoingRelationRefs": [
+          "relations.single_anchor_initializes_recycle_pass"
+        ],
+        "producerRefs": [
+          "modules.single_state_input_projection"
+        ],
+        "consumerRefs": [
+          "value_sites.single_state_input"
+        ]
+      },
+      "recycled_single_state": {
+        "incomingRelationRefs": [
+          "relations.trunk_single_output_reenters_recycle"
+        ],
+        "outgoingRelationRefs": [
+          "relations.previous_single_enters_recycle_projection"
+        ],
+        "producerRefs": [
+          "value_sites.single_state_output"
+        ],
+        "consumerRefs": [
+          "modules.single_recycle_projection"
+        ]
+      },
+      "recycled_pair_state": {
+        "incomingRelationRefs": [
+          "relations.trunk_pair_output_reenters_recycle"
+        ],
+        "outgoingRelationRefs": [
+          "relations.previous_pair_enters_recycle_projection"
+        ],
+        "producerRefs": [
+          "value_sites.pair_state_output"
+        ],
+        "consumerRefs": [
+          "modules.pair_recycle_projection"
+        ]
+      },
+      "pair_recycle_seed": {
+        "incomingRelationRefs": [
+          "relations.pair_anchor_initializes_recycle_pass",
+          "relations.pair_recycle_projection_updates_seed"
+        ],
+        "outgoingRelationRefs": [
+          "relations.z_init_initializes_template_module_pair_state"
+        ],
+        "producerRefs": [
+          "value_sites.z_init",
+          "modules.pair_recycle_projection"
+        ],
+        "consumerRefs": [
+          "value_sites.template_module_pair_state_read"
         ]
       },
       "pair_state_input": {
@@ -9114,13 +9600,13 @@ export const manifest = {
           "relations.pair_state_projection_produces_z_init"
         ],
         "outgoingRelationRefs": [
-          "relations.z_init_initializes_template_module_pair_state"
+          "relations.pair_anchor_initializes_recycle_pass"
         ],
         "producerRefs": [
           "modules.pair_state_input_projection"
         ],
         "consumerRefs": [
-          "value_sites.template_module_pair_state_read"
+          "value_sites.pair_recycle_seed"
         ]
       },
       "block_pair_state": {
@@ -9278,6 +9764,7 @@ export const manifest = {
           "relations.final_single_block_state_becomes_output"
         ],
         "outgoingRelationRefs": [
+          "relations.trunk_single_output_reenters_recycle",
           "relations.single_state_output_enters_diffusion_conditioning",
           "relations.raw_trunk_single_broadcasts_onto_atoms",
           "relations.trunk_single_enters_confidence_pairformer"
@@ -9286,6 +9773,7 @@ export const manifest = {
           "value_sites.single_after_transition"
         ],
         "consumerRefs": [
+          "value_sites.recycled_single_state",
           "modules.diffusion_conditioning",
           "modules.atom_attention_encoder_conditioned",
           "modules.confidence_pairformer_stack"
@@ -9296,6 +9784,7 @@ export const manifest = {
           "relations.final_pair_block_state_becomes_output"
         ],
         "outgoingRelationRefs": [
+          "relations.trunk_pair_output_reenters_recycle",
           "relations.pair_state_output_enters_diffusion_conditioning",
           "relations.trunk_pair_enters_confidence_pair_embedding"
         ],
@@ -9303,6 +9792,7 @@ export const manifest = {
           "value_sites.pair_after_transition"
         ],
         "consumerRefs": [
+          "value_sites.recycled_pair_state",
           "modules.diffusion_conditioning",
           "value_sites.confidence_pair_after_input_embedding"
         ]
@@ -9813,7 +10303,7 @@ export const manifest = {
           "relations.template_pair_state_enters_conditioning"
         ],
         "producerRefs": [
-          "value_sites.z_init"
+          "value_sites.pair_recycle_seed"
         ],
         "consumerRefs": [
           "modules.template_pair_conditioning"
@@ -9937,14 +10427,112 @@ export const manifest = {
         ],
         "outgoingRelationRefs": [
           "relations.noise_level_enters_fourier_embedding",
+          "relations.sampler_noise_level_conditions_noise_injection",
+          "relations.sampler_noise_level_scales_gradient",
+          "relations.sampler_noise_level_sets_update_step",
           "relations.sampler_noise_level_sets_denoiser_rescaling"
         ],
         "producerRefs": [
-          "modules.sample_diffusion"
+          "modules.sampler_schedule"
         ],
         "consumerRefs": [
           "modules.fourier_embedding",
+          "modules.sampler_noise_injection",
+          "modules.sampler_gradient",
+          "modules.sampler_update",
           "value_sites.scaled_noisy_atom_positions"
+        ]
+      },
+      "sampler_previous_level": {
+        "incomingRelationRefs": [
+          "relations.sampler_initializer_sets_first_level",
+          "relations.sampler_next_level_becomes_previous_level"
+        ],
+        "outgoingRelationRefs": [
+          "relations.sampler_previous_level_enters_schedule",
+          "relations.sampler_previous_level_conditions_noise_injection"
+        ],
+        "producerRefs": [
+          "modules.sampler_coordinate_initializer",
+          "value_sites.sampler_next_level"
+        ],
+        "consumerRefs": [
+          "modules.sampler_schedule",
+          "modules.sampler_noise_injection"
+        ]
+      },
+      "sampler_next_level": {
+        "incomingRelationRefs": [
+          "relations.sampler_schedule_selects_next_level"
+        ],
+        "outgoingRelationRefs": [
+          "relations.sampler_next_level_sets_update_step",
+          "relations.sampler_next_level_becomes_previous_level"
+        ],
+        "producerRefs": [
+          "modules.sampler_schedule"
+        ],
+        "consumerRefs": [
+          "modules.sampler_update",
+          "value_sites.sampler_previous_level"
+        ]
+      },
+      "sampler_initial_positions": {
+        "incomingRelationRefs": [
+          "relations.sampler_initializer_produces_initial_positions"
+        ],
+        "outgoingRelationRefs": [
+          "relations.sampler_initial_positions_begin_state"
+        ],
+        "producerRefs": [
+          "modules.sampler_coordinate_initializer"
+        ],
+        "consumerRefs": [
+          "value_sites.sampler_current_positions"
+        ]
+      },
+      "sampler_current_positions": {
+        "incomingRelationRefs": [
+          "relations.sampler_initial_positions_begin_state",
+          "relations.sampler_updated_positions_reenter_next_step"
+        ],
+        "outgoingRelationRefs": [
+          "relations.sampler_current_positions_enter_pose_augmentation"
+        ],
+        "producerRefs": [
+          "value_sites.sampler_initial_positions",
+          "value_sites.sampler_updated_positions"
+        ],
+        "consumerRefs": [
+          "modules.sampler_pose_augmentation"
+        ]
+      },
+      "sampler_augmented_positions": {
+        "incomingRelationRefs": [
+          "relations.sampler_pose_augmentation_produces_positions"
+        ],
+        "outgoingRelationRefs": [
+          "relations.sampler_augmented_positions_enter_noise_injection"
+        ],
+        "producerRefs": [
+          "modules.sampler_pose_augmentation"
+        ],
+        "consumerRefs": [
+          "modules.sampler_noise_injection"
+        ]
+      },
+      "sampler_denoising_direction": {
+        "incomingRelationRefs": [
+          "relations.sampler_gradient_produces_direction"
+        ],
+        "outgoingRelationRefs": [
+          "relations.sampler_direction_enters_update"
+        ],
+        "producerRefs": [
+          "modules.sampler_gradient"
+        ],
+        "consumerRefs": [
+          "modules.sampler_update"
         ]
       },
       "fourier_time_embedding": {
@@ -10046,14 +10634,16 @@ export const manifest = {
         "outgoingRelationRefs": [
           "relations.noisy_positions_scaled_to_unit_variance",
           "relations.noisy_positions_weighted_into_denoised_output",
+          "relations.sampler_noisy_positions_enter_gradient",
           "relations.noisy_positions_enter_sampler_update"
         ],
         "producerRefs": [
-          "modules.sample_diffusion"
+          "modules.sampler_noise_injection"
         ],
         "consumerRefs": [
           "value_sites.scaled_noisy_atom_positions",
           "value_sites.denoised_atom_positions",
+          "modules.sampler_gradient",
           "modules.sampler_update"
         ]
       },
@@ -10407,14 +10997,14 @@ export const manifest = {
           "relations.position_update_weighted_into_denoised_output"
         ],
         "outgoingRelationRefs": [
-          "relations.denoised_estimate_enters_sampler_update"
+          "relations.sampler_estimate_enters_gradient"
         ],
         "producerRefs": [
           "value_sites.noisy_atom_positions",
           "value_sites.atom_attention_decoder_position_update"
         ],
         "consumerRefs": [
-          "modules.sampler_update"
+          "modules.sampler_gradient"
         ]
       },
       "sampler_updated_positions": {
@@ -10422,12 +11012,14 @@ export const manifest = {
           "relations.sampler_update_produces_next_positions"
         ],
         "outgoingRelationRefs": [
+          "relations.sampler_updated_positions_reenter_next_step",
           "relations.last_sampler_update_becomes_final_sample"
         ],
         "producerRefs": [
           "modules.sampler_update"
         ],
         "consumerRefs": [
+          "value_sites.sampler_current_positions",
           "value_sites.final_sampled_atom_positions"
         ]
       },
@@ -10641,10 +11233,55 @@ export const manifest = {
     "execution": {
       "loops": [
         {
+          "id": "trunk_recycling",
+          "repeats": 4,
+          "reruns": [
+            "modules.pair_recycle_projection",
+            "modules.single_recycle_projection",
+            "modules.template_module",
+            "modules.msa_module",
+            "modules.pairformer_stack"
+          ],
+          "cached": [
+            "value_sites.s_inputs",
+            "value_sites.single_init",
+            "value_sites.z_init"
+          ],
+          "notes": [
+            "The paper's N_cycle=4 counts four full trunk passes. The released model's num_recycles is configurable and counts additional passes, so its default need not equal this paper setting.",
+            "Each pass restarts from fixed input-derived anchors, adds normalized projections of the previous pair and single outputs, then runs Template, MSA, and Pairformer in that order.",
+            "The first pass receives zero previous states. Sampling and confidence prediction run only after the final trunk pass."
+          ],
+          "evidence": {
+            "status": "confirmed_from_paper",
+            "refs": [
+              {
+                "source_ref": "af3_2024",
+                "role": "paper_evidence",
+                "locator": "Supplementary Algorithm 1 lines 2-16 (N_cycle=4, zero previous states, anchor-plus-recycle updates, downstream heads after the loop)"
+              },
+              {
+                "source_ref": "af3_model_code",
+                "role": "implementation_evidence",
+                "locator": "model.py:289-319 (zero previous pair/single state and fori_loop over configurable num_recycles + 1)"
+              },
+              {
+                "source_ref": "af3_evoformer_code",
+                "role": "implementation_evidence",
+                "locator": "evoformer.py Evoformer.__call__ (LayerNorm and learned projection of prev pair/single added to fresh input-derived activations before Template, MSA, and Pairformer)"
+              }
+            ]
+          }
+        },
+        {
           "id": "sample_diffusion",
           "repeats": 200,
           "reruns": [
+            "modules.sampler_schedule",
+            "modules.sampler_pose_augmentation",
+            "modules.sampler_noise_injection",
             "modules.diffusion_module",
+            "modules.sampler_gradient",
             "modules.sampler_update"
           ],
           "cached": [
@@ -10654,7 +11291,7 @@ export const manifest = {
           ],
           "notes": [
             "The released inference configuration generates five independent samples with 200 calls to the same denoiser per sample.",
-            "The sampler's pose augmentation, noise schedule, and update equation are deferred to the sampler pass; this loop records the call boundary only."
+            "Each step rotates and translates the current coordinates, optionally increases the noise level, adds Gaussian noise, asks the denoiser for a clean-coordinate estimate, and takes a scaled step toward it."
           ],
           "evidence": {
             "status": "confirmed_from_code",
@@ -10733,6 +11370,8 @@ export const manifest = {
       "pair_state": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10742,7 +11381,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -10760,13 +11399,15 @@ export const manifest = {
       "single_state": {
         "representation_ref": "representations.single_state",
         "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
           "value_sites.single_state_input",
           "value_sites.block_single_state",
           "value_sites.single_after_pair_attention",
           "value_sites.single_after_transition",
           "value_sites.single_state_output"
         ],
-        "lifecycle": "refined_after_pair_track_in_each_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
         "notes": [
           "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
         ],
@@ -10834,12 +11475,36 @@ export const manifest = {
             }
           ]
         }
+      },
+      "sampler_coordinates": {
+        "representation_ref": "representations.sampler_coordinate_state",
+        "value_site_refs": [
+          "value_sites.sampler_initial_positions",
+          "value_sites.sampler_current_positions",
+          "value_sites.sampler_augmented_positions"
+        ],
+        "lifecycle": "initialized_once_then_rigidly_augmented_each_sampling_step",
+        "notes": [
+          "The sampler's updated positions return as the next step's current positions; the denoiser's clean-coordinate estimate is never the carried state."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-378 (scan carry, augmentation, and positions_out)"
+            }
+          ]
+        }
       }
     },
     "stateSemanticsBySite": {
-      "pair_state_input": {
+      "recycled_pair_state": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10849,7 +11514,67 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
+        "notes": [
+          "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_pairformer_code",
+              "role": "implementation_evidence",
+              "locator": "PairFormerIteration.__call__"
+            }
+          ]
+        },
+        "groupId": "pair_state"
+      },
+      "pair_recycle_seed": {
+        "representation_ref": "representations.pair_state",
+        "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
+          "value_sites.pair_state_input",
+          "value_sites.block_pair_state",
+          "value_sites.pair_after_outgoing_multiplication",
+          "value_sites.pair_after_incoming_multiplication",
+          "value_sites.pair_after_starting_attention",
+          "value_sites.pair_after_ending_attention",
+          "value_sites.pair_after_transition",
+          "value_sites.pair_state_output"
+        ],
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
+        "notes": [
+          "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_pairformer_code",
+              "role": "implementation_evidence",
+              "locator": "PairFormerIteration.__call__"
+            }
+          ]
+        },
+        "groupId": "pair_state"
+      },
+      "pair_state_input": {
+        "representation_ref": "representations.pair_state",
+        "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
+          "value_sites.pair_state_input",
+          "value_sites.block_pair_state",
+          "value_sites.pair_after_outgoing_multiplication",
+          "value_sites.pair_after_incoming_multiplication",
+          "value_sites.pair_after_starting_attention",
+          "value_sites.pair_after_ending_attention",
+          "value_sites.pair_after_transition",
+          "value_sites.pair_state_output"
+        ],
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -10868,6 +11593,8 @@ export const manifest = {
       "block_pair_state": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10877,7 +11604,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -10896,6 +11623,8 @@ export const manifest = {
       "pair_after_outgoing_multiplication": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10905,7 +11634,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -10924,6 +11653,8 @@ export const manifest = {
       "pair_after_incoming_multiplication": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10933,7 +11664,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -10952,6 +11683,8 @@ export const manifest = {
       "pair_after_starting_attention": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10961,7 +11694,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -10980,6 +11713,8 @@ export const manifest = {
       "pair_after_ending_attention": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -10989,7 +11724,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -11008,6 +11743,8 @@ export const manifest = {
       "pair_after_transition": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -11017,7 +11754,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -11036,6 +11773,8 @@ export const manifest = {
       "pair_state_output": {
         "representation_ref": "representations.pair_state",
         "value_site_refs": [
+          "value_sites.recycled_pair_state",
+          "value_sites.pair_recycle_seed",
           "value_sites.pair_state_input",
           "value_sites.block_pair_state",
           "value_sites.pair_after_outgoing_multiplication",
@@ -11045,7 +11784,7 @@ export const manifest = {
           "value_sites.pair_after_transition",
           "value_sites.pair_state_output"
         ],
-        "lifecycle": "refined_across_five_pair_updates_per_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block",
         "notes": [
           "Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation."
         ],
@@ -11061,16 +11800,72 @@ export const manifest = {
         },
         "groupId": "pair_state"
       },
-      "single_state_input": {
+      "single_init": {
         "representation_ref": "representations.single_state",
         "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
           "value_sites.single_state_input",
           "value_sites.block_single_state",
           "value_sites.single_after_pair_attention",
           "value_sites.single_after_transition",
           "value_sites.single_state_output"
         ],
-        "lifecycle": "refined_after_pair_track_in_each_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
+        "notes": [
+          "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_pairformer_code",
+              "role": "implementation_evidence",
+              "locator": "PairFormerIteration.__call__ with with_single=True"
+            }
+          ]
+        },
+        "groupId": "single_state"
+      },
+      "recycled_single_state": {
+        "representation_ref": "representations.single_state",
+        "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
+          "value_sites.single_state_input",
+          "value_sites.block_single_state",
+          "value_sites.single_after_pair_attention",
+          "value_sites.single_after_transition",
+          "value_sites.single_state_output"
+        ],
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
+        "notes": [
+          "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_pairformer_code",
+              "role": "implementation_evidence",
+              "locator": "PairFormerIteration.__call__ with with_single=True"
+            }
+          ]
+        },
+        "groupId": "single_state"
+      },
+      "single_state_input": {
+        "representation_ref": "representations.single_state",
+        "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
+          "value_sites.single_state_input",
+          "value_sites.block_single_state",
+          "value_sites.single_after_pair_attention",
+          "value_sites.single_after_transition",
+          "value_sites.single_state_output"
+        ],
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
         "notes": [
           "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
         ],
@@ -11089,13 +11884,15 @@ export const manifest = {
       "block_single_state": {
         "representation_ref": "representations.single_state",
         "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
           "value_sites.single_state_input",
           "value_sites.block_single_state",
           "value_sites.single_after_pair_attention",
           "value_sites.single_after_transition",
           "value_sites.single_state_output"
         ],
-        "lifecycle": "refined_after_pair_track_in_each_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
         "notes": [
           "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
         ],
@@ -11114,13 +11911,15 @@ export const manifest = {
       "single_after_pair_attention": {
         "representation_ref": "representations.single_state",
         "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
           "value_sites.single_state_input",
           "value_sites.block_single_state",
           "value_sites.single_after_pair_attention",
           "value_sites.single_after_transition",
           "value_sites.single_state_output"
         ],
-        "lifecycle": "refined_after_pair_track_in_each_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
         "notes": [
           "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
         ],
@@ -11139,13 +11938,15 @@ export const manifest = {
       "single_after_transition": {
         "representation_ref": "representations.single_state",
         "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
           "value_sites.single_state_input",
           "value_sites.block_single_state",
           "value_sites.single_after_pair_attention",
           "value_sites.single_after_transition",
           "value_sites.single_state_output"
         ],
-        "lifecycle": "refined_after_pair_track_in_each_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
         "notes": [
           "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
         ],
@@ -11164,13 +11965,15 @@ export const manifest = {
       "single_state_output": {
         "representation_ref": "representations.single_state",
         "value_site_refs": [
+          "value_sites.single_init",
+          "value_sites.recycled_single_state",
           "value_sites.single_state_input",
           "value_sites.block_single_state",
           "value_sites.single_after_pair_attention",
           "value_sites.single_after_transition",
           "value_sites.single_state_output"
         ],
-        "lifecycle": "refined_after_pair_track_in_each_block",
+        "lifecycle": "recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block",
         "notes": [
           "The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block."
         ],
@@ -11242,6 +12045,75 @@ export const manifest = {
           ]
         },
         "groupId": "pair_mask"
+      },
+      "sampler_initial_positions": {
+        "representation_ref": "representations.sampler_coordinate_state",
+        "value_site_refs": [
+          "value_sites.sampler_initial_positions",
+          "value_sites.sampler_current_positions",
+          "value_sites.sampler_augmented_positions"
+        ],
+        "lifecycle": "initialized_once_then_rigidly_augmented_each_sampling_step",
+        "notes": [
+          "The sampler's updated positions return as the next step's current positions; the denoiser's clean-coordinate estimate is never the carried state."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-378 (scan carry, augmentation, and positions_out)"
+            }
+          ]
+        },
+        "groupId": "sampler_coordinates"
+      },
+      "sampler_current_positions": {
+        "representation_ref": "representations.sampler_coordinate_state",
+        "value_site_refs": [
+          "value_sites.sampler_initial_positions",
+          "value_sites.sampler_current_positions",
+          "value_sites.sampler_augmented_positions"
+        ],
+        "lifecycle": "initialized_once_then_rigidly_augmented_each_sampling_step",
+        "notes": [
+          "The sampler's updated positions return as the next step's current positions; the denoiser's clean-coordinate estimate is never the carried state."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-378 (scan carry, augmentation, and positions_out)"
+            }
+          ]
+        },
+        "groupId": "sampler_coordinates"
+      },
+      "sampler_augmented_positions": {
+        "representation_ref": "representations.sampler_coordinate_state",
+        "value_site_refs": [
+          "value_sites.sampler_initial_positions",
+          "value_sites.sampler_current_positions",
+          "value_sites.sampler_augmented_positions"
+        ],
+        "lifecycle": "initialized_once_then_rigidly_augmented_each_sampling_step",
+        "notes": [
+          "The sampler's updated positions return as the next step's current positions; the denoiser's clean-coordinate estimate is never the carried state."
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-378 (scan carry, augmentation, and positions_out)"
+            }
+          ]
+        },
+        "groupId": "sampler_coordinates"
       }
     },
     "conditioning": [
@@ -11413,7 +12285,8 @@ export const manifest = {
       "self_conditioning": "none",
       "checkpoint_notes": [
         "The released inference configuration generates five independently sampled structures, each with 200 denoiser calls; the Confidence Head evaluates each completed structure.",
-        "The sampler's schedule and update arithmetic, upstream recycling, and confidence training mini rollout are outside these boards."
+        "The source-authored sampler follows the released code's power-seven schedule, pose augmentation, churn noise, and signed update. The paper's four-pass trunk recycling is modeled separately from the 200-step sampling loop.",
+        "The confidence training mini rollout remains outside the inference boards."
       ],
       "evidence": {
         "status": "confirmed_from_code",
@@ -12280,12 +13153,12 @@ export const manifest = {
       {
         "id": "single_state_projection_produces_single_state_input",
         "from": "modules.single_state_input_projection",
-        "to": "value_sites.single_state_input",
+        "to": "value_sites.single_init",
         "kind": "state_update",
         "carries": [
           "representations.single_state"
         ],
-        "operation": "project_s_inputs_to_single_state_input",
+        "operation": "project_s_inputs_to_fixed_single_anchor",
         "evidence": {
           "status": "confirmed_from_paper",
           "refs": [
@@ -12333,6 +13206,166 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_anchor_initializes_recycle_pass",
+        "from": "value_sites.single_init",
+        "to": "value_sites.single_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "seed_single_state_from_fixed_input_anchor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 11 (s = s_init + projected previous single state)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "previous_single_enters_recycle_projection",
+        "from": "value_sites.recycled_single_state",
+        "to": "modules.single_recycle_projection",
+        "kind": "data_flow",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "normalize_and_project_previous_single_state",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "evoformer.py Evoformer.__call__ (prev_single_embedding_layer_norm and prev_single_embedding)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "single_recycle_projection_updates_input",
+        "from": "modules.single_recycle_projection",
+        "to": "value_sites.single_state_input",
+        "kind": "state_update",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "add_projected_previous_single_to_anchor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 11"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_anchor_initializes_recycle_pass",
+        "from": "value_sites.z_init",
+        "to": "value_sites.pair_recycle_seed",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "seed_pair_state_from_fixed_input_anchor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 8 (z = z_init + projected previous pair state)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "previous_pair_enters_recycle_projection",
+        "from": "value_sites.recycled_pair_state",
+        "to": "modules.pair_recycle_projection",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "normalize_and_project_previous_pair_state",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "evoformer.py Evoformer.__call__ (prev_embedding_layer_norm and prev_embedding)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pair_recycle_projection_updates_seed",
+        "from": "modules.pair_recycle_projection",
+        "to": "value_sites.pair_recycle_seed",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_projected_previous_pair_to_anchor",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 8"
+            }
+          ]
+        }
+      },
+      {
+        "id": "trunk_single_output_reenters_recycle",
+        "from": "value_sites.single_state_output",
+        "to": "value_sites.recycled_single_state",
+        "kind": "state_update",
+        "carries": [
+          "representations.single_state"
+        ],
+        "operation": "carry_single_output_to_next_trunk_pass",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:289-319 (recycle_body returns embeddings as the next pass's prev)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "trunk_pair_output_reenters_recycle",
+        "from": "value_sites.pair_state_output",
+        "to": "value_sites.recycled_pair_state",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "carry_pair_output_to_next_trunk_pass",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_model_code",
+              "role": "implementation_evidence",
+              "locator": "model.py:289-319 (recycle_body returns embeddings as the next pass's prev)"
             }
           ]
         }
@@ -12919,7 +13952,7 @@ export const manifest = {
       },
       {
         "id": "z_init_initializes_template_module_pair_state",
-        "from": "value_sites.z_init",
+        "from": "value_sites.pair_recycle_seed",
         "to": "value_sites.template_module_pair_state_read",
         "kind": "state_update",
         "carries": [
@@ -12932,7 +13965,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 16 signature ({z_ij} passed into TemplateEmbedder as its second argument); Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer. Retargeted from producing value_sites.msa_module_pair_state_read directly (module 2's original wiring, when nothing sat between z_init and the MSA module) to producing value_sites.template_module_pair_state_read, now that value_sites.z_init -> modules.template_module -> value_sites.msa_module_pair_state_read is the real chain (Algorithm 1 line 9 precedes line 10; Algorithm 16). The template module's own contribution now reaches msa_module_pair_state_read via relations.template_module_pair_output_updates_msa_module_pair_state."
+              "locator": "Supplementary Algorithm 1 lines 8-9 (pair state reconstructed from z_init plus projected previous pair output before TemplateEmbedder); Algorithm 16 signature (current z_ij enters TemplateEmbedder)"
             }
           ]
         }
@@ -14879,7 +15912,7 @@ export const manifest = {
       },
       {
         "id": "sampler_produces_step_noise_level",
-        "from": "modules.sample_diffusion",
+        "from": "modules.sampler_schedule",
         "to": "value_sites.noise_level",
         "kind": "control",
         "carries": [
@@ -14899,7 +15932,7 @@ export const manifest = {
       },
       {
         "id": "sampler_produces_step_noisy_positions",
-        "from": "modules.sample_diffusion",
+        "from": "modules.sampler_noise_injection",
         "to": "value_sites.noisy_atom_positions",
         "kind": "data_flow",
         "carries": [
@@ -14913,6 +15946,386 @@ export const manifest = {
               "source_ref": "af3_sampler_code",
               "role": "implementation_evidence",
               "locator": "diffusion_head.py:337-349 (augment current positions, add noise, call denoising_step with positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_initializer_produces_initial_positions",
+        "from": "modules.sampler_coordinate_initializer",
+        "to": "value_sites.sampler_initial_positions",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sampler_coordinate_state"
+        ],
+        "operation": "sample_initial_gaussian_atom_coordinates",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:358-365 (Gaussian initial positions times first schedule level)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_initial_positions_begin_state",
+        "from": "value_sites.sampler_initial_positions",
+        "to": "value_sites.sampler_current_positions",
+        "kind": "state_update",
+        "carries": [
+          "representations.sampler_coordinate_state"
+        ],
+        "operation": "begin_sampler_coordinate_state",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:365-373 (initial positions enter scan carry)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_current_positions_enter_pose_augmentation",
+        "from": "value_sites.sampler_current_positions",
+        "to": "modules.sampler_pose_augmentation",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sampler_coordinate_state"
+        ],
+        "operation": "randomly_rotate_and_translate_current_atom_cloud",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-339 (random_augmentation of positions)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_pose_augmentation_produces_positions",
+        "from": "modules.sampler_pose_augmentation",
+        "to": "value_sites.sampler_augmented_positions",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sampler_coordinate_state"
+        ],
+        "operation": "expose_randomly_augmented_atom_cloud",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:337-339 (positions = random_augmentation(...))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_augmented_positions_enter_noise_injection",
+        "from": "value_sites.sampler_augmented_positions",
+        "to": "modules.sampler_noise_injection",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sampler_coordinate_state"
+        ],
+        "operation": "add_step_gaussian_noise_after_pose_augmentation",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:337-349 (augmentation before noise addition)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_schedule_selects_next_level",
+        "from": "modules.sampler_schedule",
+        "to": "value_sites.sampler_next_level",
+        "kind": "control",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "select_next_power_seven_schedule_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:88-92,358-373 (noise_schedule and scan over levels[1:])"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_previous_level_enters_schedule",
+        "from": "value_sites.sampler_previous_level",
+        "to": "modules.sampler_schedule",
+        "kind": "control",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "compute_churned_t_hat_from_previous_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:339-345 (t_hat = noise_level_prev * (1 + gamma))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_initializer_sets_first_level",
+        "from": "modules.sampler_coordinate_initializer",
+        "to": "value_sites.sampler_previous_level",
+        "kind": "control",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "initialize_noise_level_carry_from_schedule_start",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:358-365 (noise_levels[0] initializes both coordinate scaling and previous-level scan carry)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_noise_level_conditions_noise_injection",
+        "from": "value_sites.noise_level",
+        "to": "modules.sampler_noise_injection",
+        "kind": "conditioning",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "set_churn_noise_variance_from_t_hat",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:342-345 (noise_scale uses t_hat)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_previous_level_conditions_noise_injection",
+        "from": "value_sites.sampler_previous_level",
+        "to": "modules.sampler_noise_injection",
+        "kind": "conditioning",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "subtract_previous_level_variance",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:344-345 (t_hat squared minus noise_level_prev squared)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_noisy_positions_enter_gradient",
+        "from": "value_sites.noisy_atom_positions",
+        "to": "modules.sampler_gradient",
+        "kind": "data_flow",
+        "carries": [
+          "representations.noisy_atom_positions"
+        ],
+        "operation": "subtract_denoised_estimate_from_noisy_positions",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_estimate_enters_gradient",
+        "from": "value_sites.denoised_atom_positions",
+        "to": "modules.sampler_gradient",
+        "kind": "data_flow",
+        "carries": [
+          "representations.denoised_atom_positions"
+        ],
+        "operation": "compute_noisy_minus_denoised_difference",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_noise_level_scales_gradient",
+        "from": "value_sites.noise_level",
+        "to": "modules.sampler_gradient",
+        "kind": "conditioning",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "divide_denoising_difference_by_t_hat",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_gradient_produces_direction",
+        "from": "modules.sampler_gradient",
+        "to": "value_sites.sampler_denoising_direction",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sampler_direction"
+        ],
+        "operation": "expose_sampler_denoising_direction",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_direction_enters_update",
+        "from": "value_sites.sampler_denoising_direction",
+        "to": "modules.sampler_update",
+        "kind": "data_flow",
+        "carries": [
+          "representations.sampler_direction"
+        ],
+        "operation": "scale_direction_by_signed_time_step",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_next_level_sets_update_step",
+        "from": "value_sites.sampler_next_level",
+        "to": "modules.sampler_update",
+        "kind": "control",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "use_next_level_minus_t_hat_as_signed_step",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_noise_level_sets_update_step",
+        "from": "value_sites.noise_level",
+        "to": "modules.sampler_update",
+        "kind": "control",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "subtract_t_hat_from_next_level",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_updated_positions_reenter_next_step",
+        "from": "value_sites.sampler_updated_positions",
+        "to": "value_sites.sampler_current_positions",
+        "kind": "state_update",
+        "carries": [
+          "representations.sampler_coordinate_state"
+        ],
+        "operation": "carry_updated_coordinates_into_next_sampler_step",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_next_level_becomes_previous_level",
+        "from": "value_sites.sampler_next_level",
+        "to": "value_sites.sampler_previous_level",
+        "kind": "state_update",
+        "carries": [
+          "representations.noise_level"
+        ],
+        "operation": "advance_sampler_noise_level_carry",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
             }
           ]
         }
@@ -14933,26 +16346,6 @@ export const manifest = {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
               "locator": "Supplementary Algorithm 20 line 2 (r_noisy = x_noisy / sqrt(t_hat^2 + sigma_data^2))"
-            }
-          ]
-        }
-      },
-      {
-        "id": "denoised_estimate_enters_sampler_update",
-        "from": "value_sites.denoised_atom_positions",
-        "to": "modules.sampler_update",
-        "kind": "data_flow",
-        "carries": [
-          "representations.denoised_atom_positions"
-        ],
-        "operation": "use_one_step_clean_coordinate_estimate",
-        "evidence": {
-          "status": "confirmed_from_code",
-          "refs": [
-            {
-              "source_ref": "af3_sampler_code",
-              "role": "implementation_evidence",
-              "locator": "diffusion_head.py:333-354 (positions_denoised enters grad, then positions_out is updated from positions_noisy)"
             }
           ]
         }
@@ -15700,7 +17093,7 @@ export const manifest = {
           "value_sites.msa_activations",
           "modules.msa_row_embedding"
         ],
-        "resolution_criteria": "Model the resampling step explicitly (likely alongside the outer per-recycle loop, Algorithm 1, which this source set does not yet model at all) if/when that recycling structure is added to this architecture.",
+        "resolution_criteria": "Add a row-subset value site and sampler operation to the MSA detail board if a later lesson needs the per-pass sample itself. The outer loop is now modeled by execution.loops.trunk_recycling, but this within-MSA row-selection detail remains deliberately unmodeled.",
         "evidence": {
           "status": "open_question",
           "refs": [
@@ -18344,7 +19737,7 @@ export const manifest = {
       "schemaVersion": "pseudocode-v0.2",
       "compilerVersion": "semantic-pseudocode-compiler-v0.3",
       "id": "alphafold3_pairformer",
-      "title": "AlphaFold 3 Pairformer Trace",
+      "title": "AlphaFold 3 Trunk Recycling and Sampling Trace",
       "rootScope": "scopes.pairformer",
       "sources": [
         {
@@ -18358,13 +19751,21 @@ export const manifest = {
         {
           "id": "single_attention_code",
           "source_ref": "af3_self_attention_code"
+        },
+        {
+          "id": "model_code",
+          "source_ref": "af3_model_code"
+        },
+        {
+          "id": "sampler_code",
+          "source_ref": "af3_sampler_code"
         }
       ],
       "scopes": [
         {
           "id": "pairformer",
           "ref": "scopes.pairformer",
-          "label": "AlphaFold 3 Pairformer",
+          "label": "AlphaFold 3 trunk and sampler",
           "kind": "program",
           "parentRef": "pseudocode",
           "subjectRef": "architecture"
@@ -18393,9 +19794,224 @@ export const manifest = {
           "kind": "module",
           "parentRef": "scopes.stack",
           "subjectRef": "modules.single_update_stage"
+        },
+        {
+          "id": "sampler",
+          "ref": "scopes.sampler",
+          "label": "200-step atom sampler",
+          "kind": "loop",
+          "parentRef": "scopes.pairformer",
+          "subjectRef": "modules.sample_diffusion",
+          "executionRef": "execution.loops.sample_diffusion"
+        },
+        {
+          "id": "sampler_update_math",
+          "ref": "scopes.sampler_update_math",
+          "label": "Fixed sampler update",
+          "kind": "module",
+          "parentRef": "scopes.sampler",
+          "subjectRef": "modules.sampler_update"
         }
       ],
       "symbols": [
+        {
+          "id": "raw_input_embedding",
+          "name": "s_inputs",
+          "type": "input",
+          "shape": "N_token x 449",
+          "representationRef": "representations.s_inputs",
+          "scale": "token",
+          "glyph": "matrix",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.s_inputs"
+        },
+        {
+          "id": "fixed_single_anchor",
+          "name": "s_init",
+          "type": "state",
+          "shape": "N_token x 384",
+          "representationRef": "representations.single_state",
+          "scale": "token",
+          "glyph": "single",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.single_init"
+        },
+        {
+          "id": "fixed_pair_anchor",
+          "name": "z_init",
+          "type": "state",
+          "shape": "N_token x N_token x 128",
+          "representationRef": "representations.pair_state",
+          "scale": "token_pair",
+          "glyph": "pair",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.z_init"
+        },
+        {
+          "id": "previous_single",
+          "name": "prev_single",
+          "type": "state",
+          "shape": "N_token x 384",
+          "representationRef": "representations.single_state",
+          "scale": "token",
+          "glyph": "single",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.recycled_single_state"
+        },
+        {
+          "id": "previous_pair",
+          "name": "prev_pair",
+          "type": "state",
+          "shape": "N_token x N_token x 128",
+          "representationRef": "representations.pair_state",
+          "scale": "token_pair",
+          "glyph": "pair",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.recycled_pair_state"
+        },
+        {
+          "id": "pair_seed",
+          "name": "z_seed",
+          "type": "state",
+          "shape": "N_token x N_token x 128",
+          "representationRef": "representations.pair_state",
+          "scale": "token_pair",
+          "glyph": "pair",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.pair_recycle_seed"
+        },
+        {
+          "id": "pair_after_template",
+          "name": "z_template",
+          "type": "state",
+          "shape": "N_token x N_token x 128",
+          "representationRef": "representations.pair_state",
+          "scale": "token_pair",
+          "glyph": "pair",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.msa_module_pair_state_read"
+        },
+        {
+          "id": "final_sample",
+          "name": "x_sample",
+          "type": "output",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.final_sampled_atom_positions",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.final_sampled_atom_positions"
+        },
+        {
+          "id": "sampler_initial",
+          "name": "x_initial",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.sampler_coordinate_state",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_initial_positions"
+        },
+        {
+          "id": "sampler_current",
+          "name": "x_current",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.sampler_coordinate_state",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_current_positions"
+        },
+        {
+          "id": "sampler_augmented",
+          "name": "x_augmented",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.sampler_coordinate_state",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_augmented_positions"
+        },
+        {
+          "id": "sampler_noisy",
+          "name": "x_noisy",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.noisy_atom_positions",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.noisy_atom_positions"
+        },
+        {
+          "id": "sampler_estimate",
+          "name": "x_estimate",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.denoised_atom_positions",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.denoised_atom_positions"
+        },
+        {
+          "id": "sampler_direction_symbol",
+          "name": "direction",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.sampler_direction",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_denoising_direction"
+        },
+        {
+          "id": "sampler_updated",
+          "name": "x_next",
+          "type": "state",
+          "shape": "N_atom x 3",
+          "representationRef": "representations.sampler_updated_positions",
+          "scale": "atom",
+          "glyph": "coordinates",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_updated_positions"
+        },
+        {
+          "id": "sampler_previous_noise",
+          "name": "t_previous",
+          "type": "control",
+          "shape": "scalar",
+          "representationRef": "representations.noise_level",
+          "scale": "structure",
+          "glyph": "scalar",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_previous_level"
+        },
+        {
+          "id": "sampler_next_noise",
+          "name": "t_next",
+          "type": "control",
+          "shape": "scalar",
+          "representationRef": "representations.noise_level",
+          "scale": "structure",
+          "glyph": "scalar",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.sampler_next_level"
+        },
+        {
+          "id": "sampler_t_hat",
+          "name": "t_hat",
+          "type": "control",
+          "shape": "scalar",
+          "representationRef": "representations.noise_level",
+          "scale": "structure",
+          "glyph": "scalar",
+          "scopeRef": "scopes.sampler",
+          "architectureRef": "value_sites.noise_level"
+        },
         {
           "id": "input_single",
           "name": "s",
@@ -18740,9 +20356,305 @@ export const manifest = {
       ],
       "lines": [
         {
+          "id": "seed_pair_recycle",
+          "text": "z_seed = z_init + ProjectPairRecycle(prev_pair)",
+          "comment": "At each pass, restart from the fixed pair anchor and add a normalized projection of the previous pass; prev_pair is zero for the first pass.",
+          "refs": "model.py:289-319, Evoformer.__call__ prev_embedding",
+          "sourceRefs": [
+            {
+              "source": "model_code",
+              "locator": "model.py:289-319"
+            },
+            {
+              "source": "evoformer_code",
+              "locator": "Evoformer.__call__ prev_embedding"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "modules.pair_recycle_projection",
+          "architectureRefs": [
+            "modules.pair_recycle_projection",
+            "execution.loops.trunk_recycling",
+            "relations.pair_anchor_initializes_recycle_pass",
+            "relations.pair_recycle_projection_updates_seed"
+          ],
+          "operation": "seed_pair_state_for_recycle",
+          "inputs": [
+            "fixed_pair_anchor",
+            "previous_pair"
+          ],
+          "outputs": [
+            "pair_seed"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "z_seed",
+              "access": "write",
+              "symbolId": "pair_seed",
+              "architectureRef": "value_sites.pair_recycle_seed",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 6
+                }
+              ]
+            },
+            {
+              "lexeme": "z_init",
+              "access": "read",
+              "symbolId": "fixed_pair_anchor",
+              "architectureRef": "value_sites.z_init",
+              "occurrences": [
+                {
+                  "start": 9,
+                  "end": 15
+                }
+              ]
+            },
+            {
+              "lexeme": "ProjectPairRecycle",
+              "access": "call",
+              "architectureRef": "modules.pair_recycle_projection",
+              "occurrences": [
+                {
+                  "start": 18,
+                  "end": 36
+                }
+              ]
+            },
+            {
+              "lexeme": "prev_pair",
+              "access": "read",
+              "symbolId": "previous_pair",
+              "architectureRef": "value_sites.recycled_pair_state",
+              "occurrences": [
+                {
+                  "start": 37,
+                  "end": 46
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "run_template_per_recycle",
+          "text": "z_template = TemplateEmbedder(z_seed, template_features)",
+          "refs": "Evoformer.__call__ _embed_template_pair",
+          "sourceRefs": [
+            {
+              "source": "evoformer_code",
+              "locator": "Evoformer.__call__ _embed_template_pair"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "modules.template_module",
+          "architectureRefs": [
+            "modules.template_module",
+            "execution.loops.trunk_recycling"
+          ],
+          "operation": "add_template_pair_evidence_each_recycle",
+          "inputs": [
+            "pair_seed"
+          ],
+          "outputs": [
+            "pair_after_template"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "z_template",
+              "access": "write",
+              "symbolId": "pair_after_template",
+              "architectureRef": "value_sites.msa_module_pair_state_read",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 10
+                }
+              ]
+            },
+            {
+              "lexeme": "TemplateEmbedder",
+              "access": "call",
+              "architectureRef": "modules.template_module",
+              "occurrences": [
+                {
+                  "start": 13,
+                  "end": 29
+                }
+              ]
+            },
+            {
+              "lexeme": "z_seed",
+              "access": "read",
+              "symbolId": "pair_seed",
+              "architectureRef": "value_sites.pair_recycle_seed",
+              "occurrences": [
+                {
+                  "start": 30,
+                  "end": 36
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "run_msa_per_recycle",
+          "text": "z = MsaModule(z_template, s_inputs, msa_features)",
+          "comment": "MSA rows are processed anew within each trunk pass; only the pair state continues into the Pairformer.",
+          "refs": "Evoformer.__call__ _embed_process_msa",
+          "sourceRefs": [
+            {
+              "source": "evoformer_code",
+              "locator": "Evoformer.__call__ _embed_process_msa"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "modules.msa_module",
+          "architectureRefs": [
+            "modules.msa_module",
+            "execution.loops.trunk_recycling"
+          ],
+          "operation": "add_msa_pair_evidence_each_recycle",
+          "inputs": [
+            "pair_after_template",
+            "raw_input_embedding"
+          ],
+          "outputs": [
+            "input_pair"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "z",
+              "access": "write",
+              "symbolId": "input_pair",
+              "tex": "z",
+              "architectureRef": "value_sites.pair_state_input",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 1
+                }
+              ]
+            },
+            {
+              "lexeme": "MsaModule",
+              "access": "call",
+              "architectureRef": "modules.msa_module",
+              "occurrences": [
+                {
+                  "start": 4,
+                  "end": 13
+                }
+              ]
+            },
+            {
+              "lexeme": "z_template",
+              "access": "read",
+              "symbolId": "pair_after_template",
+              "architectureRef": "value_sites.msa_module_pair_state_read",
+              "occurrences": [
+                {
+                  "start": 14,
+                  "end": 24
+                }
+              ]
+            },
+            {
+              "lexeme": "s_inputs",
+              "access": "read",
+              "symbolId": "raw_input_embedding",
+              "architectureRef": "value_sites.s_inputs",
+              "occurrences": [
+                {
+                  "start": 26,
+                  "end": 34
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "seed_single_recycle",
+          "text": "s = s_init + ProjectSingleRecycle(prev_single)",
+          "comment": "The single state also restarts from its fixed input-derived anchor on each pass.",
+          "refs": "Evoformer.__call__ prev_single_embedding",
+          "sourceRefs": [
+            {
+              "source": "evoformer_code",
+              "locator": "Evoformer.__call__ prev_single_embedding"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "modules.single_recycle_projection",
+          "architectureRefs": [
+            "modules.single_recycle_projection",
+            "execution.loops.trunk_recycling",
+            "relations.single_anchor_initializes_recycle_pass",
+            "relations.single_recycle_projection_updates_input"
+          ],
+          "operation": "seed_single_state_for_recycle",
+          "inputs": [
+            "fixed_single_anchor",
+            "previous_single"
+          ],
+          "outputs": [
+            "input_single"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "s",
+              "access": "write",
+              "symbolId": "input_single",
+              "tex": "s",
+              "architectureRef": "value_sites.single_state_input",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 1
+                }
+              ]
+            },
+            {
+              "lexeme": "s_init",
+              "access": "read",
+              "symbolId": "fixed_single_anchor",
+              "architectureRef": "value_sites.single_init",
+              "occurrences": [
+                {
+                  "start": 4,
+                  "end": 10
+                }
+              ]
+            },
+            {
+              "lexeme": "ProjectSingleRecycle",
+              "access": "call",
+              "architectureRef": "modules.single_recycle_projection",
+              "occurrences": [
+                {
+                  "start": 13,
+                  "end": 33
+                }
+              ]
+            },
+            {
+              "lexeme": "prev_single",
+              "access": "read",
+              "symbolId": "previous_single",
+              "architectureRef": "value_sites.recycled_single_state",
+              "occurrences": [
+                {
+                  "start": 34,
+                  "end": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
           "id": "run_pairformer",
           "text": "s_trunk, z_trunk = PairformerStack(s, z, token_mask, pair_mask)",
-          "comment": "The component boundary starts after AF3 has already embedded the token and pair inputs.",
+          "comment": "The same 48-block stack runs after Template and MSA in every trunk pass.",
           "refs": "pairformer_stack application",
           "sourceRefs": [
             {
@@ -18853,6 +20765,1031 @@ export const manifest = {
                 {
                   "start": 53,
                   "end": 62
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "carry_trunk_single",
+          "text": "prev_single = s_trunk",
+          "refs": "model.py:289-319 recycle_body",
+          "sourceRefs": [
+            {
+              "source": "model_code",
+              "locator": "model.py:289-319 recycle_body"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "relations.trunk_single_output_reenters_recycle",
+          "architectureRefs": [
+            "relations.trunk_single_output_reenters_recycle",
+            "execution.loops.trunk_recycling"
+          ],
+          "operation": "carry_single_to_next_recycle",
+          "inputs": [
+            "output_single"
+          ],
+          "outputs": [
+            "previous_single"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "prev_single",
+              "access": "write",
+              "symbolId": "previous_single",
+              "architectureRef": "value_sites.recycled_single_state",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 11
+                }
+              ]
+            },
+            {
+              "lexeme": "s_trunk",
+              "access": "read",
+              "symbolId": "output_single",
+              "tex": "s^{trunk}",
+              "architectureRef": "value_sites.single_state_output",
+              "occurrences": [
+                {
+                  "start": 14,
+                  "end": 21
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "carry_trunk_pair",
+          "text": "prev_pair = z_trunk",
+          "refs": "model.py:289-319 recycle_body",
+          "sourceRefs": [
+            {
+              "source": "model_code",
+              "locator": "model.py:289-319 recycle_body"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "relations.trunk_pair_output_reenters_recycle",
+          "architectureRefs": [
+            "relations.trunk_pair_output_reenters_recycle",
+            "execution.loops.trunk_recycling"
+          ],
+          "operation": "carry_pair_to_next_recycle",
+          "inputs": [
+            "output_pair"
+          ],
+          "outputs": [
+            "previous_pair"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "prev_pair",
+              "access": "write",
+              "symbolId": "previous_pair",
+              "architectureRef": "value_sites.recycled_pair_state",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 9
+                }
+              ]
+            },
+            {
+              "lexeme": "z_trunk",
+              "access": "read",
+              "symbolId": "output_pair",
+              "tex": "z^{trunk}",
+              "architectureRef": "value_sites.pair_state_output",
+              "occurrences": [
+                {
+                  "start": 12,
+                  "end": 19
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "run_diffusion_after_trunk",
+          "text": "x_sample = SampleDiffusion(s_inputs, s_trunk, z_trunk)",
+          "comment": "Sampling begins only after the final trunk pass; the trunk outputs remain fixed for all 200 denoising calls.",
+          "refs": "model.py:321-325, sample",
+          "sourceRefs": [
+            {
+              "source": "model_code",
+              "locator": "model.py:321-325"
+            },
+            {
+              "source": "sampler_code",
+              "locator": "sample"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "modules.sample_diffusion",
+          "calleeScopeRef": "scopes.sampler",
+          "architectureRefs": [
+            "modules.sample_diffusion",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "sample_atoms_after_trunk_recycling",
+          "inputs": [
+            "raw_input_embedding",
+            "output_single",
+            "output_pair"
+          ],
+          "outputs": [
+            "final_sample"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_sample",
+              "access": "write",
+              "symbolId": "final_sample",
+              "architectureRef": "value_sites.final_sampled_atom_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 8
+                }
+              ]
+            },
+            {
+              "lexeme": "SampleDiffusion",
+              "access": "call",
+              "architectureRef": "modules.sample_diffusion",
+              "occurrences": [
+                {
+                  "start": 11,
+                  "end": 26
+                }
+              ]
+            },
+            {
+              "lexeme": "s_inputs",
+              "access": "read",
+              "symbolId": "raw_input_embedding",
+              "architectureRef": "value_sites.s_inputs",
+              "occurrences": [
+                {
+                  "start": 27,
+                  "end": 35
+                }
+              ]
+            },
+            {
+              "lexeme": "s_trunk",
+              "access": "read",
+              "symbolId": "output_single",
+              "tex": "s^{trunk}",
+              "architectureRef": "value_sites.single_state_output",
+              "occurrences": [
+                {
+                  "start": 37,
+                  "end": 44
+                }
+              ]
+            },
+            {
+              "lexeme": "z_trunk",
+              "access": "read",
+              "symbolId": "output_pair",
+              "tex": "z^{trunk}",
+              "architectureRef": "value_sites.pair_state_output",
+              "occurrences": [
+                {
+                  "start": 46,
+                  "end": 53
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "initialize_sampler",
+          "text": "x_initial, t_previous = InitializeGaussianSampler()",
+          "comment": "Draw each initial atom cloud independently and scale it by the first scheduled noise level.",
+          "refs": "diffusion_head.py:358-365",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:358-365"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "modules.sampler_coordinate_initializer",
+          "architectureRefs": [
+            "modules.sampler_coordinate_initializer",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "initialize_gaussian_coordinate_state",
+          "inputs": [
+
+          ],
+          "outputs": [
+            "sampler_initial",
+            "sampler_previous_noise"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_initial",
+              "access": "write",
+              "symbolId": "sampler_initial",
+              "architectureRef": "value_sites.sampler_initial_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 9
+                }
+              ]
+            },
+            {
+              "lexeme": "t_previous",
+              "access": "write",
+              "symbolId": "sampler_previous_noise",
+              "architectureRef": "value_sites.sampler_previous_level",
+              "occurrences": [
+                {
+                  "start": 11,
+                  "end": 21
+                }
+              ]
+            },
+            {
+              "lexeme": "InitializeGaussianSampler",
+              "access": "call",
+              "architectureRef": "modules.sampler_coordinate_initializer",
+              "occurrences": [
+                {
+                  "start": 24,
+                  "end": 49
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "begin_sampler_state",
+          "text": "x_current = x_initial",
+          "refs": "diffusion_head.py:365-373",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:365-373"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "relations.sampler_initial_positions_begin_state",
+          "architectureRefs": [
+            "relations.sampler_initial_positions_begin_state"
+          ],
+          "operation": "begin_sampler_coordinate_carry",
+          "inputs": [
+            "sampler_initial"
+          ],
+          "outputs": [
+            "sampler_current"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_current",
+              "access": "write",
+              "symbolId": "sampler_current",
+              "architectureRef": "value_sites.sampler_current_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 9
+                }
+              ]
+            },
+            {
+              "lexeme": "x_initial",
+              "access": "read",
+              "symbolId": "sampler_initial",
+              "architectureRef": "value_sites.sampler_initial_positions",
+              "occurrences": [
+                {
+                  "start": 12,
+                  "end": 21
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "select_sampler_level",
+          "text": "t_next, t_hat = SelectScheduleLevels(t_previous)",
+          "comment": "The next power-seven level gates churn; t_hat is the previous level multiplied by 1 + gamma.",
+          "refs": "diffusion_head.py:88-92,339-345,358-373",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:88-92,339-345,358-373"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "modules.sampler_schedule",
+          "architectureRefs": [
+            "modules.sampler_schedule",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "select_noise_level_and_churn",
+          "inputs": [
+            "sampler_previous_noise"
+          ],
+          "outputs": [
+            "sampler_next_noise",
+            "sampler_t_hat"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "t_next",
+              "access": "write",
+              "symbolId": "sampler_next_noise",
+              "architectureRef": "value_sites.sampler_next_level",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 6
+                }
+              ]
+            },
+            {
+              "lexeme": "t_hat",
+              "access": "write",
+              "symbolId": "sampler_t_hat",
+              "architectureRef": "value_sites.noise_level",
+              "occurrences": [
+                {
+                  "start": 8,
+                  "end": 13
+                }
+              ]
+            },
+            {
+              "lexeme": "SelectScheduleLevels",
+              "access": "call",
+              "architectureRef": "modules.sampler_schedule",
+              "occurrences": [
+                {
+                  "start": 16,
+                  "end": 36
+                }
+              ]
+            },
+            {
+              "lexeme": "t_previous",
+              "access": "read",
+              "symbolId": "sampler_previous_noise",
+              "architectureRef": "value_sites.sampler_previous_level",
+              "occurrences": [
+                {
+                  "start": 37,
+                  "end": 47
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "augment_sampler_pose",
+          "text": "x_augmented = RandomPose(x_current)",
+          "refs": "diffusion_head.py:333-339",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:333-339"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "modules.sampler_pose_augmentation",
+          "architectureRefs": [
+            "modules.sampler_pose_augmentation",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "randomly_rotate_and_translate_current_cloud",
+          "inputs": [
+            "sampler_current"
+          ],
+          "outputs": [
+            "sampler_augmented"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_augmented",
+              "access": "write",
+              "symbolId": "sampler_augmented",
+              "architectureRef": "value_sites.sampler_augmented_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 11
+                }
+              ]
+            },
+            {
+              "lexeme": "RandomPose",
+              "access": "call",
+              "architectureRef": "modules.sampler_pose_augmentation",
+              "occurrences": [
+                {
+                  "start": 14,
+                  "end": 24
+                }
+              ]
+            },
+            {
+              "lexeme": "x_current",
+              "access": "read",
+              "symbolId": "sampler_current",
+              "architectureRef": "value_sites.sampler_current_positions",
+              "occurrences": [
+                {
+                  "start": 25,
+                  "end": 34
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "inject_sampler_noise",
+          "text": "x_noisy = AddChurnNoise(x_augmented, t_previous, t_hat)",
+          "comment": "Noise scale is 1.003 times the square root of t_hat squared minus t_previous squared.",
+          "refs": "diffusion_head.py:344-349",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:344-349"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "modules.sampler_noise_injection",
+          "architectureRefs": [
+            "modules.sampler_noise_injection",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "inject_churn_gaussian_noise",
+          "inputs": [
+            "sampler_augmented",
+            "sampler_previous_noise",
+            "sampler_t_hat"
+          ],
+          "outputs": [
+            "sampler_noisy"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_noisy",
+              "access": "write",
+              "symbolId": "sampler_noisy",
+              "architectureRef": "value_sites.noisy_atom_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 7
+                }
+              ]
+            },
+            {
+              "lexeme": "AddChurnNoise",
+              "access": "call",
+              "architectureRef": "modules.sampler_noise_injection",
+              "occurrences": [
+                {
+                  "start": 10,
+                  "end": 23
+                }
+              ]
+            },
+            {
+              "lexeme": "x_augmented",
+              "access": "read",
+              "symbolId": "sampler_augmented",
+              "architectureRef": "value_sites.sampler_augmented_positions",
+              "occurrences": [
+                {
+                  "start": 24,
+                  "end": 35
+                }
+              ]
+            },
+            {
+              "lexeme": "t_previous",
+              "access": "read",
+              "symbolId": "sampler_previous_noise",
+              "architectureRef": "value_sites.sampler_previous_level",
+              "occurrences": [
+                {
+                  "start": 37,
+                  "end": 47
+                }
+              ]
+            },
+            {
+              "lexeme": "t_hat",
+              "access": "read",
+              "symbolId": "sampler_t_hat",
+              "architectureRef": "value_sites.noise_level",
+              "occurrences": [
+                {
+                  "start": 49,
+                  "end": 54
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "run_one_denoiser_call",
+          "text": "x_estimate = DiffusionModule(x_noisy, t_hat)",
+          "comment": "This is a clean-coordinate estimate for one step, not the sampler's next state.",
+          "refs": "diffusion_head.py:349",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:349"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "modules.diffusion_module",
+          "architectureRefs": [
+            "modules.diffusion_module",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "estimate_denoised_atom_positions",
+          "inputs": [
+            "sampler_noisy",
+            "sampler_t_hat"
+          ],
+          "outputs": [
+            "sampler_estimate"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_estimate",
+              "access": "write",
+              "symbolId": "sampler_estimate",
+              "architectureRef": "value_sites.denoised_atom_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 10
+                }
+              ]
+            },
+            {
+              "lexeme": "DiffusionModule",
+              "access": "call",
+              "architectureRef": "modules.diffusion_module",
+              "occurrences": [
+                {
+                  "start": 13,
+                  "end": 28
+                }
+              ]
+            },
+            {
+              "lexeme": "x_noisy",
+              "access": "read",
+              "symbolId": "sampler_noisy",
+              "architectureRef": "value_sites.noisy_atom_positions",
+              "occurrences": [
+                {
+                  "start": 29,
+                  "end": 36
+                }
+              ]
+            },
+            {
+              "lexeme": "t_hat",
+              "access": "read",
+              "symbolId": "sampler_t_hat",
+              "architectureRef": "value_sites.noise_level",
+              "occurrences": [
+                {
+                  "start": 38,
+                  "end": 43
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "compute_sampler_direction",
+          "text": "direction = (x_noisy - x_estimate) / t_hat",
+          "refs": "diffusion_head.py:349-350",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:349-350"
+            }
+          ],
+          "scopeRef": "scopes.sampler_update_math",
+          "statementRef": "modules.sampler_gradient",
+          "architectureRefs": [
+            "modules.sampler_gradient",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "compute_denoising_direction",
+          "inputs": [
+            "sampler_noisy",
+            "sampler_estimate",
+            "sampler_t_hat"
+          ],
+          "outputs": [
+            "sampler_direction_symbol"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "direction",
+              "access": "write",
+              "symbolId": "sampler_direction_symbol",
+              "architectureRef": "value_sites.sampler_denoising_direction",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 9
+                }
+              ]
+            },
+            {
+              "lexeme": "x_noisy",
+              "access": "read",
+              "symbolId": "sampler_noisy",
+              "architectureRef": "value_sites.noisy_atom_positions",
+              "occurrences": [
+                {
+                  "start": 13,
+                  "end": 20
+                }
+              ]
+            },
+            {
+              "lexeme": "x_estimate",
+              "access": "read",
+              "symbolId": "sampler_estimate",
+              "architectureRef": "value_sites.denoised_atom_positions",
+              "occurrences": [
+                {
+                  "start": 23,
+                  "end": 33
+                }
+              ]
+            },
+            {
+              "lexeme": "t_hat",
+              "access": "read",
+              "symbolId": "sampler_t_hat",
+              "architectureRef": "value_sites.noise_level",
+              "occurrences": [
+                {
+                  "start": 37,
+                  "end": 42
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "run_fixed_sampler_update",
+          "text": "x_next = FixedSamplerUpdate(x_noisy, x_estimate, t_hat, t_next)",
+          "refs": "diffusion_head.py:349-354",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:349-354"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "modules.sampler_update",
+          "calleeScopeRef": "scopes.sampler_update_math",
+          "architectureRefs": [
+            "modules.sampler_update",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "apply_fixed_sampler_update",
+          "inputs": [
+            "sampler_noisy",
+            "sampler_estimate",
+            "sampler_t_hat",
+            "sampler_next_noise"
+          ],
+          "outputs": [
+            "sampler_updated"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_next",
+              "access": "write",
+              "symbolId": "sampler_updated",
+              "architectureRef": "value_sites.sampler_updated_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 6
+                }
+              ]
+            },
+            {
+              "lexeme": "FixedSamplerUpdate",
+              "access": "call",
+              "architectureRef": "modules.sampler_update",
+              "occurrences": [
+                {
+                  "start": 9,
+                  "end": 27
+                }
+              ]
+            },
+            {
+              "lexeme": "x_noisy",
+              "access": "read",
+              "symbolId": "sampler_noisy",
+              "architectureRef": "value_sites.noisy_atom_positions",
+              "occurrences": [
+                {
+                  "start": 28,
+                  "end": 35
+                }
+              ]
+            },
+            {
+              "lexeme": "x_estimate",
+              "access": "read",
+              "symbolId": "sampler_estimate",
+              "architectureRef": "value_sites.denoised_atom_positions",
+              "occurrences": [
+                {
+                  "start": 37,
+                  "end": 47
+                }
+              ]
+            },
+            {
+              "lexeme": "t_hat",
+              "access": "read",
+              "symbolId": "sampler_t_hat",
+              "architectureRef": "value_sites.noise_level",
+              "occurrences": [
+                {
+                  "start": 49,
+                  "end": 54
+                }
+              ]
+            },
+            {
+              "lexeme": "t_next",
+              "access": "read",
+              "symbolId": "sampler_next_noise",
+              "architectureRef": "value_sites.sampler_next_level",
+              "occurrences": [
+                {
+                  "start": 56,
+                  "end": 62
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "apply_sampler_update",
+          "text": "x_next = x_noisy + 1.5 * (t_next - t_hat) * direction",
+          "comment": "The signed level difference is negative, so this step moves toward the denoiser estimate.",
+          "refs": "diffusion_head.py:350-354",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:350-354"
+            }
+          ],
+          "scopeRef": "scopes.sampler_update_math",
+          "statementRef": "modules.sampler_update",
+          "architectureRefs": [
+            "modules.sampler_update",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "advance_sampler_coordinates",
+          "inputs": [
+            "sampler_noisy",
+            "sampler_next_noise",
+            "sampler_t_hat",
+            "sampler_direction_symbol"
+          ],
+          "outputs": [
+            "sampler_updated"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_next",
+              "access": "write",
+              "symbolId": "sampler_updated",
+              "architectureRef": "value_sites.sampler_updated_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 6
+                }
+              ]
+            },
+            {
+              "lexeme": "x_noisy",
+              "access": "read",
+              "symbolId": "sampler_noisy",
+              "architectureRef": "value_sites.noisy_atom_positions",
+              "occurrences": [
+                {
+                  "start": 9,
+                  "end": 16
+                }
+              ]
+            },
+            {
+              "lexeme": "t_next",
+              "access": "read",
+              "symbolId": "sampler_next_noise",
+              "architectureRef": "value_sites.sampler_next_level",
+              "occurrences": [
+                {
+                  "start": 26,
+                  "end": 32
+                }
+              ]
+            },
+            {
+              "lexeme": "t_hat",
+              "access": "read",
+              "symbolId": "sampler_t_hat",
+              "architectureRef": "value_sites.noise_level",
+              "occurrences": [
+                {
+                  "start": 35,
+                  "end": 40
+                }
+              ]
+            },
+            {
+              "lexeme": "direction",
+              "access": "read",
+              "symbolId": "sampler_direction_symbol",
+              "architectureRef": "value_sites.sampler_denoising_direction",
+              "occurrences": [
+                {
+                  "start": 44,
+                  "end": 53
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "carry_sampler_coordinates",
+          "text": "x_current = x_next",
+          "refs": "diffusion_head.py:354,373",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:354,373"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "relations.sampler_updated_positions_reenter_next_step",
+          "architectureRefs": [
+            "relations.sampler_updated_positions_reenter_next_step",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "carry_coordinates_to_next_step",
+          "inputs": [
+            "sampler_updated"
+          ],
+          "outputs": [
+            "sampler_current"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_current",
+              "access": "write",
+              "symbolId": "sampler_current",
+              "architectureRef": "value_sites.sampler_current_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 9
+                }
+              ]
+            },
+            {
+              "lexeme": "x_next",
+              "access": "read",
+              "symbolId": "sampler_updated",
+              "architectureRef": "value_sites.sampler_updated_positions",
+              "occurrences": [
+                {
+                  "start": 12,
+                  "end": 18
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "carry_sampler_level",
+          "text": "t_previous = t_next",
+          "refs": "diffusion_head.py:354,373",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:354,373"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "relations.sampler_next_level_becomes_previous_level",
+          "architectureRefs": [
+            "relations.sampler_next_level_becomes_previous_level",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "carry_noise_level_to_next_step",
+          "inputs": [
+            "sampler_next_noise"
+          ],
+          "outputs": [
+            "sampler_previous_noise"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "t_previous",
+              "access": "write",
+              "symbolId": "sampler_previous_noise",
+              "architectureRef": "value_sites.sampler_previous_level",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 10
+                }
+              ]
+            },
+            {
+              "lexeme": "t_next",
+              "access": "read",
+              "symbolId": "sampler_next_noise",
+              "architectureRef": "value_sites.sampler_next_level",
+              "occurrences": [
+                {
+                  "start": 13,
+                  "end": 19
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "complete_diffusion_sample",
+          "text": "x_sample = x_next",
+          "refs": "diffusion_head.py:373-378",
+          "sourceRefs": [
+            {
+              "source": "sampler_code",
+              "locator": "diffusion_head.py:373-378"
+            }
+          ],
+          "scopeRef": "scopes.sampler",
+          "statementRef": "relations.last_sampler_update_becomes_final_sample",
+          "architectureRefs": [
+            "relations.last_sampler_update_becomes_final_sample",
+            "execution.loops.sample_diffusion"
+          ],
+          "operation": "return_last_updated_coordinate_state",
+          "inputs": [
+            "sampler_updated"
+          ],
+          "outputs": [
+            "final_sample"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "x_sample",
+              "access": "write",
+              "symbolId": "final_sample",
+              "architectureRef": "value_sites.final_sampled_atom_positions",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 8
+                }
+              ]
+            },
+            {
+              "lexeme": "x_next",
+              "access": "read",
+              "symbolId": "sampler_updated",
+              "architectureRef": "value_sites.sampler_updated_positions",
+              "occurrences": [
+                {
+                  "start": 11,
+                  "end": 17
                 }
               ]
             }
@@ -19999,16 +22936,41 @@ export const manifest = {
       {
         "id": "pairformer_overview",
         "title": "AlphaFold 3",
-        "summary": "Input features, templates, and MSA evidence build the single and pair representations for the Pairformer. A diffusion sampler repeatedly calls the one-step denoiser to produce a completed structure; the Confidence Head then judges that specific sample through four predicted confidence outputs.",
+        "summary": "Fixed input features seed four paper-setting trunk passes. Each pass adds projected previous single and pair states, then runs Template, MSA, and Pairformer with shared weights. A separate 200-step diffusion sampler produces coordinates before the Confidence Head judges the completed sample.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
           "columns": 19,
-          "rows": 9,
+          "rows": 10,
           "column_sizing": "content",
           "col_gap": 36,
           "row_gap": 24
         },
+        "regions": [
+          {
+            "id": "one_trunk_recycle",
+            "kind": "repeat",
+            "execution_ref": "execution.loops.trunk_recycling",
+            "label": "one trunk pass",
+            "node_ids": [
+              "template_module",
+              "msa_module",
+              "pairformer_stack",
+              "single_recycle_projection",
+              "pair_recycle_projection",
+              "recycled_single_state",
+              "recycled_pair_state",
+              "single_state_input",
+              "pair_recycle_seed",
+              "single_state_output",
+              "pair_state_output"
+            ],
+            "iteration_relation_refs": [
+              "relations.trunk_single_output_reenters_recycle",
+              "relations.trunk_pair_output_reenters_recycle"
+            ]
+          }
+        ],
         "nodes": [
           {
             "id": "atom_reference_features_input",
@@ -20090,6 +23052,86 @@ export const manifest = {
             "density": "micro",
             "col": 4,
             "row": 5
+          },
+          {
+            "id": "single_init",
+            "ref": "value_sites.single_init",
+            "label": "fixed single anchor",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 3
+          },
+          {
+            "id": "z_init",
+            "ref": "value_sites.z_init",
+            "label": "fixed pair anchor",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 5
+          },
+          {
+            "id": "pair_recycle_seed",
+            "ref": "value_sites.pair_recycle_seed",
+            "label": "this pass's pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 4
+          },
+          {
+            "id": "recycled_single_state",
+            "ref": "value_sites.recycled_single_state",
+            "label": "previous singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 12,
+            "row": 9
+          },
+          {
+            "id": "recycled_pair_state",
+            "ref": "value_sites.recycled_pair_state",
+            "label": "previous pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 12,
+            "row": 10
+          },
+          {
+            "id": "single_recycle_projection",
+            "ref": "modules.single_recycle_projection",
+            "label": "project previous singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 10,
+            "row": 2
+          },
+          {
+            "id": "pair_recycle_projection",
+            "ref": "modules.pair_recycle_projection",
+            "label": "project previous pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 10,
+            "row": 8
+          },
+          {
+            "id": "single_state_input",
+            "ref": "value_sites.single_state_input",
+            "label": "this pass's singles",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 10,
+            "row": 3
           },
           {
             "id": "token_mask_input",
@@ -20413,13 +23455,7 @@ export const manifest = {
         ],
         "elide": [
           {
-            "ref": "value_sites.single_state_input"
-          },
-          {
             "ref": "value_sites.pair_state_input"
-          },
-          {
-            "ref": "value_sites.z_init"
           },
           {
             "ref": "value_sites.relative_position_encoding_output"
@@ -20998,26 +24034,70 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_184d03e2fb95",
-            "from": "pair_state_input_projection",
-            "to": "template_module",
-            "projection": "contracted",
+            "id": "projection_55d61b80f1e2",
+            "from": "pair_recycle_projection",
+            "to": "pair_recycle_seed",
+            "projection": "direct",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
-              "relations.pair_state_projection_produces_z_init",
-              "relations.z_init_initializes_template_module_pair_state"
+              "relations.pair_recycle_projection_updates_seed"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.pair_state_projection_produces_z_init"
-              },
+                "relation_ref": "relations.pair_recycle_projection_updates_seed"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7d6aef7a0b29",
+            "from": "pair_recycle_seed",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.z_init_initializes_template_module_pair_state"
+            ],
+            "provenance_hops": [
               {
                 "relation_ref": "relations.z_init_initializes_template_module_pair_state"
               }
             ],
             "hidden_refs": [
-              "value_sites.z_init"
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_2f82a591dd8a",
+            "from": "pair_state_input_projection",
+            "to": "z_init",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_state_projection_produces_z_init"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_projection_produces_z_init"
+              }
+            ],
+            "hidden_refs": [
+
             ],
             "carries": [
               "representations.pair_state"
@@ -21038,6 +24118,30 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.trunk_pair_enters_confidence_pair_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_bbadb0682d12",
+            "from": "pair_state_output",
+            "to": "recycled_pair_state",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_pair_output_reenters_recycle"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_pair_output_reenters_recycle"
               }
             ],
             "hidden_refs": [
@@ -21153,6 +24257,54 @@ export const manifest = {
             ],
             "carries": [
               "representations.profile"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a4256015a892",
+            "from": "recycled_pair_state",
+            "to": "pair_recycle_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.previous_pair_enters_recycle_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.previous_pair_enters_recycle_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_21d2550a686c",
+            "from": "recycled_single_state",
+            "to": "single_recycle_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.previous_single_enters_recycle_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.previous_single_enters_recycle_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
             ],
             "presentation": {
             }
@@ -21402,26 +24554,94 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_a09034493b88",
-            "from": "single_state_input_projection",
-            "to": "pairformer_stack",
-            "projection": "contracted",
+            "id": "projection_ebadc5831a85",
+            "from": "single_init",
+            "to": "single_state_input",
+            "projection": "direct",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
-              "relations.single_state_projection_produces_single_state_input",
-              "relations.input_single_state_initializes_block_single_state"
+              "relations.single_anchor_initializes_recycle_pass"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.single_state_projection_produces_single_state_input"
-              },
+                "relation_ref": "relations.single_anchor_initializes_recycle_pass"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7af392f26848",
+            "from": "single_recycle_projection",
+            "to": "single_state_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_recycle_projection_updates_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_recycle_projection_updates_input"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f1044b987a6f",
+            "from": "single_state_input",
+            "to": "pairformer_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.input_single_state_initializes_block_single_state"
+            ],
+            "provenance_hops": [
               {
                 "relation_ref": "relations.input_single_state_initializes_block_single_state"
               }
             ],
             "hidden_refs": [
-              "value_sites.single_state_input"
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d4189605880c",
+            "from": "single_state_input_projection",
+            "to": "single_init",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_state_projection_produces_single_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_projection_produces_single_state_input"
+              }
+            ],
+            "hidden_refs": [
+
             ],
             "carries": [
               "representations.single_state"
@@ -21442,6 +24662,30 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.trunk_single_enters_confidence_pairformer"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_fa1b2dc1179f",
+            "from": "single_state_output",
+            "to": "recycled_single_state",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_single_output_reenters_recycle"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_single_output_reenters_recycle"
               }
             ],
             "hidden_refs": [
@@ -21716,6 +24960,30 @@ export const manifest = {
             ],
             "presentation": {
             }
+          },
+          {
+            "id": "projection_88002811d4cf",
+            "from": "z_init",
+            "to": "pair_recycle_seed",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_anchor_initializes_recycle_pass"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_anchor_initializes_recycle_pass"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
           }
         ],
         "classifications": {
@@ -21747,15 +25015,22 @@ export const manifest = {
           "modules.outer_product_mean": "collapsed:modules.msa_module",
           "modules.pair_attention_ending_node": "collapsed:modules.pairformer_stack",
           "modules.pair_attention_starting_node": "collapsed:modules.pairformer_stack",
+          "modules.pair_recycle_projection": "visible",
           "modules.pair_state_input_projection": "visible",
           "modules.pair_transition": "collapsed:modules.pairformer_stack",
           "modules.pairformer_stack": "visible",
           "modules.relative_position_encoding": "visible",
           "modules.sample_diffusion": "visible",
+          "modules.sampler_coordinate_initializer": "collapsed:modules.sample_diffusion",
+          "modules.sampler_gradient": "collapsed:modules.sample_diffusion",
+          "modules.sampler_noise_injection": "collapsed:modules.sample_diffusion",
+          "modules.sampler_pose_augmentation": "collapsed:modules.sample_diffusion",
+          "modules.sampler_schedule": "collapsed:modules.sample_diffusion",
           "modules.sampler_update": "collapsed:modules.sample_diffusion",
           "modules.sequence_local_attention_mask": "collapsed:modules.sample_diffusion",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
+          "modules.single_recycle_projection": "visible",
           "modules.single_state_input_projection": "visible",
           "modules.single_transition": "collapsed:modules.pairformer_stack",
           "modules.template_module": "visible",
@@ -21838,6 +25113,7 @@ export const manifest = {
           "value_sites.pair_after_starting_attention": "collapsed:modules.pairformer_stack",
           "value_sites.pair_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.pair_mask_input": "visible",
+          "value_sites.pair_recycle_seed": "visible",
           "value_sites.pair_state_input": "elided",
           "value_sites.pair_state_output": "visible",
           "value_sites.predicted_aligned_error": "visible",
@@ -21849,6 +25125,8 @@ export const manifest = {
           "value_sites.predicted_lddt_distribution": "collapsed:modules.confidence_head",
           "value_sites.predicted_resolved_distribution": "collapsed:modules.confidence_head",
           "value_sites.profile_input": "visible",
+          "value_sites.recycled_pair_state": "visible",
+          "value_sites.recycled_single_state": "visible",
           "value_sites.relative_chain_offset": "collapsed:modules.relative_position_encoding",
           "value_sites.relative_position_encoding_output": "elided",
           "value_sites.relative_residue_offset": "collapsed:modules.relative_position_encoding",
@@ -21857,13 +25135,20 @@ export const manifest = {
           "value_sites.restype_input": "visible",
           "value_sites.s_inputs": "visible",
           "value_sites.same_entity_signal": "collapsed:modules.relative_position_encoding",
+          "value_sites.sampler_augmented_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_current_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_denoising_direction": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_initial_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_next_level": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_previous_level": "collapsed:modules.sample_diffusion",
           "value_sites.sampler_updated_positions": "collapsed:modules.sample_diffusion",
           "value_sites.scaled_noisy_atom_positions": "collapsed:modules.sample_diffusion",
           "value_sites.sequence_local_atom_attention_mask": "excluded",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
+          "value_sites.single_init": "visible",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
-          "value_sites.single_state_input": "elided",
+          "value_sites.single_state_input": "visible",
           "value_sites.single_state_output": "visible",
           "value_sites.sym_id": "visible",
           "value_sites.template_backbone_frame_mask": "visible",
@@ -21882,7 +25167,7 @@ export const manifest = {
           "value_sites.template_unit_vector": "visible",
           "value_sites.token_index": "visible",
           "value_sites.token_mask_input": "visible",
-          "value_sites.z_init": "elided"
+          "value_sites.z_init": "visible"
         },
         "projectionMode": "derived"
       },
@@ -25891,6 +29176,10 @@ export const manifest = {
             "reason": "z_init's own construction (the raw projection of the current pair state) is shown on the parent pairformer_overview board; this board begins at the module's own entry point, template_module_pair_state_read."
           },
           {
+            "ref": "value_sites.pair_recycle_seed",
+            "reason": "The current pass's pair seed is assembled on the parent board; this board starts at the Template Module entry state."
+          },
+          {
             "ref": "value_sites.msa_module_pair_state_read",
             "reason": "Where this module's output lands inside the MSA module is shown on msa_module_detail; this board ends at the module's own output, template_module_pair_output."
           }
@@ -26406,6 +29695,7 @@ export const manifest = {
           "modules.template_triangle_multiplication_outgoing": "collapsed:modules.template_pair_update_stage",
           "value_sites.asym_id": "visible",
           "value_sites.msa_module_pair_state_read": "excluded",
+          "value_sites.pair_recycle_seed": "excluded",
           "value_sites.template_backbone_frame_mask": "visible",
           "value_sites.template_distogram": "visible",
           "value_sites.template_module_pair_output": "visible",
@@ -27237,18 +30527,43 @@ export const manifest = {
       },
       {
         "id": "sample_diffusion_detail",
-        "title": "Diffusion Sampling Boundary",
-        "summary": "The sampler repeatedly asks the same Diffusion Module for a clean-coordinate estimate, then updates its current atom positions. Only the coordinates after the last update are a completed sample for confidence prediction. The schedule and update arithmetic are left for the sampler lesson.",
+        "title": "200-Step Diffusion Sampling",
+        "summary": "Five independent Gaussian atom clouds follow the same 200-step power-seven schedule. On each step the sampler randomly reorients the current cloud, adds controlled noise, asks the same denoiser for a clean-coordinate estimate, and takes a signed step toward it. The estimate itself is never the state carried to the next step.",
         "parent": "pairformer_overview",
         "subject_ref": "modules.sample_diffusion",
-        "expansion_depth": 1,
+        "expansion_depth": 2,
         "grid": {
-          "columns": 6,
-          "rows": 5,
+          "columns": 11,
+          "rows": 6,
           "column_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
         },
+        "regions": [
+          {
+            "id": "one_sampler_step",
+            "kind": "repeat",
+            "execution_ref": "execution.loops.sample_diffusion",
+            "label": "one sampling step",
+            "node_ids": [
+              "sampler_schedule",
+              "sampler_previous_level",
+              "sampler_next_level",
+              "sampler_noise_level",
+              "sampler_current_positions",
+              "sampler_pose_augmentation",
+              "sampler_noise_injection",
+              "sampler_denoiser",
+              "sampler_gradient",
+              "sampler_update",
+              "sampler_updated_positions"
+            ],
+            "iteration_relation_refs": [
+              "relations.sampler_updated_positions_reenter_next_step",
+              "relations.sampler_next_level_becomes_previous_level"
+            ]
+          }
+        ],
         "nodes": [
           {
             "id": "sampler_s_inputs",
@@ -27291,19 +30606,29 @@ export const manifest = {
             "row": 4
           },
           {
-            "id": "sampler_controller",
-            "ref": "modules.sample_diffusion",
-            "label": "sampler state",
+            "id": "sampler_initializer",
+            "ref": "modules.sampler_coordinate_initializer",
+            "label": "Gaussian start",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 2,
-            "row": 2
+            "col": 1,
+            "row": 5
           },
           {
-            "id": "sampler_noise_level",
-            "ref": "value_sites.noise_level",
-            "label": "current noise level",
+            "id": "sampler_initial_positions",
+            "ref": "value_sites.sampler_initial_positions",
+            "label": "first noisy cloud",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 6
+          },
+          {
+            "id": "sampler_previous_level",
+            "ref": "value_sites.sampler_previous_level",
+            "label": "previous level",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -27311,14 +30636,84 @@ export const manifest = {
             "row": 1
           },
           {
-            "id": "sampler_noisy_positions",
-            "ref": "value_sites.noisy_atom_positions",
-            "label": "current noisy atoms",
+            "id": "sampler_current_positions",
+            "ref": "value_sites.sampler_current_positions",
+            "label": "current atom cloud",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
             "col": 2,
-            "row": 4
+            "row": 5
+          },
+          {
+            "id": "sampler_schedule",
+            "ref": "modules.sampler_schedule",
+            "label": "select noise level",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "sampler_pose_augmentation",
+            "ref": "modules.sampler_pose_augmentation",
+            "label": "random pose",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "sampler_next_level",
+            "ref": "value_sites.sampler_next_level",
+            "label": "next level",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "sampler_augmented_positions",
+            "ref": "value_sites.sampler_augmented_positions",
+            "label": "reoriented cloud",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 4,
+            "row": 5
+          },
+          {
+            "id": "sampler_noise_level",
+            "ref": "value_sites.noise_level",
+            "label": "churned level t_hat",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 1
+          },
+          {
+            "id": "sampler_noise_injection",
+            "ref": "modules.sampler_noise_injection",
+            "label": "add Gaussian noise",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 5
+          },
+          {
+            "id": "sampler_noisy_positions",
+            "ref": "value_sites.noisy_atom_positions",
+            "label": "noisy atoms",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 5
           },
           {
             "id": "sampler_denoiser",
@@ -27327,39 +30722,60 @@ export const manifest = {
             "prominence": "primary",
             "treatment": "compact",
             "density": "compact",
-            "col": 3,
-            "row": 3,
+            "col": 7,
+            "row": 4,
             "board_ref": "diffusion_module_detail"
           },
           {
             "id": "sampler_estimate",
             "ref": "value_sites.denoised_atom_positions",
-            "label": "one-step estimate",
+            "label": "clean-coordinate estimate",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 4,
-            "row": 3
+            "col": 8,
+            "row": 4
+          },
+          {
+            "id": "sampler_gradient",
+            "ref": "modules.sampler_gradient",
+            "label": "denoising direction",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 9,
+            "row": 4
+          },
+          {
+            "id": "sampler_direction",
+            "ref": "value_sites.sampler_denoising_direction",
+            "label": "direction",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 9,
+            "row": 5
           },
           {
             "id": "sampler_update",
             "ref": "modules.sampler_update",
-            "label": "sampler update",
+            "label": "signed step",
             "prominence": "primary",
             "treatment": "compact",
             "density": "compact",
-            "col": 5,
-            "row": 3
+            "col": 10,
+            "row": 4,
+            "board_ref": "sampler_update_detail"
           },
           {
             "id": "sampler_updated_positions",
             "ref": "value_sites.sampler_updated_positions",
-            "label": "updated positions",
+            "label": "next atom cloud",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 5,
-            "row": 4
+            "col": 10,
+            "row": 5
           },
           {
             "id": "sampler_final_positions",
@@ -27368,8 +30784,8 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 6,
-            "row": 3
+            "col": 11,
+            "row": 4
           }
         ],
         "exclude": [
@@ -27389,49 +30805,49 @@ export const manifest = {
         "projection_mode": "derived",
         "edges": [
           {
-            "id": "projection_3c7507af417d",
-            "from": "sampler_controller",
-            "to": "sampler_noise_level",
+            "id": "projection_1e7756cfe262",
+            "from": "sampler_augmented_positions",
+            "to": "sampler_noise_injection",
             "projection": "direct",
             "origin": "canonical",
-            "kind": "control",
+            "kind": "data_flow",
             "relation_path": [
-              "relations.sampler_produces_step_noise_level"
+              "relations.sampler_augmented_positions_enter_noise_injection"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.sampler_produces_step_noise_level"
+                "relation_ref": "relations.sampler_augmented_positions_enter_noise_injection"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.noise_level"
+              "representations.sampler_coordinate_state"
             ],
             "presentation": {
             }
           },
           {
-            "id": "projection_23c552ab3f2b",
-            "from": "sampler_controller",
-            "to": "sampler_noisy_positions",
+            "id": "projection_f9259dd15555",
+            "from": "sampler_current_positions",
+            "to": "sampler_pose_augmentation",
             "projection": "direct",
             "origin": "canonical",
             "kind": "data_flow",
             "relation_path": [
-              "relations.sampler_produces_step_noisy_positions"
+              "relations.sampler_current_positions_enter_pose_augmentation"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.sampler_produces_step_noisy_positions"
+                "relation_ref": "relations.sampler_current_positions_enter_pose_augmentation"
               }
             ],
             "hidden_refs": [
 
             ],
             "carries": [
-              "representations.noisy_atom_positions"
+              "representations.sampler_coordinate_state"
             ],
             "presentation": {
             }
@@ -27461,18 +30877,42 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_deff16911868",
-            "from": "sampler_estimate",
+            "id": "projection_6c30d2096bb0",
+            "from": "sampler_direction",
             "to": "sampler_update",
             "projection": "direct",
             "origin": "canonical",
             "kind": "data_flow",
             "relation_path": [
-              "relations.denoised_estimate_enters_sampler_update"
+              "relations.sampler_direction_enters_update"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.denoised_estimate_enters_sampler_update"
+                "relation_ref": "relations.sampler_direction_enters_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_direction"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3088bdc0fef8",
+            "from": "sampler_estimate",
+            "to": "sampler_gradient",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_estimate_enters_gradient"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_estimate_enters_gradient"
               }
             ],
             "hidden_refs": [
@@ -27480,6 +30920,174 @@ export const manifest = {
             ],
             "carries": [
               "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_526390ac88bf",
+            "from": "sampler_gradient",
+            "to": "sampler_direction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_gradient_produces_direction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_gradient_produces_direction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_direction"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_51a39f13c239",
+            "from": "sampler_initial_positions",
+            "to": "sampler_current_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.sampler_initial_positions_begin_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_initial_positions_begin_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_coordinate_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b5fa66c5fbdd",
+            "from": "sampler_initializer",
+            "to": "sampler_initial_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_initializer_produces_initial_positions"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_initializer_produces_initial_positions"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_coordinate_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7964927d9d32",
+            "from": "sampler_initializer",
+            "to": "sampler_previous_level",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_initializer_sets_first_level"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_initializer_sets_first_level"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b81facc54273",
+            "from": "sampler_next_level",
+            "to": "sampler_previous_level",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.sampler_next_level_becomes_previous_level"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_next_level_becomes_previous_level"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a3f58aafcab5",
+            "from": "sampler_next_level",
+            "to": "sampler_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_next_level_sets_update_step"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_next_level_sets_update_step"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_053efb3560ee",
+            "from": "sampler_noise_injection",
+            "to": "sampler_noisy_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_produces_step_noisy_positions"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_produces_step_noisy_positions"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noisy_atom_positions"
             ],
             "presentation": {
             }
@@ -27497,6 +31105,78 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.sampler_noise_level_sets_denoiser_rescaling"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e107d8f57447",
+            "from": "sampler_noise_level",
+            "to": "sampler_gradient",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.sampler_noise_level_scales_gradient"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_scales_gradient"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_69c27cdfa5c2",
+            "from": "sampler_noise_level",
+            "to": "sampler_noise_injection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.sampler_noise_level_conditions_noise_injection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_conditions_noise_injection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d103f0b63197",
+            "from": "sampler_noise_level",
+            "to": "sampler_update",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_noise_level_sets_update_step"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_sets_update_step"
               }
             ],
             "hidden_refs": [
@@ -27557,6 +31237,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_06db46a837a1",
+            "from": "sampler_noisy_positions",
+            "to": "sampler_gradient",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_noisy_positions_enter_gradient"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noisy_positions_enter_gradient"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_edcf0d4000d7",
             "from": "sampler_noisy_positions",
             "to": "sampler_update",
@@ -27576,6 +31280,78 @@ export const manifest = {
             ],
             "carries": [
               "representations.noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7c451827659e",
+            "from": "sampler_pose_augmentation",
+            "to": "sampler_augmented_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_pose_augmentation_produces_positions"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_pose_augmentation_produces_positions"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_coordinate_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f9817ba11767",
+            "from": "sampler_previous_level",
+            "to": "sampler_noise_injection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.sampler_previous_level_conditions_noise_injection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_previous_level_conditions_noise_injection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_34fd8ad08bea",
+            "from": "sampler_previous_level",
+            "to": "sampler_schedule",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_previous_level_enters_schedule"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_previous_level_enters_schedule"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
             ],
             "presentation": {
             }
@@ -27648,6 +31424,54 @@ export const manifest = {
             ],
             "carries": [
               "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_236cb4819dfb",
+            "from": "sampler_schedule",
+            "to": "sampler_next_level",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_schedule_selects_next_level"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_schedule_selects_next_level"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_fbe7687025da",
+            "from": "sampler_schedule",
+            "to": "sampler_noise_level",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_produces_step_noise_level"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_produces_step_noise_level"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
             ],
             "presentation": {
             }
@@ -27749,6 +31573,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_b861fc2eb728",
+            "from": "sampler_updated_positions",
+            "to": "sampler_current_positions",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.sampler_updated_positions_reenter_next_step"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_updated_positions_reenter_next_step"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_coordinate_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_6c574c9bda15",
             "from": "sampler_updated_positions",
             "to": "sampler_final_positions",
@@ -27782,7 +31630,11 @@ export const manifest = {
           "modules.diffusion_module": "visible",
           "modules.fourier_embedding": "excluded",
           "modules.relative_position_encoding": "excluded",
-          "modules.sample_diffusion": "visible",
+          "modules.sampler_coordinate_initializer": "visible",
+          "modules.sampler_gradient": "visible",
+          "modules.sampler_noise_injection": "visible",
+          "modules.sampler_pose_augmentation": "visible",
+          "modules.sampler_schedule": "visible",
           "modules.sampler_update": "visible",
           "modules.sequence_local_attention_mask": "collapsed:modules.diffusion_module",
           "modules.token_attention_pair_bias": "collapsed:modules.diffusion_module",
@@ -27826,10 +31678,342 @@ export const manifest = {
           "value_sites.relative_token_offset": "excluded",
           "value_sites.s_inputs": "visible",
           "value_sites.same_entity_signal": "excluded",
+          "value_sites.sampler_augmented_positions": "visible",
+          "value_sites.sampler_current_positions": "visible",
+          "value_sites.sampler_denoising_direction": "visible",
+          "value_sites.sampler_initial_positions": "visible",
+          "value_sites.sampler_next_level": "visible",
+          "value_sites.sampler_previous_level": "visible",
           "value_sites.sampler_updated_positions": "visible",
           "value_sites.scaled_noisy_atom_positions": "collapsed:modules.diffusion_module",
           "value_sites.sequence_local_atom_attention_mask": "collapsed:modules.diffusion_module",
           "value_sites.single_state_output": "visible"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "sampler_update_detail",
+        "title": "Fixed Sampler Update",
+        "summary": "The denoiser estimates clean atom coordinates, but the sampler carries a different state. It forms the direction (noisy minus estimated) divided by t_hat, then adds 1.5 times the signed step (next level minus t_hat) times that direction to the noisy coordinates. Since the signed step is negative, this moves toward the estimate.",
+        "parent": "sample_diffusion_detail",
+        "subject_ref": "modules.sampler_update",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 5,
+          "rows": 4,
+          "column_sizing": "content",
+          "col_gap": 28,
+          "row_gap": 24
+        },
+        "nodes": [
+          {
+            "id": "update_noisy",
+            "ref": "value_sites.noisy_atom_positions",
+            "label": "noisy coordinates",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 2
+          },
+          {
+            "id": "update_estimate",
+            "ref": "value_sites.denoised_atom_positions",
+            "label": "denoiser estimate",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 3
+          },
+          {
+            "id": "update_t_hat",
+            "ref": "value_sites.noise_level",
+            "label": "churned level t_hat",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 1
+          },
+          {
+            "id": "update_gradient",
+            "ref": "modules.sampler_gradient",
+            "label": "(noisy - estimate) / t_hat",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 2
+          },
+          {
+            "id": "update_direction",
+            "ref": "value_sites.sampler_denoising_direction",
+            "label": "denoising direction",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 2
+          },
+          {
+            "id": "update_next_level",
+            "ref": "value_sites.sampler_next_level",
+            "label": "next level",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "update_operator",
+            "ref": "modules.sampler_update",
+            "label": "noisy + 1.5 × (next - t_hat) × direction",
+            "prominence": "primary",
+            "treatment": "block",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "update_output",
+            "ref": "value_sites.sampler_updated_positions",
+            "label": "next sampler state",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 2
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_5649eb9f42f6",
+            "from": "update_direction",
+            "to": "update_operator",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_direction_enters_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_direction_enters_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_direction"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4b4b54a7e353",
+            "from": "update_estimate",
+            "to": "update_gradient",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_estimate_enters_gradient"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_estimate_enters_gradient"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.denoised_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ff143d1805bd",
+            "from": "update_gradient",
+            "to": "update_direction",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_gradient_produces_direction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_gradient_produces_direction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_direction"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a708790760c5",
+            "from": "update_next_level",
+            "to": "update_operator",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_next_level_sets_update_step"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_next_level_sets_update_step"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9275b27871d9",
+            "from": "update_noisy",
+            "to": "update_gradient",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.sampler_noisy_positions_enter_gradient"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noisy_positions_enter_gradient"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_7747710cbe7c",
+            "from": "update_noisy",
+            "to": "update_operator",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noisy_positions_enter_sampler_update"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noisy_positions_enter_sampler_update"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noisy_atom_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3e85e325b882",
+            "from": "update_operator",
+            "to": "update_output",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.sampler_update_produces_next_positions"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_update_produces_next_positions"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.sampler_updated_positions"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f4213c278fb3",
+            "from": "update_t_hat",
+            "to": "update_gradient",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.sampler_noise_level_scales_gradient"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_scales_gradient"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_33e4bb22c849",
+            "from": "update_t_hat",
+            "to": "update_operator",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "control",
+            "relation_path": [
+              "relations.sampler_noise_level_sets_update_step"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.sampler_noise_level_sets_update_step"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          }
+        ],
+        "classifications": {
+          "modules.sampler_gradient": "visible",
+          "modules.sampler_update": "visible",
+          "value_sites.denoised_atom_positions": "visible",
+          "value_sites.noise_level": "visible",
+          "value_sites.noisy_atom_positions": "visible",
+          "value_sites.sampler_denoising_direction": "visible",
+          "value_sites.sampler_next_level": "visible",
+          "value_sites.sampler_updated_positions": "visible"
         },
         "projectionMode": "derived"
       },
@@ -29288,6 +33472,10 @@ export const manifest = {
           {
             "ref": "modules.sampler_update",
             "reason": "The enclosing sampler board shows how this one-step estimate enters the sampler update."
+          },
+          {
+            "ref": "modules.sampler_gradient",
+            "reason": "The enclosing sampler board shows the fixed denoising direction computed from this estimate."
           }
         ],
         "projection_mode": "derived",
@@ -30024,6 +34212,7 @@ export const manifest = {
           "modules.atom_encoder_atom_transformer": "collapsed:modules.atom_attention_encoder_conditioned",
           "modules.diffusion_conditioning": "visible",
           "modules.diffusion_transformer_token_level": "visible",
+          "modules.sampler_gradient": "excluded",
           "modules.sampler_update": "excluded",
           "modules.sequence_local_attention_mask": "visible",
           "modules.token_attention_pair_bias": "collapsed:modules.diffusion_transformer_token_level",

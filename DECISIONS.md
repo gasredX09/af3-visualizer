@@ -499,3 +499,23 @@ generic panel interaction. This adds a renderer asset, so the 2026-09-22
 upstreaming note's assumption that this project changes content files only
 no longer holds. Review the engine change separately before any upstream
 contribution.
+
+## 2026-09-23: Model AF3's two inference loops without tensor assets
+
+**Decision:** Add canonical trunk recycling and full diffusion sampling to the
+AF3 architecture source, then project them into repeat regions, sampler math,
+and semantic pseudocode. Use the paper's four-pass trunk setting in the
+teaching board, with an explicit note that the released code's configurable
+`num_recycles` counts additional passes. Keep the 200-step sampler separate:
+only the final trunk states condition those denoising calls. Keep the real
+tensor tracer and trajectory scrubber on hold until a fixed-complex AF3 run
+exists.
+
+**Why:** Genie 3 already traces its complete inference sampler in the same
+explainer framework. AF3 had broader module coverage but represented one
+trunk pass and only a sampler boundary. Canonical previous-pass single/pair
+states and fixed input anchors prevent the recycle picture from implying an
+in-place continuation. Separate noisy, estimated, and updated atom-coordinate
+sites prevent the sampler picture from treating a denoiser estimate as the
+next sampled state. This completes the source-only comparison without
+inventing model output.

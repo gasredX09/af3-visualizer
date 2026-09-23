@@ -7,15 +7,35 @@ root_board: pairformer_overview
 boards:
   - id: pairformer_overview
     title: AlphaFold 3
-    summary: Input features, templates, and MSA evidence build the single and pair representations for the Pairformer. A diffusion sampler repeatedly calls the one-step denoiser to produce a completed structure; the Confidence Head then judges that specific sample through four predicted confidence outputs.
+    summary: Fixed input features seed four paper-setting trunk passes. Each pass adds projected previous single and pair states, then runs Template, MSA, and Pairformer with shared weights. A separate 200-step diffusion sampler produces coordinates before the Confidence Head judges the completed sample.
     subject_ref: architecture
     expansion_depth: 1
     grid:
       columns: 19
-      rows: 9
+      rows: 10
       column_sizing: content
       col_gap: 36
       row_gap: 24
+    regions:
+      - id: one_trunk_recycle
+        kind: repeat
+        execution_ref: execution.loops.trunk_recycling
+        label: one trunk pass
+        node_ids:
+          - template_module
+          - msa_module
+          - pairformer_stack
+          - single_recycle_projection
+          - pair_recycle_projection
+          - recycled_single_state
+          - recycled_pair_state
+          - single_state_input
+          - pair_recycle_seed
+          - single_state_output
+          - pair_state_output
+        iteration_relation_refs:
+          - relations.trunk_single_output_reenters_recycle
+          - relations.trunk_pair_output_reenters_recycle
     nodes:
     - id: atom_reference_features_input
       ref: value_sites.atom_reference_features_input
@@ -82,6 +102,14 @@ boards:
       density: micro
       col: 4
       row: 5
+    - { id: single_init, ref: value_sites.single_init, label: fixed single anchor, prominence: context, treatment: chip, density: micro, col: 5, row: 3 }
+    - { id: z_init, ref: value_sites.z_init, label: fixed pair anchor, prominence: context, treatment: chip, density: micro, col: 5, row: 5 }
+    - { id: pair_recycle_seed, ref: value_sites.pair_recycle_seed, label: this pass's pairs, prominence: secondary, treatment: compact, density: compact, col: 6, row: 4 }
+    - { id: recycled_single_state, ref: value_sites.recycled_single_state, label: previous singles, prominence: context, treatment: chip, density: micro, col: 12, row: 9 }
+    - { id: recycled_pair_state, ref: value_sites.recycled_pair_state, label: previous pairs, prominence: context, treatment: chip, density: micro, col: 12, row: 10 }
+    - { id: single_recycle_projection, ref: modules.single_recycle_projection, label: project previous singles, prominence: context, treatment: chip, density: micro, col: 10, row: 2 }
+    - { id: pair_recycle_projection, ref: modules.pair_recycle_projection, label: project previous pairs, prominence: context, treatment: chip, density: micro, col: 10, row: 8 }
+    - { id: single_state_input, ref: value_sites.single_state_input, label: this pass's singles, prominence: context, treatment: compact, density: compact, col: 10, row: 3 }
     - id: token_mask_input
       ref: value_sites.token_mask_input
       label: token mask
@@ -307,9 +335,7 @@ boards:
         role: downstream pair context
         inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
     elide:
-    - ref: value_sites.single_state_input
     - ref: value_sites.pair_state_input
-    - ref: value_sites.z_init
     - ref: value_sites.relative_position_encoding_output
     exclude:
     - ref: value_sites.diffusion_conditioned_pair
@@ -1534,6 +1560,8 @@ boards:
     exclude:
     - ref: value_sites.z_init
       reason: z_init's own construction (the raw projection of the current pair state) is shown on the parent pairformer_overview board; this board begins at the module's own entry point, template_module_pair_state_read.
+    - ref: value_sites.pair_recycle_seed
+      reason: The current pass's pair seed is assembled on the parent board; this board starts at the Template Module entry state.
     - ref: value_sites.msa_module_pair_state_read
       reason: Where this module's output lands inside the MSA module is shown on msa_module_detail; this board ends at the module's own output, template_module_pair_output.
     edge_overrides:
@@ -1854,29 +1882,76 @@ boards:
           inside: The cross-template accumulation is divided by N_templates and projected once more through a plain LinearNoBias(ReLU(...)) up to the trunk's 128-channel width -- this is the module's own returned contribution.
 
   - id: sample_diffusion_detail
-    title: Diffusion Sampling Boundary
-    summary: The sampler repeatedly asks the same Diffusion Module for a clean-coordinate estimate, then updates its current atom positions. Only the coordinates after the last update are a completed sample for confidence prediction. The schedule and update arithmetic are left for the sampler lesson.
+    title: 200-Step Diffusion Sampling
+    summary: Five independent Gaussian atom clouds follow the same 200-step power-seven schedule. On each step the sampler randomly reorients the current cloud, adds controlled noise, asks the same denoiser for a clean-coordinate estimate, and takes a signed step toward it. The estimate itself is never the state carried to the next step.
     parent: pairformer_overview
     subject_ref: modules.sample_diffusion
-    expansion_depth: 1
-    grid: { columns: 6, rows: 5, column_sizing: content, col_gap: 28, row_gap: 24 }
+    expansion_depth: 2
+    grid: { columns: 11, rows: 6, column_sizing: content, col_gap: 28, row_gap: 24 }
+    regions:
+      - id: one_sampler_step
+        kind: repeat
+        execution_ref: execution.loops.sample_diffusion
+        label: one sampling step
+        node_ids:
+          - sampler_schedule
+          - sampler_previous_level
+          - sampler_next_level
+          - sampler_noise_level
+          - sampler_current_positions
+          - sampler_pose_augmentation
+          - sampler_noise_injection
+          - sampler_denoiser
+          - sampler_gradient
+          - sampler_update
+          - sampler_updated_positions
+        iteration_relation_refs:
+          - relations.sampler_updated_positions_reenter_next_step
+          - relations.sampler_next_level_becomes_previous_level
     nodes:
       - { id: sampler_s_inputs, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
       - { id: sampler_trunk_single, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
       - { id: sampler_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
       - { id: sampler_reference_atoms, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
-      - { id: sampler_controller, ref: modules.sample_diffusion, label: sampler state, prominence: context, treatment: chip, density: micro, col: 2, row: 2 }
-      - { id: sampler_noise_level, ref: value_sites.noise_level, label: current noise level, prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
-      - { id: sampler_noisy_positions, ref: value_sites.noisy_atom_positions, label: current noisy atoms, prominence: secondary, treatment: compact, density: compact, col: 2, row: 4 }
-      - { id: sampler_denoiser, ref: modules.diffusion_module, label: one denoising call, prominence: primary, treatment: compact, density: compact, col: 3, row: 3, board_ref: diffusion_module_detail }
-      - { id: sampler_estimate, ref: value_sites.denoised_atom_positions, label: one-step estimate, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
-      - { id: sampler_update, ref: modules.sampler_update, label: sampler update, prominence: primary, treatment: compact, density: compact, col: 5, row: 3 }
-      - { id: sampler_updated_positions, ref: value_sites.sampler_updated_positions, label: updated positions, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
-      - { id: sampler_final_positions, ref: value_sites.final_sampled_atom_positions, label: completed sample, prominence: secondary, treatment: compact, density: compact, col: 6, row: 3 }
+      - { id: sampler_initializer, ref: modules.sampler_coordinate_initializer, label: Gaussian start, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: sampler_initial_positions, ref: value_sites.sampler_initial_positions, label: first noisy cloud, prominence: context, treatment: compact, density: compact, col: 1, row: 6 }
+      - { id: sampler_previous_level, ref: value_sites.sampler_previous_level, label: previous level, prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
+      - { id: sampler_current_positions, ref: value_sites.sampler_current_positions, label: current atom cloud, prominence: secondary, treatment: compact, density: compact, col: 2, row: 5 }
+      - { id: sampler_schedule, ref: modules.sampler_schedule, label: select noise level, prominence: primary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: sampler_pose_augmentation, ref: modules.sampler_pose_augmentation, label: random pose, prominence: primary, treatment: compact, density: compact, col: 3, row: 5 }
+      - { id: sampler_next_level, ref: value_sites.sampler_next_level, label: next level, prominence: context, treatment: chip, density: micro, col: 4, row: 1 }
+      - { id: sampler_augmented_positions, ref: value_sites.sampler_augmented_positions, label: reoriented cloud, prominence: secondary, treatment: compact, density: compact, col: 4, row: 5 }
+      - { id: sampler_noise_level, ref: value_sites.noise_level, label: churned level t_hat, prominence: context, treatment: chip, density: micro, col: 5, row: 1 }
+      - { id: sampler_noise_injection, ref: modules.sampler_noise_injection, label: add Gaussian noise, prominence: primary, treatment: compact, density: compact, col: 5, row: 5 }
+      - { id: sampler_noisy_positions, ref: value_sites.noisy_atom_positions, label: noisy atoms, prominence: secondary, treatment: compact, density: compact, col: 6, row: 5 }
+      - { id: sampler_denoiser, ref: modules.diffusion_module, label: one denoising call, prominence: primary, treatment: compact, density: compact, col: 7, row: 4, board_ref: diffusion_module_detail }
+      - { id: sampler_estimate, ref: value_sites.denoised_atom_positions, label: clean-coordinate estimate, prominence: secondary, treatment: compact, density: compact, col: 8, row: 4 }
+      - { id: sampler_gradient, ref: modules.sampler_gradient, label: denoising direction, prominence: primary, treatment: compact, density: compact, col: 9, row: 4 }
+      - { id: sampler_direction, ref: value_sites.sampler_denoising_direction, label: direction, prominence: context, treatment: compact, density: compact, col: 9, row: 5 }
+      - { id: sampler_update, ref: modules.sampler_update, label: signed step, prominence: primary, treatment: compact, density: compact, col: 10, row: 4, board_ref: sampler_update_detail }
+      - { id: sampler_updated_positions, ref: value_sites.sampler_updated_positions, label: next atom cloud, prominence: secondary, treatment: compact, density: compact, col: 10, row: 5 }
+      - { id: sampler_final_positions, ref: value_sites.final_sampled_atom_positions, label: completed sample, prominence: secondary, treatment: compact, density: compact, col: 11, row: 4 }
     exclude:
       - { ref: modules.relative_position_encoding, reason: Relative-position internals are shown on their own board; this sampler board focuses on the repeated coordinate call. }
       - { ref: value_sites.relative_position_encoding_output, reason: The positional prior is expanded on the one-step Diffusion Module board. }
       - { ref: modules.fourier_embedding, reason: Noise embedding is expanded inside the one-step Diffusion Module boards. }
+
+  - id: sampler_update_detail
+    title: Fixed Sampler Update
+    summary: The denoiser estimates clean atom coordinates, but the sampler carries a different state. It forms the direction (noisy minus estimated) divided by t_hat, then adds 1.5 times the signed step (next level minus t_hat) times that direction to the noisy coordinates. Since the signed step is negative, this moves toward the estimate.
+    parent: sample_diffusion_detail
+    subject_ref: modules.sampler_update
+    expansion_depth: 1
+    grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    nodes:
+      - { id: update_noisy, ref: value_sites.noisy_atom_positions, label: noisy coordinates, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
+      - { id: update_estimate, ref: value_sites.denoised_atom_positions, label: denoiser estimate, prominence: context, treatment: compact, density: compact, col: 1, row: 3 }
+      - { id: update_t_hat, ref: value_sites.noise_level, label: churned level t_hat, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: update_gradient, ref: modules.sampler_gradient, label: (noisy - estimate) / t_hat, prominence: primary, treatment: compact, density: compact, col: 2, row: 2 }
+      - { id: update_direction, ref: value_sites.sampler_denoising_direction, label: denoising direction, prominence: secondary, treatment: compact, density: compact, col: 3, row: 2 }
+      - { id: update_next_level, ref: value_sites.sampler_next_level, label: next level, prominence: context, treatment: chip, density: micro, col: 3, row: 1 }
+      - { id: update_operator, ref: modules.sampler_update, label: noisy + 1.5 × (next - t_hat) × direction, prominence: primary, treatment: block, col: 4, row: 2 }
+      - { id: update_output, ref: value_sites.sampler_updated_positions, label: next sampler state, prominence: secondary, treatment: compact, density: compact, col: 5, row: 2 }
 
   - id: confidence_head_detail
     title: Confidence Head for One Completed Sample
@@ -1991,6 +2066,8 @@ boards:
         reason: The encoder and decoder detail boards show the saved pair-conditioning tensor; the overview keeps the main coordinate path legible.
       - ref: modules.sampler_update
         reason: The enclosing sampler board shows how this one-step estimate enters the sampler update.
+      - ref: modules.sampler_gradient
+        reason: The enclosing sampler board shows the fixed denoising direction computed from this estimate.
 
   - id: relative_position_encoding_detail
     title: Relative Position Encoding

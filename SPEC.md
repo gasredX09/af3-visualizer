@@ -614,6 +614,28 @@ denoised estimate, feed the head. Check the existing Diffusion, Pairformer,
 MSA, and Template boards for regressions. Review every density warning and
 curate boards that exceed the project's threshold.
 
+## Source-only architecture coverage (2026-09-23)
+
+The explainer now includes both inference loops as source-authored facts and
+boards. The trunk repeat region shows the paper's `N_cycle=4` setting: each
+pass starts from fixed `s_init` and `z_init`, adds normalized projections of
+the previous single and pair outputs (zero on the first pass), then runs
+Template, MSA, and the 48-block Pairformer. This count is a paper example;
+the released implementation's `num_recycles` is configurable and counts
+additional passes, so its default can differ. Sampling begins only after the
+trunk's final pass.
+
+The sampler board shows a separate 200-step loop over five independently
+initialized atom clouds. Each step uses the released code's power-seven
+schedule, random pose augmentation, optional churn noise, one Diffusion Module
+call, and signed coordinate update. The schedule's `smax=160` and
+`smin=0.0004` are multiplied by `sigma_data=16`, giving actual initial and
+terminal noise levels of 2560 and 0.0064. The denoiser output is a
+clean-coordinate estimate used to update the sampler state, not the next
+state itself. These boards and the pseudocode are source-grounded teaching
+views, not real tensor playback. The input flow tracer and sampler scrubber
+still require the offline AF3 tensor dump and remain on hold.
+
 ## Core screens
 
 These four carry the main narrative: what AF3 takes in, how it transforms it,
@@ -758,7 +780,9 @@ so the board must not call it covariance.
 
 ### Curves that demystify formulas
 
-**Noise schedule.** 160 A down to 4e-4 A on a log axis with step markers.
+**Noise schedule.** 2560 A down to 0.0064 A on a log axis with step markers
+(the released code multiplies `smax=160` and `smin=0.0004` by
+`sigma_data=16`).
 Alongside it, raw noise level plotted against log(noise / sigma_data) to show
 why the Fourier time embedding takes the log: without it nearly all resolution
 sits at the high-noise end, where it matters least.

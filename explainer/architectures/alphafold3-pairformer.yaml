@@ -72,10 +72,36 @@ decomposition:
 
 execution:
   loops:
+    - id: trunk_recycling
+      repeats: 4
+      reruns:
+        - modules.pair_recycle_projection
+        - modules.single_recycle_projection
+        - modules.template_module
+        - modules.msa_module
+        - modules.pairformer_stack
+      cached:
+        - value_sites.s_inputs
+        - value_sites.single_init
+        - value_sites.z_init
+      notes:
+        - The paper's N_cycle=4 counts four full trunk passes. The released model's num_recycles is configurable and counts additional passes, so its default need not equal this paper setting.
+        - Each pass restarts from fixed input-derived anchors, adds normalized projections of the previous pair and single outputs, then runs Template, MSA, and Pairformer in that order.
+        - The first pass receives zero previous states. Sampling and confidence prediction run only after the final trunk pass.
+      evidence:
+        status: confirmed_from_paper
+        refs:
+          - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 lines 2-16 (N_cycle=4, zero previous states, anchor-plus-recycle updates, downstream heads after the loop)" }
+          - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (zero previous pair/single state and fori_loop over configurable num_recycles + 1)" }
+          - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (LayerNorm and learned projection of prev pair/single added to fresh input-derived activations before Template, MSA, and Pairformer)" }
     - id: sample_diffusion
       repeats: 200
       reruns:
+        - modules.sampler_schedule
+        - modules.sampler_pose_augmentation
+        - modules.sampler_noise_injection
         - modules.diffusion_module
+        - modules.sampler_gradient
         - modules.sampler_update
       cached:
         - value_sites.s_inputs
@@ -83,7 +109,7 @@ execution:
         - value_sites.pair_state_output
       notes:
         - The released inference configuration generates five independent samples with 200 calls to the same denoiser per sample.
-        - The sampler's pose augmentation, noise schedule, and update equation are deferred to the sampler pass; this loop records the call boundary only.
+        - Each step rotates and translates the current coordinates, optionally increases the noise level, adds Gaussian noise, asks the denoiser for a clean-coordinate estimate, and takes a scaled step toward it.
       evidence:
         status: confirmed_from_code
         refs:
@@ -135,6 +161,8 @@ state_semantics:
   pair_state:
     representation_ref: representations.pair_state
     value_site_refs:
+      - value_sites.recycled_pair_state
+      - value_sites.pair_recycle_seed
       - value_sites.pair_state_input
       - value_sites.block_pair_state
       - value_sites.pair_after_outgoing_multiplication
@@ -143,7 +171,7 @@ state_semantics:
       - value_sites.pair_after_ending_attention
       - value_sites.pair_after_transition
       - value_sites.pair_state_output
-    lifecycle: refined_across_five_pair_updates_per_block
+    lifecycle: recycled_across_trunk_passes_and_refined_across_five_pair_updates_per_block
     notes:
       - Every operation returns an additive delta; PairFormerIteration applies the residual update before the next operation.
     evidence:
@@ -155,12 +183,14 @@ state_semantics:
   single_state:
     representation_ref: representations.single_state
     value_site_refs:
+      - value_sites.single_init
+      - value_sites.recycled_single_state
       - value_sites.single_state_input
       - value_sites.block_single_state
       - value_sites.single_after_pair_attention
       - value_sites.single_after_transition
       - value_sites.single_state_output
-    lifecycle: refined_after_pair_track_in_each_block
+    lifecycle: recycled_across_trunk_passes_and_refined_after_pair_track_in_each_block
     notes:
       - The updated pair state affects the single state through attention logits; the single state is not written back into the pair state in the same Pairformer block.
     evidence:
@@ -204,6 +234,19 @@ state_semantics:
         - source_ref: af3_evoformer_code
           role: implementation_evidence
           locator: pair_mask passed to PairFormerIteration
+  sampler_coordinates:
+    representation_ref: representations.sampler_coordinate_state
+    value_site_refs:
+      - value_sites.sampler_initial_positions
+      - value_sites.sampler_current_positions
+      - value_sites.sampler_augmented_positions
+    lifecycle: initialized_once_then_rigidly_augmented_each_sampling_step
+    notes:
+      - The sampler's updated positions return as the next step's current positions; the denoiser's clean-coordinate estimate is never the carried state.
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-378 (scan carry, augmentation, and positions_out)" }
 
 conditioning:
   - id: outgoing_pair_mask
@@ -280,7 +323,8 @@ training_inference:
   self_conditioning: none
   checkpoint_notes:
     - The released inference configuration generates five independently sampled structures, each with 200 denoiser calls; the Confidence Head evaluates each completed structure.
-    - The sampler's schedule and update arithmetic, upstream recycling, and confidence training mini rollout are outside these boards.
+    - The source-authored sampler follows the released code's power-seven schedule, pose augmentation, churn noise, and signed update. The paper's four-pass trunk recycling is modeled separately from the 200-step sampling loop.
+    - The confidence training mini rollout remains outside the inference boards.
   evidence:
     status: confirmed_from_code
     refs:
@@ -1015,6 +1059,26 @@ representations:
           role: paper_evidence
           locator: Supplementary Algorithm 20 line 8 (x_l^out = sigma_data^2/(sigma_data^2+t_hat^2) * x_l^noisy + sigma_data*t_hat/sqrt(sigma_data^2+t_hat^2) * r_l^update) and line 9 (return {x_l^out}); consumed as {x_l^denoised} by Algorithm 18 line 8, the sampler's call site
 
+  - id: sampler_coordinate_state
+    scale: atom
+    semantic_role: atom coordinates carried between sampler steps, initialized as Gaussian noise and rigidly augmented before each denoiser call
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries: [current per-atom sampling coordinates]
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-378 (initial positions, step carry, random augmentation)" }
+  - id: sampler_direction
+    scale: atom
+    semantic_role: per-atom difference between noisy coordinates and denoiser estimate divided by t_hat, before the signed schedule step is applied
+    shape: "N_atom x 3"
+    glyph: coordinates
+    carries: [denoising direction used by the fixed sampler update]
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:349-352 (grad = (positions_noisy - positions_denoised) / t_hat)" }
   - id: sampler_updated_positions
     scale: atom
     semantic_role: one sampler iteration's updated atom coordinates after using the denoiser estimate, distinct from the estimate itself
@@ -1147,6 +1211,38 @@ value_sites:
     scope_ref: architecture
     role: component_input
     evidence: *single_shape_evidence
+  - id: single_init
+    representation_ref: representations.single_state
+    scope_ref: architecture
+    role: fixed_input_derived_single_anchor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 line 2 (s_init), reused at line 11 of every recycle" }
+  - id: recycled_single_state
+    representation_ref: representations.single_state
+    scope_ref: architecture
+    role: previous_trunk_pass_single_output_zero_on_first_pass
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (prev['single'] starts at zero and receives each recycle_body output)" }
+  - id: recycled_pair_state
+    representation_ref: representations.pair_state
+    scope_ref: architecture
+    role: previous_trunk_pass_pair_output_zero_on_first_pass
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (prev['pair'] starts at zero and receives each recycle_body output)" }
+  - id: pair_recycle_seed
+    representation_ref: representations.pair_state
+    scope_ref: architecture
+    role: fixed_pair_anchor_plus_projected_previous_pair
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (pair_activations plus LayerNorm/Linear of prev['pair'] before template and MSA processing)" }
   - id: pair_state_input
     representation_ref: representations.pair_state
     scope_ref: architecture
@@ -1227,7 +1323,7 @@ value_sites:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs)); Algorithm 8 signature ({z_ij} passed into MsaModule as its second argument) -- the pair representation as it exists right after the outer-sum projection of s_inputs, before Template/MSA processing; only one representative pass is modeled, so this value site stands in for what Algorithm 1 line 8 would otherwise reconstruct at the start of every recycle
+          locator: Supplementary Algorithm 1 lines 3-5 (fixed z_init built once from input features, relative positions, and token bonds); line 8 adds a projected previous pair state at the beginning of every recycle
   - id: block_pair_state
     representation_ref: representations.pair_state
     scope_ref: modules.pairformer_stack
@@ -1754,6 +1850,54 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 21 signature (DiffusionConditioning(t_hat, ...)) -- t_hat, the current denoising step's noise level, fixed by this plan as this exact id
+  - id: sampler_previous_level
+    representation_ref: representations.noise_level
+    scope_ref: modules.sample_diffusion
+    role: previous_noise_schedule_level
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-348,365-373 (noise_level_prev in scan carry)" }
+  - id: sampler_next_level
+    representation_ref: representations.noise_level
+    scope_ref: modules.sample_diffusion
+    role: next_noise_schedule_level
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:339-352,358-373 (selected noise_level, d_t = noise_level - t_hat)" }
+  - id: sampler_initial_positions
+    representation_ref: representations.sampler_coordinate_state
+    scope_ref: modules.sample_diffusion
+    role: gaussian_atom_cloud_scaled_by_first_schedule_level
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:358-365 (normal coordinates multiplied by noise_levels[0])" }
+  - id: sampler_current_positions
+    representation_ref: representations.sampler_coordinate_state
+    scope_ref: modules.sample_diffusion
+    role: sampler_state_before_pose_augmentation
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-339,373 (positions in scan carry)" }
+  - id: sampler_augmented_positions
+    representation_ref: representations.sampler_coordinate_state
+    scope_ref: modules.sample_diffusion
+    role: randomly_rotated_and_translated_current_positions
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:337-339 (random_augmentation)" }
+  - id: sampler_denoising_direction
+    representation_ref: representations.sampler_direction
+    scope_ref: modules.sample_diffusion
+    role: normalized_noisy_minus_denoised_coordinates
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:349-352 (grad)" }
   - id: fourier_time_embedding
     representation_ref: representations.fourier_time_embedding
     scope_ref: modules.fourier_embedding
@@ -2368,7 +2512,7 @@ modules:
     label: Project Single State Input
     kind: adapter
     mechanisms: [linear_projection]
-    role: project s_inputs to the 384-channel single_state_input via one LinearNoBias layer
+    role: project s_inputs to the fixed 384-channel single_init anchor via one LinearNoBias layer
     scale: token
     evidence:
       status: confirmed_from_paper
@@ -2376,6 +2520,30 @@ modules:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))
+  - id: single_recycle_projection
+    parent_ref: architecture
+    decomposition: { status: leaf }
+    label: Project Previous Single State
+    kind: adapter
+    mechanisms: [layer_normalization, linear_projection]
+    role: normalize and project the previous pass's single state before adding it to the fixed single_init anchor; the previous state is zero on the first pass
+    scale: token
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (prev_single_embedding_layer_norm and prev_single_embedding added to fresh single_activations)" }
+  - id: pair_recycle_projection
+    parent_ref: architecture
+    decomposition: { status: leaf }
+    label: Project Previous Pair State
+    kind: adapter
+    mechanisms: [layer_normalization, linear_projection]
+    role: normalize and project the previous pass's pair state before adding it to the fixed z_init anchor; the previous state is zero on the first pass
+    scale: token_pair
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (prev_embedding_layer_norm and prev_embedding added to fresh pair_activations)" }
   - id: pair_state_input_projection
     parent_ref: architecture
     decomposition:
@@ -2383,7 +2551,7 @@ modules:
     label: Project Pair State Input
     kind: adapter
     mechanisms: [linear_projection, outer_sum]
-    role: project s_inputs to 128 channels via two independent LinearNoBias layers, one per token of the pair, and outer-sum them into pair_state_input
+    role: project s_inputs to 128 channels via two independent LinearNoBias layers, one per token of the pair, and outer-sum them into the fixed z_init anchor
     scale: token_pair
     evidence:
       status: confirmed_from_paper
@@ -2414,7 +2582,7 @@ modules:
     label: MSA Module
     kind: refiner
     mechanisms: [msa_row_embedding, outer_product_mean, msa_pair_weighted_averaging, transition, triangle_multiplication, axial_pair_attention]
-    role: embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation; update the MSA activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; and run the resulting pair state through the module's own pair-stack (triangle multiplication x2, triangle attention x2, transition), architecturally identical to the Pairformer's own pair-stack mechanism but with its own parameters, run N_block=4 times instead of 48; only z_ij is returned, the MSA representation itself is discarded every call; only one representative pass through the module is modeled here, not the N_block=4 loop or the outer per-recycle loop
+    role: embed raw per-row MSA features (one-hot sequence identity, deletion flags/values) plus s_inputs into per-row MSA activations, then read those activations into OuterProductMean to contribute evolutionary coupling into the pair representation; update the MSA activations via MSAPairWeightedAveraging (attention whose weights come entirely from the pair representation) followed by a Transition; and run the resulting pair state through the module's own pair-stack (triangle multiplication x2, triangle attention x2, transition), architecturally identical to the Pairformer's own pair-stack mechanism but with its own parameters, run N_block=4 times instead of 48; only z_ij is returned, the MSA representation itself is discarded every call; this module board shows one representative call while execution.loops.trunk_recycling accounts for repeated calls
     scale: msa
     repeats: 4
     evidence:
@@ -2600,7 +2768,7 @@ modules:
     label: Template Module
     kind: refiner
     mechanisms: [template_feature_masking, outer_sum_conditioning, triangle_multiplication, axial_pair_attention, transition, cross_template_pooling]
-    role: run once per recycle, immediately before the MSA module (Algorithm 1 line 9 precedes line 10), reading the raw per-template AF3 template features together with the current pair representation z_ij and writing a pooled contribution back into it; for one representative template, mask and concatenate the raw template evidence (the backbone-frame and pseudo-beta AND-gate masks, the distogram and unit-vector pairwise evidence, an asym_id intra-chain gate, and the one-hot restype of both tokens) into a per-template pair feature, outer-sum it with a projection of the current pair state to form that template's own pair-conditioned state at the module's narrower 64-channel width, refine it through the module's own N_block=2 pair-only (with_single=False) Pairformer block, accumulate the LayerNorm'd result across every template, average, and project once more through a plain ReLU (not SwiGLU) into a 128-channel contribution added into the pair representation before the MSA module runs; only one representative pass through the module is modeled here, not the N_templates loop, the N_block=2 pair-stack repeat, or the outer per-recycle loop
+    role: run once per recycle, immediately before the MSA module (Algorithm 1 line 9 precedes line 10), reading the raw per-template AF3 template features together with the current pair representation z_ij and writing a pooled contribution back into it; for one representative template, mask and concatenate the raw template evidence (the backbone-frame and pseudo-beta AND-gate masks, the distogram and unit-vector pairwise evidence, an asym_id intra-chain gate, and the one-hot restype of both tokens) into a per-template pair feature, outer-sum it with a projection of the current pair state to form that template's own pair-conditioned state at the module's narrower 64-channel width, refine it through the module's own N_block=2 pair-only (with_single=False) Pairformer block, accumulate the LayerNorm'd result across every template, average, and project once more through a plain ReLU (not SwiGLU) into a 128-channel contribution added into the pair representation before the MSA module runs; this module board shows one representative template and pass while execution.loops.trunk_recycling accounts for repeated calls
     scale: token_pair
     evidence:
       status: confirmed_from_paper
@@ -2768,13 +2936,11 @@ modules:
           locator: "template_modules.py TemplateEmbedding.Config (template_stack = PairFormerIteration.Config(num_layer=2, pair_transition=TransitionBlock.Config(num_intermediate_factor=2))) -- overrides TransitionBlock.Config's num_intermediate_factor default of 4 (modules.py) to 2 for this stack's transition only, the one place in the architecture this factor is not 4"
   - id: sample_diffusion
     parent_ref: architecture
-    decomposition:
-      status: partial
-      reason: This pass accounts for the repeated denoiser call and its output boundary. The schedule, pose augmentation, noise injection, and update arithmetic remain for the sampler pass.
+    decomposition: { status: complete }
     label: Diffusion Sampler
     kind: sampler
     mechanisms: [iterative_denoising, sampler_state_update]
-    role: generate completed atom coordinates by repeatedly calling the one-step Diffusion Module and updating the current positions; one denoiser return is an estimate used by the sampler, not the final sample or the next step's coordinates
+    role: initialize five independent Gaussian atom clouds, then for each of 200 scheduled levels rotate and translate the current cloud, optionally churn in Gaussian noise, call the one-step Diffusion Module, and take a scaled step toward its clean-coordinate estimate; return only the state after the final update
     scale: atom_and_token
     repeats: 200
     evidence:
@@ -2782,13 +2948,73 @@ modules:
       refs:
         - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 18 lines 2, 8-13 (repeated DiffusionModule calls, sampler update, final coordinates)" }
         - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-378 (apply_denoising_step scanned over 200 configured levels, returning final atom_positions)" }
+  - id: sampler_coordinate_initializer
+    parent_ref: modules.sample_diffusion
+    decomposition: { status: leaf }
+    label: Initialize Gaussian Atom Cloud
+    kind: operator
+    mechanisms: [gaussian_initialization]
+    role: draw an independent Gaussian atom cloud for each sample and multiply it by the first scheduled noise level
+    scale: atom
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:358-365 (initial normal positions scaled by noise_levels[0])" }
+  - id: sampler_schedule
+    parent_ref: modules.sample_diffusion
+    decomposition: { status: leaf }
+    label: Noise Schedule
+    kind: operator
+    mechanisms: [noise_schedule]
+    role: select the next level from the 200-step power-seven schedule with dimensionless endpoints smax=160 and smin=0.0004 multiplied by sigma_data=16 (actual noise levels 2560 down to 0.0064); set gamma to 0.8 only when that next level exceeds 1.0 and form t_hat from the previous level
+    scale: atom
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:88-92,101-107,339-345,358-373 (noise_schedule, gamma gate, t_hat and sampled levels)" }
+  - id: sampler_pose_augmentation
+    parent_ref: modules.sample_diffusion
+    decomposition: { status: leaf }
+    label: Random Pose Augmentation
+    kind: operator
+    mechanisms: [random_rigid_augmentation]
+    role: independently rotate and translate the current atom cloud before every denoising step, without changing its internal geometry
+    scale: atom
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-339 (random_augmentation applied to current positions at every step)" }
+  - id: sampler_noise_injection
+    parent_ref: modules.sample_diffusion
+    decomposition: { status: leaf }
+    label: Stochastic Noise Injection
+    kind: operator
+    mechanisms: [gaussian_noise_injection]
+    role: add Gaussian noise with scale 1.003 times sqrt(t_hat squared minus previous noise level squared) to the augmented positions before the denoiser call
+    scale: atom
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:344-349 (noise_scale, Gaussian noise, positions_noisy)" }
+  - id: sampler_gradient
+    parent_ref: modules.sampler_update
+    decomposition: { status: leaf }
+    label: Denoising Direction
+    kind: operator
+    mechanisms: [denoising_direction]
+    role: compute (positions_noisy minus positions_denoised) divided by t_hat; this points away from the denoiser estimate, while the following negative time step moves toward it
+    scale: atom
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:349-352 (grad and d_t)" }
   - id: sampler_update
     parent_ref: modules.sample_diffusion
-    decomposition: { status: opaque, reason: The sampler update arithmetic and stochastic pose steps are reserved for the later sampler pass. }
+    decomposition: { status: complete }
     label: Sampler State Update
     kind: operator
     mechanisms: [sampler_state_update]
-    role: use the current noisy positions and the denoiser's clean-coordinate estimate to form the next sampler state; the last state is the completed sample
+    role: set the next state to positions_noisy plus 1.5 times (next scheduled level minus t_hat) times the denoising direction; the last updated state is the completed sample
     scale: atom
     evidence:
       status: confirmed_from_code
@@ -3543,10 +3769,10 @@ relations:
           locator: Supplementary Algorithm 1 line 2
   - id: single_state_projection_produces_single_state_input
     from: modules.single_state_input_projection
-    to: value_sites.single_state_input
+    to: value_sites.single_init
     kind: state_update
     carries: [representations.single_state]
-    operation: project_s_inputs_to_single_state_input
+    operation: project_s_inputs_to_fixed_single_anchor
     evidence:
       status: confirmed_from_paper
       refs:
@@ -3577,6 +3803,86 @@ relations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8).
+  - id: single_anchor_initializes_recycle_pass
+    from: value_sites.single_init
+    to: value_sites.single_state_input
+    kind: state_update
+    carries: [representations.single_state]
+    operation: seed_single_state_from_fixed_input_anchor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 line 11 (s = s_init + projected previous single state)" }
+  - id: previous_single_enters_recycle_projection
+    from: value_sites.recycled_single_state
+    to: modules.single_recycle_projection
+    kind: data_flow
+    carries: [representations.single_state]
+    operation: normalize_and_project_previous_single_state
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (prev_single_embedding_layer_norm and prev_single_embedding)" }
+  - id: single_recycle_projection_updates_input
+    from: modules.single_recycle_projection
+    to: value_sites.single_state_input
+    kind: state_update
+    carries: [representations.single_state]
+    operation: add_projected_previous_single_to_anchor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 line 11" }
+  - id: pair_anchor_initializes_recycle_pass
+    from: value_sites.z_init
+    to: value_sites.pair_recycle_seed
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: seed_pair_state_from_fixed_input_anchor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 line 8 (z = z_init + projected previous pair state)" }
+  - id: previous_pair_enters_recycle_projection
+    from: value_sites.recycled_pair_state
+    to: modules.pair_recycle_projection
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: normalize_and_project_previous_pair_state
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (prev_embedding_layer_norm and prev_embedding)" }
+  - id: pair_recycle_projection_updates_seed
+    from: modules.pair_recycle_projection
+    to: value_sites.pair_recycle_seed
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: add_projected_previous_pair_to_anchor
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 line 8" }
+  - id: trunk_single_output_reenters_recycle
+    from: value_sites.single_state_output
+    to: value_sites.recycled_single_state
+    kind: state_update
+    carries: [representations.single_state]
+    operation: carry_single_output_to_next_trunk_pass
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (recycle_body returns embeddings as the next pass's prev)" }
+  - id: trunk_pair_output_reenters_recycle
+    from: value_sites.pair_state_output
+    to: value_sites.recycled_pair_state
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: carry_pair_output_to_next_trunk_pass
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (recycle_body returns embeddings as the next pass's prev)" }
   - id: asym_id_conditions_relative_position_encoding
     from: value_sites.asym_id
     to: modules.relative_position_encoding
@@ -3926,7 +4232,7 @@ relations:
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 4 (m_si += LinearNoBias(s_i^inputs)) -- s_inputs is added into every MSA row identically
   - id: z_init_initializes_template_module_pair_state
-    from: value_sites.z_init
+    from: value_sites.pair_recycle_seed
     to: value_sites.template_module_pair_state_read
     kind: state_update
     carries: [representations.pair_state]
@@ -3936,7 +4242,7 @@ relations:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 16 signature ({z_ij} passed into TemplateEmbedder as its second argument); Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- the module's own entry state, mirroring input_pair_state_initializes_block_pair_state's role for the Pairformer. Retargeted from producing value_sites.msa_module_pair_state_read directly (module 2's original wiring, when nothing sat between z_init and the MSA module) to producing value_sites.template_module_pair_state_read, now that value_sites.z_init -> modules.template_module -> value_sites.msa_module_pair_state_read is the real chain (Algorithm 1 line 9 precedes line 10; Algorithm 16). The template module's own contribution now reaches msa_module_pair_state_read via relations.template_module_pair_output_updates_msa_module_pair_state.
+          locator: Supplementary Algorithm 1 lines 8-9 (pair state reconstructed from z_init plus projected previous pair output before TemplateEmbedder); Algorithm 16 signature (current z_ij enters TemplateEmbedder)
   - id: outer_product_mean_contribution_updates_msa_module_pair_state
     from: value_sites.outer_product_mean_pair_contribution
     to: value_sites.msa_module_pair_state_read
@@ -5013,7 +5319,7 @@ relations:
           locator: "diffusion_head.py DiffusionHead.__call__ (out_scaling = noise_level * SIGMA_DATA / jnp.sqrt(noise_level**2 + SIGMA_DATA**2)), the coefficient applied to position_update, the atom decoder's own returned tensor, immediately before the two terms are summed and masked"
 
   - id: sampler_produces_step_noise_level
-    from: modules.sample_diffusion
+    from: modules.sampler_schedule
     to: value_sites.noise_level
     kind: control
     carries: [representations.noise_level]
@@ -5023,7 +5329,7 @@ relations:
       refs:
         - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-348,358-373 (scheduled level and t_hat passed into denoising_step)" }
   - id: sampler_produces_step_noisy_positions
-    from: modules.sample_diffusion
+    from: modules.sampler_noise_injection
     to: value_sites.noisy_atom_positions
     kind: data_flow
     carries: [representations.noisy_atom_positions]
@@ -5032,6 +5338,169 @@ relations:
       status: confirmed_from_code
       refs:
         - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:337-349 (augment current positions, add noise, call denoising_step with positions_noisy)" }
+  - id: sampler_initializer_produces_initial_positions
+    from: modules.sampler_coordinate_initializer
+    to: value_sites.sampler_initial_positions
+    kind: data_flow
+    carries: [representations.sampler_coordinate_state]
+    operation: sample_initial_gaussian_atom_coordinates
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:358-365 (Gaussian initial positions times first schedule level)" }
+  - id: sampler_initial_positions_begin_state
+    from: value_sites.sampler_initial_positions
+    to: value_sites.sampler_current_positions
+    kind: state_update
+    carries: [representations.sampler_coordinate_state]
+    operation: begin_sampler_coordinate_state
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:365-373 (initial positions enter scan carry)" }
+  - id: sampler_current_positions_enter_pose_augmentation
+    from: value_sites.sampler_current_positions
+    to: modules.sampler_pose_augmentation
+    kind: data_flow
+    carries: [representations.sampler_coordinate_state]
+    operation: randomly_rotate_and_translate_current_atom_cloud
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:333-339 (random_augmentation of positions)" }
+  - id: sampler_pose_augmentation_produces_positions
+    from: modules.sampler_pose_augmentation
+    to: value_sites.sampler_augmented_positions
+    kind: data_flow
+    carries: [representations.sampler_coordinate_state]
+    operation: expose_randomly_augmented_atom_cloud
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:337-339 (positions = random_augmentation(...))" }
+  - id: sampler_augmented_positions_enter_noise_injection
+    from: value_sites.sampler_augmented_positions
+    to: modules.sampler_noise_injection
+    kind: data_flow
+    carries: [representations.sampler_coordinate_state]
+    operation: add_step_gaussian_noise_after_pose_augmentation
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:337-349 (augmentation before noise addition)" }
+  - id: sampler_schedule_selects_next_level
+    from: modules.sampler_schedule
+    to: value_sites.sampler_next_level
+    kind: control
+    carries: [representations.noise_level]
+    operation: select_next_power_seven_schedule_level
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:88-92,358-373 (noise_schedule and scan over levels[1:])" }
+  - id: sampler_previous_level_enters_schedule
+    from: value_sites.sampler_previous_level
+    to: modules.sampler_schedule
+    kind: control
+    carries: [representations.noise_level]
+    operation: compute_churned_t_hat_from_previous_level
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:339-345 (t_hat = noise_level_prev * (1 + gamma))" }
+  - id: sampler_initializer_sets_first_level
+    from: modules.sampler_coordinate_initializer
+    to: value_sites.sampler_previous_level
+    kind: control
+    carries: [representations.noise_level]
+    operation: initialize_noise_level_carry_from_schedule_start
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:358-365 (noise_levels[0] initializes both coordinate scaling and previous-level scan carry)" }
+  - id: sampler_noise_level_conditions_noise_injection
+    from: value_sites.noise_level
+    to: modules.sampler_noise_injection
+    kind: conditioning
+    carries: [representations.noise_level]
+    operation: set_churn_noise_variance_from_t_hat
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:342-345 (noise_scale uses t_hat)" }
+  - id: sampler_previous_level_conditions_noise_injection
+    from: value_sites.sampler_previous_level
+    to: modules.sampler_noise_injection
+    kind: conditioning
+    carries: [representations.noise_level]
+    operation: subtract_previous_level_variance
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - { source_ref: af3_sampler_code, role: implementation_evidence, locator: "diffusion_head.py:344-345 (t_hat squared minus noise_level_prev squared)" }
+  - id: sampler_noisy_positions_enter_gradient
+    from: value_sites.noisy_atom_positions
+    to: modules.sampler_gradient
+    kind: data_flow
+    carries: [representations.noisy_atom_positions]
+    operation: subtract_denoised_estimate_from_noisy_positions
+    evidence: *sampler_update_evidence
+  - id: sampler_estimate_enters_gradient
+    from: value_sites.denoised_atom_positions
+    to: modules.sampler_gradient
+    kind: data_flow
+    carries: [representations.denoised_atom_positions]
+    operation: compute_noisy_minus_denoised_difference
+    evidence: *sampler_update_evidence
+  - id: sampler_noise_level_scales_gradient
+    from: value_sites.noise_level
+    to: modules.sampler_gradient
+    kind: conditioning
+    carries: [representations.noise_level]
+    operation: divide_denoising_difference_by_t_hat
+    evidence: *sampler_update_evidence
+  - id: sampler_gradient_produces_direction
+    from: modules.sampler_gradient
+    to: value_sites.sampler_denoising_direction
+    kind: data_flow
+    carries: [representations.sampler_direction]
+    operation: expose_sampler_denoising_direction
+    evidence: *sampler_update_evidence
+  - id: sampler_direction_enters_update
+    from: value_sites.sampler_denoising_direction
+    to: modules.sampler_update
+    kind: data_flow
+    carries: [representations.sampler_direction]
+    operation: scale_direction_by_signed_time_step
+    evidence: *sampler_update_evidence
+  - id: sampler_next_level_sets_update_step
+    from: value_sites.sampler_next_level
+    to: modules.sampler_update
+    kind: control
+    carries: [representations.noise_level]
+    operation: use_next_level_minus_t_hat_as_signed_step
+    evidence: *sampler_update_evidence
+  - id: sampler_noise_level_sets_update_step
+    from: value_sites.noise_level
+    to: modules.sampler_update
+    kind: control
+    carries: [representations.noise_level]
+    operation: subtract_t_hat_from_next_level
+    evidence: *sampler_update_evidence
+  - id: sampler_updated_positions_reenter_next_step
+    from: value_sites.sampler_updated_positions
+    to: value_sites.sampler_current_positions
+    kind: state_update
+    carries: [representations.sampler_coordinate_state]
+    operation: carry_updated_coordinates_into_next_sampler_step
+    evidence: *sampler_update_evidence
+  - id: sampler_next_level_becomes_previous_level
+    from: value_sites.sampler_next_level
+    to: value_sites.sampler_previous_level
+    kind: state_update
+    carries: [representations.noise_level]
+    operation: advance_sampler_noise_level_carry
+    evidence: *sampler_update_evidence
   - id: sampler_noise_level_sets_denoiser_rescaling
     from: value_sites.noise_level
     to: value_sites.scaled_noisy_atom_positions
@@ -5042,13 +5511,6 @@ relations:
       status: confirmed_from_paper
       refs:
         - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 20 line 2 (r_noisy = x_noisy / sqrt(t_hat^2 + sigma_data^2))" }
-  - id: denoised_estimate_enters_sampler_update
-    from: value_sites.denoised_atom_positions
-    to: modules.sampler_update
-    kind: data_flow
-    carries: [representations.denoised_atom_positions]
-    operation: use_one_step_clean_coordinate_estimate
-    evidence: *sampler_update_evidence
   - id: noisy_positions_enter_sampler_update
     from: value_sites.noisy_atom_positions
     to: modules.sampler_update
@@ -5309,7 +5771,7 @@ open_questions:
     affected_refs:
       - value_sites.msa_activations
       - modules.msa_row_embedding
-    resolution_criteria: Model the resampling step explicitly (likely alongside the outer per-recycle loop, Algorithm 1, which this source set does not yet model at all) if/when that recycling structure is added to this architecture.
+    resolution_criteria: Add a row-subset value site and sampler operation to the MSA detail board if a later lesson needs the per-pass sample itself. The outer loop is now modeled by execution.loops.trunk_recycling, but this within-MSA row-selection detail remains deliberately unmodeled.
     evidence:
       status: open_question
       refs:

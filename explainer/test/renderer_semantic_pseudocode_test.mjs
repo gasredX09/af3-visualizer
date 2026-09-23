@@ -270,13 +270,27 @@ test("Genie 3 boards select one semantic scope without leaking child statements"
   }), null);
 });
 
-test("shared trunk outputs do not pull Pairformer code onto unrelated AF3 boards", () => {
-  for (const boardId of ["msa_module_detail", "diffusion_module_detail", "diffusion_conditioning_detail"]) {
+test("AF3 boards show only the pseudocode for their own stage", () => {
+  const expected = {
+    msa_module_detail: ["run_msa_per_recycle"],
+    template_module_detail: ["run_template_per_recycle"],
+    sample_diffusion_detail: [
+      "initialize_sampler", "begin_sampler_state", "select_sampler_level",
+      "augment_sampler_pose", "inject_sampler_noise", "run_one_denoiser_call",
+      "run_fixed_sampler_update", "carry_sampler_coordinates", "carry_sampler_level",
+      "complete_diffusion_sample",
+    ],
+    sampler_update_detail: ["compute_sampler_direction", "apply_sampler_update"],
+    diffusion_module_detail: ["run_one_denoiser_call"],
+    diffusion_conditioning_detail: [],
+  };
+  for (const [boardId, statementIds] of Object.entries(expected)) {
     const board = alphafold3Manifest.boards.items.find((candidate) => candidate.id === boardId);
     assert(board, boardId);
     assert.deepEqual(
-      semanticProgramTraceForBoard({ manifest: alphafold3Manifest, board }).statements,
-      [],
+      semanticProgramTraceForBoard({ manifest: alphafold3Manifest, board }).statements
+        .map(({ statement }) => statement.id),
+      statementIds,
       boardId,
     );
   }
