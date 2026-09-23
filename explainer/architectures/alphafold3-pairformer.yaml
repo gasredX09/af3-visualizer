@@ -1208,12 +1208,12 @@ representations:
 value_sites:
   - id: single_state_input
     representation_ref: representations.single_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: component_input
     evidence: *single_shape_evidence
   - id: single_init
     representation_ref: representations.single_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: fixed_input_derived_single_anchor
     evidence:
       status: confirmed_from_paper
@@ -1221,7 +1221,7 @@ value_sites:
         - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 line 2 (s_init), reused at line 11 of every recycle" }
   - id: recycled_single_state
     representation_ref: representations.single_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: previous_trunk_pass_single_output_zero_on_first_pass
     evidence:
       status: confirmed_from_code
@@ -1229,7 +1229,7 @@ value_sites:
         - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (prev['single'] starts at zero and receives each recycle_body output)" }
   - id: recycled_pair_state
     representation_ref: representations.pair_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: previous_trunk_pass_pair_output_zero_on_first_pass
     evidence:
       status: confirmed_from_code
@@ -1237,7 +1237,7 @@ value_sites:
         - { source_ref: af3_model_code, role: implementation_evidence, locator: "model.py:289-319 (prev['pair'] starts at zero and receives each recycle_body output)" }
   - id: pair_recycle_seed
     representation_ref: representations.pair_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: fixed_pair_anchor_plus_projected_previous_pair
     evidence:
       status: confirmed_from_code
@@ -1245,7 +1245,7 @@ value_sites:
         - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (pair_activations plus LayerNorm/Linear of prev['pair'] before template and MSA processing)" }
   - id: pair_state_input
     representation_ref: representations.pair_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: component_input
     evidence: *pair_shape_evidence
   - id: token_mask_input
@@ -1316,7 +1316,7 @@ value_sites:
           locator: Supplementary Algorithm 2 line 2; Supplementary Algorithm 1 lines 2-3 (independently read by both the single_state_input and pair_state_input projections)
   - id: z_init
     representation_ref: representations.pair_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: outer_sum_projected_pair_state
     evidence:
       status: confirmed_from_paper
@@ -1376,12 +1376,12 @@ value_sites:
     evidence: *single_shape_evidence
   - id: single_state_output
     representation_ref: representations.single_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: component_output
     evidence: *single_shape_evidence
   - id: pair_state_output
     representation_ref: representations.pair_state
-    scope_ref: architecture
+    scope_ref: modules.trunk_model
     role: component_output
     evidence: *pair_shape_evidence
   - id: msa_input
@@ -2290,8 +2290,20 @@ value_sites:
     evidence: *resolved_evidence
 
 modules:
-  - id: pairformer_stack
+  - id: trunk_model
     parent_ref: architecture
+    decomposition: { status: complete }
+    label: Recycling Trunk
+    kind: refiner
+    mechanisms: [input_projection, iterative_refinement]
+    role: project s_inputs into fixed single and pair anchors, then run four paper-setting passes that add projected previous states and apply Template, MSA, and the 48-block Pairformer before handing final single and pair states to diffusion and confidence prediction
+    scale: token_and_token_pair
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - { source_ref: af3_2024, role: paper_evidence, locator: "Supplementary Algorithm 1 lines 2-11 (fixed input projections, recycled single and pair states, Template and MSA updates, Pairformer stack, final trunk outputs)" }
+  - id: pairformer_stack
+    parent_ref: modules.trunk_model
     decomposition:
       status: complete
     label: Pairformer Stack
@@ -2506,7 +2518,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 2 line 2 (concat(a_i, f_i^restype, f_i^profile, f_i^deletion_mean))
   - id: single_state_input_projection
-    parent_ref: architecture
+    parent_ref: modules.trunk_model
     decomposition:
       status: leaf
     label: Project Single State Input
@@ -2521,7 +2533,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 1 line 2 (s_init = LinearNoBias(s_inputs))
   - id: single_recycle_projection
-    parent_ref: architecture
+    parent_ref: modules.trunk_model
     decomposition: { status: leaf }
     label: Project Previous Single State
     kind: adapter
@@ -2533,7 +2545,7 @@ modules:
       refs:
         - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (prev_single_embedding_layer_norm and prev_single_embedding added to fresh single_activations)" }
   - id: pair_recycle_projection
-    parent_ref: architecture
+    parent_ref: modules.trunk_model
     decomposition: { status: leaf }
     label: Project Previous Pair State
     kind: adapter
@@ -2545,7 +2557,7 @@ modules:
       refs:
         - { source_ref: af3_evoformer_code, role: implementation_evidence, locator: "evoformer.py Evoformer.__call__ (prev_embedding_layer_norm and prev_embedding added to fresh pair_activations)" }
   - id: pair_state_input_projection
-    parent_ref: architecture
+    parent_ref: modules.trunk_model
     decomposition:
       status: leaf
     label: Project Pair State Input
@@ -2576,7 +2588,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 3 (RelativePositionEncoding); Section 3.1.2 (r_max=32, s_max=2) -- this exact algorithm is invoked twice in AF3, seeding z_init (Algorithm 1 line 4) and again inside DiffusionConditioning (Algorithm 21 line 1); only this one shared module is modeled here, feeding value_sites.relative_position_encoding_output
   - id: msa_module
-    parent_ref: architecture
+    parent_ref: modules.trunk_model
     decomposition:
       status: complete
     label: MSA Module
@@ -2762,7 +2774,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 8 line 13 ({z_ij} += Transition({z_ij})); Algorithm 11 (Transition) -- no dropout on this step, matching the Pairformer's own pair_transition (Algorithm 17 line 6)
   - id: template_module
-    parent_ref: architecture
+    parent_ref: modules.trunk_model
     decomposition:
       status: complete
     label: Template Module

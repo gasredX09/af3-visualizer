@@ -7,35 +7,15 @@ root_board: pairformer_overview
 boards:
   - id: pairformer_overview
     title: AlphaFold 3
-    summary: Fixed input features seed four paper-setting trunk passes. Each pass adds projected previous single and pair states, then runs Template, MSA, and Pairformer with shared weights. A separate 200-step diffusion sampler produces coordinates before the Confidence Head judges the completed sample.
+    summary: Input features feed a recycling trunk, then a separate diffusion sampler makes atom coordinates and the Confidence Head estimates their quality. Open the trunk to follow the four paper-setting passes through Template, MSA, and Pairformer.
     subject_ref: architecture
     expansion_depth: 1
     grid:
-      columns: 19
-      rows: 10
+      columns: 11
+      rows: 8
       column_sizing: content
-      col_gap: 36
-      row_gap: 24
-    regions:
-      - id: one_trunk_recycle
-        kind: repeat
-        execution_ref: execution.loops.trunk_recycling
-        label: one trunk pass
-        node_ids:
-          - template_module
-          - msa_module
-          - pairformer_stack
-          - single_recycle_projection
-          - pair_recycle_projection
-          - recycled_single_state
-          - recycled_pair_state
-          - single_state_input
-          - pair_recycle_seed
-          - single_state_output
-          - pair_state_output
-        iteration_relation_refs:
-          - relations.trunk_single_output_reenters_recycle
-          - relations.trunk_pair_output_reenters_recycle
+      col_gap: 24
+      row_gap: 20
     nodes:
     - id: atom_reference_features_input
       ref: value_sites.atom_reference_features_input
@@ -73,7 +53,8 @@ boards:
       ref: modules.input_feature_embedder
       label: Input Feature Embedder
       prominence: primary
-      treatment: block
+      treatment: compact
+      density: compact
       col: 2
       row: 4
       board_ref: input_feature_embedder_detail
@@ -86,53 +67,13 @@ boards:
       density: compact
       col: 3
       row: 4
-    - id: single_state_input_projection
-      ref: modules.single_state_input_projection
-      label: project singles
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 4
-      row: 3
-    - id: pair_state_input_projection
-      ref: modules.pair_state_input_projection
-      label: project pairs
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 4
-      row: 5
-    - { id: single_init, ref: value_sites.single_init, label: fixed single anchor, prominence: context, treatment: chip, density: micro, col: 5, row: 3 }
-    - { id: z_init, ref: value_sites.z_init, label: fixed pair anchor, prominence: context, treatment: chip, density: micro, col: 5, row: 5 }
-    - { id: pair_recycle_seed, ref: value_sites.pair_recycle_seed, label: this pass's pairs, prominence: secondary, treatment: compact, density: compact, col: 6, row: 4 }
-    - { id: recycled_single_state, ref: value_sites.recycled_single_state, label: previous singles, prominence: context, treatment: chip, density: micro, col: 12, row: 9 }
-    - { id: recycled_pair_state, ref: value_sites.recycled_pair_state, label: previous pairs, prominence: context, treatment: chip, density: micro, col: 12, row: 10 }
-    - { id: single_recycle_projection, ref: modules.single_recycle_projection, label: project previous singles, prominence: context, treatment: chip, density: micro, col: 10, row: 2 }
-    - { id: pair_recycle_projection, ref: modules.pair_recycle_projection, label: project previous pairs, prominence: context, treatment: chip, density: micro, col: 10, row: 8 }
-    - { id: single_state_input, ref: value_sites.single_state_input, label: this pass's singles, prominence: context, treatment: compact, density: compact, col: 10, row: 3 }
-    - id: token_mask_input
-      ref: value_sites.token_mask_input
-      label: token mask
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 5
-      row: 2
-    - id: pair_mask_input
-      ref: value_sites.pair_mask_input
-      label: pair mask
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 5
-      row: 6
     - id: template_backbone_frame_mask
       ref: value_sites.template_backbone_frame_mask
       label: backbone-frame mask
       prominence: context
       treatment: chip
       density: micro
-      col: 6
+      col: 4
       row: 1
     - id: template_pseudo_beta_mask
       ref: value_sites.template_pseudo_beta_mask
@@ -140,7 +81,7 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 6
+      col: 4
       row: 2
     - id: template_distogram
       ref: value_sites.template_distogram
@@ -148,7 +89,7 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 6
+      col: 4
       row: 3
     - id: template_unit_vector
       ref: value_sites.template_unit_vector
@@ -156,7 +97,7 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 6
+      col: 4
       row: 5
     - id: template_restype
       ref: value_sites.template_restype
@@ -164,7 +105,7 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 6
+      col: 4
       row: 6
     - id: asym_id
       ref: value_sites.asym_id
@@ -172,23 +113,15 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 6
+      col: 4
       row: 7
-    - id: template_module
-      ref: modules.template_module
-      label: Template Module
-      prominence: primary
-      treatment: block
-      col: 7
-      row: 4
-      board_ref: template_module_detail
     - id: msa_input
       ref: value_sites.msa_input
       label: MSA identity
       prominence: context
       treatment: chip
       density: micro
-      col: 8
+      col: 5
       row: 2
     - id: has_deletion_input
       ref: value_sites.has_deletion_input
@@ -196,39 +129,48 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 8
-      row: 3
+      col: 5
+      row: 4
     - id: deletion_value_input
       ref: value_sites.deletion_value_input
       label: deletion value
       prominence: context
       treatment: chip
       density: micro
-      col: 8
-      row: 5
-    - id: msa_module
-      ref: modules.msa_module
-      label: MSA Module
+      col: 5
+      row: 6
+    - id: token_mask_input
+      ref: value_sites.token_mask_input
+      label: token mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 7
+    - id: pair_mask_input
+      ref: value_sites.pair_mask_input
+      label: pair mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 8
+    - id: trunk_model
+      ref: modules.trunk_model
+      label: Recycling Trunk
       prominence: primary
-      treatment: block
-      col: 9
+      treatment: compact
+      density: compact
+      col: 6
       row: 4
-      board_ref: msa_module_detail
-    - id: pairformer_stack
-      ref: modules.pairformer_stack
-      label: 48-block Pairformer
-      prominence: primary
-      treatment: block
-      col: 11
-      row: 4
-      board_ref: pairformer_block
+      board_ref: trunk_model_detail
     - id: entity_id
       ref: value_sites.entity_id
       label: entity id
       prominence: context
       treatment: chip
       density: micro
-      col: 12
+      col: 7
       row: 1
     - id: residue_index
       ref: value_sites.residue_index
@@ -236,7 +178,7 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 12
+      col: 7
       row: 2
     - id: single_state_output
       ref: value_sites.single_state_output
@@ -245,7 +187,7 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 12
+      col: 7
       row: 3
     - id: pair_state_output
       ref: value_sites.pair_state_output
@@ -254,7 +196,7 @@ boards:
       prominence: secondary
       treatment: compact
       density: compact
-      col: 12
+      col: 7
       row: 5
     - id: sym_id
       ref: value_sites.sym_id
@@ -262,7 +204,7 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 12
+      col: 7
       row: 6
     - id: token_index
       ref: value_sites.token_index
@@ -270,24 +212,15 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 12
+      col: 7
       row: 7
-    - id: sample_diffusion
-      ref: modules.sample_diffusion
-      label: Diffusion Sampler
-      prominence: primary
-      treatment: compact
-      density: compact
-      col: 14
-      row: 4
-      board_ref: sample_diffusion_detail
     - id: relative_position_encoding
       ref: modules.relative_position_encoding
       label: relative positions
       prominence: context
       treatment: chip
       density: micro
-      col: 13
+      col: 8
       row: 1
       board_ref: relative_position_encoding_detail
     - id: fourier_embedding
@@ -296,15 +229,24 @@ boards:
       prominence: context
       treatment: chip
       density: micro
-      col: 14
+      col: 8
       row: 2
+    - id: sample_diffusion
+      ref: modules.sample_diffusion
+      label: Diffusion Sampler
+      prominence: primary
+      treatment: compact
+      density: compact
+      col: 8
+      row: 4
+      board_ref: sample_diffusion_detail
     - id: final_sampled_atom_positions
       ref: value_sites.final_sampled_atom_positions
       label: completed structure sample
       prominence: secondary
       treatment: compact
       density: compact
-      col: 15
+      col: 9
       row: 4
     - id: confidence_head
       ref: modules.confidence_head
@@ -312,13 +254,13 @@ boards:
       prominence: primary
       treatment: compact
       density: compact
-      col: 16
+      col: 10
       row: 4
       board_ref: confidence_head_detail
-    - { id: predicted_lddt, ref: value_sites.predicted_lddt, label: predicted local score, prominence: secondary, treatment: compact, density: compact, col: 18, row: 2 }
-    - { id: predicted_aligned_error, ref: value_sites.predicted_aligned_error, label: directional PAE, prominence: secondary, treatment: compact, density: compact, col: 18, row: 4 }
-    - { id: predicted_distance_error, ref: value_sites.predicted_distance_error, label: symmetric PDE, prominence: secondary, treatment: compact, density: compact, col: 18, row: 6 }
-    - { id: predicted_experimentally_resolved, ref: value_sites.predicted_experimentally_resolved, label: predicted resolved probability, prominence: secondary, treatment: compact, density: compact, col: 18, row: 8 }
+    - { id: predicted_lddt, ref: value_sites.predicted_lddt, label: predicted local score, prominence: secondary, treatment: compact, density: compact, col: 11, row: 2 }
+    - { id: predicted_aligned_error, ref: value_sites.predicted_aligned_error, label: directional PAE, prominence: secondary, treatment: compact, density: compact, col: 11, row: 4 }
+    - { id: predicted_distance_error, ref: value_sites.predicted_distance_error, label: symmetric PDE, prominence: secondary, treatment: compact, density: compact, col: 11, row: 6 }
+    - { id: predicted_experimentally_resolved, ref: value_sites.predicted_experimentally_resolved, label: predicted resolved probability, prominence: secondary, treatment: compact, density: compact, col: 11, row: 8 }
     edge_overrides:
     - match:
         relation_ref: relations.final_single_block_state_becomes_output
@@ -335,7 +277,6 @@ boards:
         role: downstream pair context
         inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
     elide:
-    - ref: value_sites.pair_state_input
     - ref: value_sites.relative_position_encoding_output
     exclude:
     - ref: value_sites.diffusion_conditioned_pair
@@ -357,10 +298,236 @@ boards:
     - ref: value_sites.diffusion_token_activation_normalized
       reason: The token transformer's normalized output is expanded on the diffusion module detail boards.
 
+  - id: trunk_model_detail
+    title: Four Trunk Passes
+    summary: Fixed input-derived single and pair anchors are combined with projected previous states on each pass. Template adds structural context, MSA adds evolutionary pair evidence, and the same 48-block Pairformer refines singles and pairs before the next pass or final handoff.
+    parent: pairformer_overview
+    subject_ref: modules.trunk_model
+    expansion_depth: 1
+    grid:
+      columns: 9
+      rows: 8
+      column_sizing: content
+      col_gap: 20
+      row_gap: 18
+    regions:
+      - id: one_trunk_recycle
+        kind: repeat
+        execution_ref: execution.loops.trunk_recycling
+        label: one trunk pass
+        node_ids:
+          - template_module
+          - msa_module
+          - pairformer_stack
+          - single_recycle_projection
+          - pair_recycle_projection
+          - recycled_single_state
+          - recycled_pair_state
+          - single_state_input
+          - pair_recycle_seed
+          - single_state_output
+          - pair_state_output
+        iteration_relation_refs:
+          - relations.trunk_single_output_reenters_recycle
+          - relations.trunk_pair_output_reenters_recycle
+    nodes:
+    - id: s_inputs
+      ref: value_sites.s_inputs
+      label: input embedding
+      notation: s^{inputs}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 3
+      row: 4
+    - id: single_state_input_projection
+      ref: modules.single_state_input_projection
+      label: project singles
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 3
+      row: 3
+    - id: pair_state_input_projection
+      ref: modules.pair_state_input_projection
+      label: project pairs
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 3
+      row: 5
+    - { id: single_init, ref: value_sites.single_init, label: fixed single anchor, prominence: context, treatment: chip, density: micro, col: 4, row: 3 }
+    - { id: z_init, ref: value_sites.z_init, label: fixed pair anchor, prominence: context, treatment: chip, density: micro, col: 4, row: 5 }
+    - { id: pair_recycle_seed, ref: value_sites.pair_recycle_seed, label: this pass's pairs, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
+    - { id: recycled_single_state, ref: value_sites.recycled_single_state, label: previous singles, prominence: context, treatment: chip, density: micro, col: 8, row: 7 }
+    - { id: recycled_pair_state, ref: value_sites.recycled_pair_state, label: previous pairs, prominence: context, treatment: chip, density: micro, col: 8, row: 8 }
+    - { id: single_recycle_projection, ref: modules.single_recycle_projection, label: project previous singles, prominence: context, treatment: chip, density: micro, col: 7, row: 2 }
+    - { id: pair_recycle_projection, ref: modules.pair_recycle_projection, label: project previous pairs, prominence: context, treatment: chip, density: micro, col: 7, row: 7 }
+    - { id: single_state_input, ref: value_sites.single_state_input, label: this pass's singles, prominence: context, treatment: compact, density: compact, col: 7, row: 3 }
+    - id: token_mask_input
+      ref: value_sites.token_mask_input
+      label: token mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 4
+      row: 2
+    - id: pair_mask_input
+      ref: value_sites.pair_mask_input
+      label: pair mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 4
+      row: 6
+    - id: template_backbone_frame_mask
+      ref: value_sites.template_backbone_frame_mask
+      label: backbone-frame mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 1
+    - id: template_pseudo_beta_mask
+      ref: value_sites.template_pseudo_beta_mask
+      label: pseudo-beta mask
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 2
+    - id: template_distogram
+      ref: value_sites.template_distogram
+      label: distogram
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 3
+    - id: template_unit_vector
+      ref: value_sites.template_unit_vector
+      label: unit vector
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 5
+    - id: template_restype
+      ref: value_sites.template_restype
+      label: template restype
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 6
+    - id: asym_id
+      ref: value_sites.asym_id
+      label: chain id (asym_id)
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 7
+    - id: template_module
+      ref: modules.template_module
+      label: Template Module
+      prominence: primary
+      treatment: compact
+      density: compact
+      col: 6
+      row: 4
+      board_ref: template_module_detail
+    - id: msa_input
+      ref: value_sites.msa_input
+      label: MSA identity
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 2
+    - id: has_deletion_input
+      ref: value_sites.has_deletion_input
+      label: has deletion
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 3
+    - id: deletion_value_input
+      ref: value_sites.deletion_value_input
+      label: deletion value
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 6
+      row: 5
+    - id: msa_module
+      ref: modules.msa_module
+      label: MSA Module
+      prominence: primary
+      treatment: compact
+      density: compact
+      col: 7
+      row: 4
+      board_ref: msa_module_detail
+    - id: pairformer_stack
+      ref: modules.pairformer_stack
+      label: 48-block Pairformer
+      prominence: primary
+      treatment: compact
+      density: compact
+      col: 8
+      row: 4
+      board_ref: pairformer_block
+    - id: single_state_output
+      ref: value_sites.single_state_output
+      label: trunk singles
+      notation: s^{trunk}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 9
+      row: 3
+    - id: pair_state_output
+      ref: value_sites.pair_state_output
+      label: trunk pairs
+      notation: z^{trunk}
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 9
+      row: 5
+    edge_overrides:
+    - match:
+        relation_ref: relations.final_single_block_state_becomes_output
+      label: s^{trunk}
+      connection:
+        title: Final single representation
+        role: downstream trunk state
+        inside: After block 48, the token-wise state is exposed to downstream AF3 modules.
+    - match:
+        relation_ref: relations.final_pair_block_state_becomes_output
+      label: z^{trunk}
+      connection:
+        title: Final pair representation
+        role: downstream pair context
+        inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
+    elide:
+    - ref: value_sites.pair_state_input
+    exclude:
+    - ref: modules.diffusion_conditioning
+      reason: Diffusion conditioning consumes the completed trunk states on the sampler's child boards.
+    - ref: modules.atom_attention_encoder_conditioned
+      reason: The conditioned atom encoder belongs to the downstream diffusion module.
+    - ref: modules.confidence_pairformer_stack
+      reason: The Confidence Head's separate Pairformer is expanded on its own board.
+    - ref: value_sites.confidence_pair_after_input_embedding
+      reason: Confidence pair embedding belongs to the downstream Confidence Head board.
+
   - id: pairformer_block
     title: One Pairformer Block, Repeated 48 Times
     summary: Each block first completes the pair-track update. Only then is that updated pair state projected to attention logits that bias the single-track update. The two outputs become the next block's inputs.
-    parent: pairformer_overview
+    parent: trunk_model_detail
     subject_ref: modules.pairformer_stack
     expansion_depth: 1
     grid:
@@ -895,7 +1062,7 @@ boards:
     summary: Raw per-row MSA features are embedded and anchored to s_inputs, then read into OuterProductMean, which contributes evolutionary coupling (correlated variation across the alignment) into the pair representation before that block's pair-stack runs. MSAPairWeightedAveraging updates the MSA rows using attention weights derived entirely from the pair representation, never from row content. Only the final pair state is returned; the MSA representation itself is discarded.
     subject_ref: modules.msa_module
     expansion_depth: 1
-    parent: pairformer_overview
+    parent: trunk_model_detail
     grid:
       columns: 5
       rows: 5
@@ -1436,7 +1603,7 @@ boards:
     summary: Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, and a pairwise unit vector) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate; each token's template residue type is concatenated on afterward and is not itself gated, so it reaches every pair, cross-chain included. The result is outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.
     subject_ref: modules.template_module
     expansion_depth: 1
-    parent: pairformer_overview
+    parent: trunk_model_detail
     grid:
       columns: 7
       rows: 8

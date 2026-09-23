@@ -519,3 +519,17 @@ in-place continuation. Separate noisy, estimated, and updated atom-coordinate
 sites prevent the sampler picture from treating a denoiser estimate as the
 next sampled state. This completes the source-only comparison without
 inventing model output.
+
+## 2026-09-23: Make the recycling trunk a drillable overview stage
+
+**Decision:** Place the fixed input projections, recycle projections,
+Template Module, MSA Module, and Pairformer under one canonical Recycling
+Trunk module. Show that module on the root board and move the feedback loop to
+its child board. Keep all task inputs and outputs visible on the root.
+
+**Why:** Once both inference loops were modeled, the overview had 45 nodes and
+61 projected edges. The complete pipeline was difficult to read at its fitted
+zoom. The trunk's child board now owns the fixed anchors and previous-pass
+states, so the root can show input embedding, trunk execution, sampling, and
+confidence as distinct stages without hiding required inputs. The underlying
+relations and evidence remain canonical and unchanged.

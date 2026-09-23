@@ -625,6 +625,12 @@ the released implementation's `num_recycles` is configurable and counts
 additional passes, so its default can differ. Sampling begins only after the
 trunk's final pass.
 
+The overview keeps every task input and output visible, as required by the
+explainer's root-board contract. It shows a single drillable Recycling Trunk
+between input embedding and diffusion. The trunk child board shows the fixed
+anchors, feedback states, Template, MSA, and Pairformer on each pass. This
+separates the complete inference path from the loop's internal mechanics.
+
 The sampler board shows a separate 200-step loop over five independently
 initialized atom clouds. Each step uses the released code's power-seven
 schedule, random pose augmentation, optional churn noise, one Diffusion Module

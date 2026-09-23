@@ -27,7 +27,20 @@ class Alphafold3InferenceLoopsTest < Minitest::Test
     assert_relation "trunk_single_output_reenters_recycle", "value_sites.single_state_output", "value_sites.recycled_single_state"
     assert_relation "trunk_pair_output_reenters_recycle", "value_sites.pair_state_output", "value_sites.recycled_pair_state"
 
-    region = @boards.fetch("pairformer_overview").fetch("regions").find { |item| item.fetch("id") == "one_trunk_recycle" }
+    trunk = @architecture.fetch("modules").find { |item| item.fetch("id") == "trunk_model" }
+    assert_equal "architecture", trunk.fetch("parent_ref")
+    assert_equal "trunk_model_detail", @boards.fetch("pairformer_overview").fetch("nodes")
+      .find { |node| node.fetch("id") == "trunk_model" }.fetch("board_ref")
+    %w[template_module msa_module pairformer_stack single_recycle_projection pair_recycle_projection].each do |module_id|
+      child = @architecture.fetch("modules").find { |item| item.fetch("id") == module_id }
+      assert_equal "modules.trunk_model", child.fetch("parent_ref")
+    end
+    %w[single_init z_init recycled_single_state recycled_pair_state single_state_output pair_state_output].each do |site_id|
+      site = @architecture.fetch("value_sites").find { |item| item.fetch("id") == site_id }
+      assert_equal "modules.trunk_model", site.fetch("scope_ref")
+    end
+
+    region = @boards.fetch("trunk_model_detail").fetch("regions").find { |item| item.fetch("id") == "one_trunk_recycle" }
     assert_equal "execution.loops.trunk_recycling", region.fetch("execution_ref")
     assert_includes region.fetch("iteration_relation_refs"), "relations.trunk_single_output_reenters_recycle"
     assert_includes region.fetch("iteration_relation_refs"), "relations.trunk_pair_output_reenters_recycle"

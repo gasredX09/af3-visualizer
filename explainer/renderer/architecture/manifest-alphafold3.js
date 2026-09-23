@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
-      "architectures/alphafold3-pairformer.yaml": "2df1b229a1fab2bc8f4b3c15a5336b140b7d7bb68aa1b969dc2f9f134b84a3ca",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "da53bfb10ac37a1b121aae237310fa5b33b945af3eec84c1d562efc513f5a7db",
+      "architectures/alphafold3-pairformer.yaml": "0ddfad5092a78566e19fdadc78c15fe9b7013a069a469b5a079da94af5d758cd",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4e423d2223b4a69991720d78a63a237ae9d727113ebe8bca28b525ecee6b15d0",
       "pseudocode/alphafold3-pairformer.yaml": "fcdf63593c26d4b2b373c11c7c6192318dab2fdb3f456d3463571613640e90c8",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
@@ -117,25 +117,33 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 12,
+          "immediateModuleCount": 6,
           "immediateModuleRefs": [
-            "modules.pairformer_stack",
+            "modules.trunk_model",
             "modules.input_feature_embedder",
-            "modules.single_state_input_projection",
-            "modules.single_recycle_projection",
-            "modules.pair_recycle_projection",
-            "modules.pair_state_input_projection",
             "modules.relative_position_encoding",
-            "modules.msa_module",
-            "modules.template_module",
             "modules.sample_diffusion",
             "modules.confidence_head",
             "modules.fourier_embedding"
           ]
         },
-        "modules.pairformer_stack": {
+        "modules.trunk_model": {
           "status": "complete",
           "depth": 1,
+          "immediateModuleCount": 7,
+          "immediateModuleRefs": [
+            "modules.pairformer_stack",
+            "modules.single_state_input_projection",
+            "modules.single_recycle_projection",
+            "modules.pair_recycle_projection",
+            "modules.pair_state_input_projection",
+            "modules.msa_module",
+            "modules.template_module"
+          ]
+        },
+        "modules.pairformer_stack": {
+          "status": "complete",
+          "depth": 2,
           "immediateModuleCount": 2,
           "immediateModuleRefs": [
             "modules.pair_update_stage",
@@ -144,7 +152,7 @@ export const manifest = {
         },
         "modules.pair_update_stage": {
           "status": "complete",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.triangle_multiplication_outgoing",
@@ -156,7 +164,7 @@ export const manifest = {
         },
         "modules.triangle_multiplication_outgoing": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -164,7 +172,7 @@ export const manifest = {
         },
         "modules.triangle_multiplication_incoming": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -172,7 +180,7 @@ export const manifest = {
         },
         "modules.pair_attention_starting_node": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -180,7 +188,7 @@ export const manifest = {
         },
         "modules.pair_attention_ending_node": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -188,7 +196,7 @@ export const manifest = {
         },
         "modules.pair_transition": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -196,7 +204,7 @@ export const manifest = {
         },
         "modules.single_update_stage": {
           "status": "complete",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 3,
           "immediateModuleRefs": [
             "modules.single_pair_logits_projection",
@@ -206,7 +214,7 @@ export const manifest = {
         },
         "modules.single_pair_logits_projection": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -214,7 +222,7 @@ export const manifest = {
         },
         "modules.single_attention_with_pair_bias": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -222,7 +230,7 @@ export const manifest = {
         },
         "modules.single_transition": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -256,7 +264,7 @@ export const manifest = {
         },
         "modules.single_state_input_projection": {
           "status": "leaf",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -264,7 +272,7 @@ export const manifest = {
         },
         "modules.single_recycle_projection": {
           "status": "leaf",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -272,7 +280,7 @@ export const manifest = {
         },
         "modules.pair_recycle_projection": {
           "status": "leaf",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -280,7 +288,7 @@ export const manifest = {
         },
         "modules.pair_state_input_projection": {
           "status": "leaf",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -297,7 +305,7 @@ export const manifest = {
         },
         "modules.msa_module": {
           "status": "complete",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.msa_row_embedding",
@@ -309,7 +317,7 @@ export const manifest = {
         },
         "modules.msa_row_embedding": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -318,7 +326,7 @@ export const manifest = {
         "modules.outer_product_mean": {
           "status": "partial",
           "reason": "Real internal structure (the two independent a_si/b_si projections, the mean outer product, and the biased pair-channel compression) is modeled at value-site granularity rather than as further child modules; see the outer_product_mean_detail board.",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -327,7 +335,7 @@ export const manifest = {
         "modules.msa_pair_weighted_averaging": {
           "status": "partial",
           "reason": "Real internal structure (the pair-derived per-head weights, the per-row value and gate projections, and the output projection) is modeled at value-site granularity rather than as further child modules; see the msa_pair_weighted_averaging_detail board.",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -335,7 +343,7 @@ export const manifest = {
         },
         "modules.msa_transition": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -343,7 +351,7 @@ export const manifest = {
         },
         "modules.msa_pair_update_stage": {
           "status": "complete",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.msa_triangle_multiplication_outgoing",
@@ -355,7 +363,7 @@ export const manifest = {
         },
         "modules.msa_triangle_multiplication_outgoing": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -363,7 +371,7 @@ export const manifest = {
         },
         "modules.msa_triangle_multiplication_incoming": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -371,7 +379,7 @@ export const manifest = {
         },
         "modules.msa_pair_attention_starting_node": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -379,7 +387,7 @@ export const manifest = {
         },
         "modules.msa_pair_attention_ending_node": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -387,7 +395,7 @@ export const manifest = {
         },
         "modules.msa_pair_transition": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -395,7 +403,7 @@ export const manifest = {
         },
         "modules.template_module": {
           "status": "complete",
-          "depth": 1,
+          "depth": 2,
           "immediateModuleCount": 3,
           "immediateModuleRefs": [
             "modules.template_pair_feature_construction",
@@ -405,7 +413,7 @@ export const manifest = {
         },
         "modules.template_pair_feature_construction": {
           "status": "leaf",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -414,7 +422,7 @@ export const manifest = {
         "modules.template_pair_conditioning": {
           "status": "partial",
           "reason": "Real internal structure (the two independent LinearNoBias projections combined by outer sum at line 8, the per-template LayerNorm-and-accumulate step at line 10, the division by N_templates at line 12, and the final plain-ReLU LinearNoBias projection at line 13) is modeled at value-site granularity rather than as further child modules, mirroring modules.outer_product_mean's treatment.",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -422,7 +430,7 @@ export const manifest = {
         },
         "modules.template_pair_update_stage": {
           "status": "complete",
-          "depth": 2,
+          "depth": 3,
           "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.template_triangle_multiplication_outgoing",
@@ -434,7 +442,7 @@ export const manifest = {
         },
         "modules.template_triangle_multiplication_outgoing": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -442,7 +450,7 @@ export const manifest = {
         },
         "modules.template_triangle_multiplication_incoming": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -450,7 +458,7 @@ export const manifest = {
         },
         "modules.template_pair_attention_starting_node": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -458,7 +466,7 @@ export const manifest = {
         },
         "modules.template_pair_attention_ending_node": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -466,7 +474,7 @@ export const manifest = {
         },
         "modules.template_pair_transition": {
           "status": "leaf",
-          "depth": 3,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -710,9 +718,9 @@ export const manifest = {
         }
       },
       "summary": {
-        "scopeCount": 67,
-        "expandedScopeCount": 18,
-        "completeExpandedScopeCount": 16,
+        "scopeCount": 68,
+        "expandedScopeCount": 19,
+        "completeExpandedScopeCount": 17,
         "partialScopeCount": 8,
         "leafFrontierCount": 42,
         "opaqueFrontierCount": 1,
@@ -735,8 +743,33 @@ export const manifest = {
     },
     "modules": [
       {
-        "id": "pairformer_stack",
+        "id": "trunk_model",
         "parent_ref": "architecture",
+        "decomposition": {
+          "status": "complete"
+        },
+        "label": "Recycling Trunk",
+        "kind": "refiner",
+        "mechanisms": [
+          "input_projection",
+          "iterative_refinement"
+        ],
+        "role": "project s_inputs into fixed single and pair anchors, then run four paper-setting passes that add projected previous states and apply Template, MSA, and the 48-block Pairformer before handing final single and pair states to diffusion and confidence prediction",
+        "scale": "token_and_token_pair",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 lines 2-11 (fixed input projections, recycled single and pair states, Template and MSA updates, Pairformer stack, final trunk outputs)"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pairformer_stack",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "complete"
         },
@@ -1141,7 +1174,7 @@ export const manifest = {
       },
       {
         "id": "single_state_input_projection",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "leaf"
         },
@@ -1165,7 +1198,7 @@ export const manifest = {
       },
       {
         "id": "single_recycle_projection",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "leaf"
         },
@@ -1190,7 +1223,7 @@ export const manifest = {
       },
       {
         "id": "pair_recycle_projection",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "leaf"
         },
@@ -1215,7 +1248,7 @@ export const manifest = {
       },
       {
         "id": "pair_state_input_projection",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "leaf"
         },
@@ -1269,7 +1302,7 @@ export const manifest = {
       },
       {
         "id": "msa_module",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "complete"
         },
@@ -1589,7 +1622,7 @@ export const manifest = {
       },
       {
         "id": "template_module",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.trunk_model",
         "decomposition": {
           "status": "complete"
         },
@@ -7290,7 +7323,7 @@ export const manifest = {
       {
         "id": "single_state_input",
         "representation_ref": "representations.single_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "component_input",
         "evidence": {
           "status": "confirmed_from_code",
@@ -7311,7 +7344,7 @@ export const manifest = {
       {
         "id": "single_init",
         "representation_ref": "representations.single_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "fixed_input_derived_single_anchor",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7327,7 +7360,7 @@ export const manifest = {
       {
         "id": "recycled_single_state",
         "representation_ref": "representations.single_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "previous_trunk_pass_single_output_zero_on_first_pass",
         "evidence": {
           "status": "confirmed_from_code",
@@ -7343,7 +7376,7 @@ export const manifest = {
       {
         "id": "recycled_pair_state",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "previous_trunk_pass_pair_output_zero_on_first_pass",
         "evidence": {
           "status": "confirmed_from_code",
@@ -7359,7 +7392,7 @@ export const manifest = {
       {
         "id": "pair_recycle_seed",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "fixed_pair_anchor_plus_projected_previous_pair",
         "evidence": {
           "status": "confirmed_from_code",
@@ -7375,7 +7408,7 @@ export const manifest = {
       {
         "id": "pair_state_input",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "component_input",
         "evidence": {
           "status": "confirmed_from_code",
@@ -7514,7 +7547,7 @@ export const manifest = {
       {
         "id": "z_init",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "outer_sum_projected_pair_state",
         "evidence": {
           "status": "confirmed_from_paper",
@@ -7715,7 +7748,7 @@ export const manifest = {
       {
         "id": "single_state_output",
         "representation_ref": "representations.single_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "component_output",
         "evidence": {
           "status": "confirmed_from_code",
@@ -7736,7 +7769,7 @@ export const manifest = {
       {
         "id": "pair_state_output",
         "representation_ref": "representations.pair_state",
-        "scope_ref": "architecture",
+        "scope_ref": "modules.trunk_model",
         "role": "component_output",
         "evidence": {
           "status": "confirmed_from_code",
@@ -22936,41 +22969,16 @@ export const manifest = {
       {
         "id": "pairformer_overview",
         "title": "AlphaFold 3",
-        "summary": "Fixed input features seed four paper-setting trunk passes. Each pass adds projected previous single and pair states, then runs Template, MSA, and Pairformer with shared weights. A separate 200-step diffusion sampler produces coordinates before the Confidence Head judges the completed sample.",
+        "summary": "Input features feed a recycling trunk, then a separate diffusion sampler makes atom coordinates and the Confidence Head estimates their quality. Open the trunk to follow the four paper-setting passes through Template, MSA, and Pairformer.",
         "subject_ref": "architecture",
         "expansion_depth": 1,
         "grid": {
-          "columns": 19,
-          "rows": 10,
+          "columns": 11,
+          "rows": 8,
           "column_sizing": "content",
-          "col_gap": 36,
-          "row_gap": 24
+          "col_gap": 24,
+          "row_gap": 20
         },
-        "regions": [
-          {
-            "id": "one_trunk_recycle",
-            "kind": "repeat",
-            "execution_ref": "execution.loops.trunk_recycling",
-            "label": "one trunk pass",
-            "node_ids": [
-              "template_module",
-              "msa_module",
-              "pairformer_stack",
-              "single_recycle_projection",
-              "pair_recycle_projection",
-              "recycled_single_state",
-              "recycled_pair_state",
-              "single_state_input",
-              "pair_recycle_seed",
-              "single_state_output",
-              "pair_state_output"
-            ],
-            "iteration_relation_refs": [
-              "relations.trunk_single_output_reenters_recycle",
-              "relations.trunk_pair_output_reenters_recycle"
-            ]
-          }
-        ],
         "nodes": [
           {
             "id": "atom_reference_features_input",
@@ -23017,7 +23025,8 @@ export const manifest = {
             "ref": "modules.input_feature_embedder",
             "label": "Input Feature Embedder",
             "prominence": "primary",
-            "treatment": "block",
+            "treatment": "compact",
+            "density": "compact",
             "col": 2,
             "row": 4,
             "board_ref": "input_feature_embedder_detail"
@@ -23034,133 +23043,13 @@ export const manifest = {
             "row": 4
           },
           {
-            "id": "single_state_input_projection",
-            "ref": "modules.single_state_input_projection",
-            "label": "project singles",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 4,
-            "row": 3
-          },
-          {
-            "id": "pair_state_input_projection",
-            "ref": "modules.pair_state_input_projection",
-            "label": "project pairs",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 4,
-            "row": 5
-          },
-          {
-            "id": "single_init",
-            "ref": "value_sites.single_init",
-            "label": "fixed single anchor",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 5,
-            "row": 3
-          },
-          {
-            "id": "z_init",
-            "ref": "value_sites.z_init",
-            "label": "fixed pair anchor",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 5,
-            "row": 5
-          },
-          {
-            "id": "pair_recycle_seed",
-            "ref": "value_sites.pair_recycle_seed",
-            "label": "this pass's pairs",
-            "prominence": "secondary",
-            "treatment": "compact",
-            "density": "compact",
-            "col": 6,
-            "row": 4
-          },
-          {
-            "id": "recycled_single_state",
-            "ref": "value_sites.recycled_single_state",
-            "label": "previous singles",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 12,
-            "row": 9
-          },
-          {
-            "id": "recycled_pair_state",
-            "ref": "value_sites.recycled_pair_state",
-            "label": "previous pairs",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 12,
-            "row": 10
-          },
-          {
-            "id": "single_recycle_projection",
-            "ref": "modules.single_recycle_projection",
-            "label": "project previous singles",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 10,
-            "row": 2
-          },
-          {
-            "id": "pair_recycle_projection",
-            "ref": "modules.pair_recycle_projection",
-            "label": "project previous pairs",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 10,
-            "row": 8
-          },
-          {
-            "id": "single_state_input",
-            "ref": "value_sites.single_state_input",
-            "label": "this pass's singles",
-            "prominence": "context",
-            "treatment": "compact",
-            "density": "compact",
-            "col": 10,
-            "row": 3
-          },
-          {
-            "id": "token_mask_input",
-            "ref": "value_sites.token_mask_input",
-            "label": "token mask",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 5,
-            "row": 2
-          },
-          {
-            "id": "pair_mask_input",
-            "ref": "value_sites.pair_mask_input",
-            "label": "pair mask",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 5,
-            "row": 6
-          },
-          {
             "id": "template_backbone_frame_mask",
             "ref": "value_sites.template_backbone_frame_mask",
             "label": "backbone-frame mask",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
+            "col": 4,
             "row": 1
           },
           {
@@ -23170,7 +23059,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
+            "col": 4,
             "row": 2
           },
           {
@@ -23180,7 +23069,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
+            "col": 4,
             "row": 3
           },
           {
@@ -23190,7 +23079,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
+            "col": 4,
             "row": 5
           },
           {
@@ -23200,7 +23089,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
+            "col": 4,
             "row": 6
           },
           {
@@ -23210,18 +23099,8 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 6,
+            "col": 4,
             "row": 7
-          },
-          {
-            "id": "template_module",
-            "ref": "modules.template_module",
-            "label": "Template Module",
-            "prominence": "primary",
-            "treatment": "block",
-            "col": 7,
-            "row": 4,
-            "board_ref": "template_module_detail"
           },
           {
             "id": "msa_input",
@@ -23230,7 +23109,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 8,
+            "col": 5,
             "row": 2
           },
           {
@@ -23240,8 +23119,8 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 8,
-            "row": 3
+            "col": 5,
+            "row": 4
           },
           {
             "id": "deletion_value_input",
@@ -23250,28 +23129,39 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 8,
-            "row": 5
+            "col": 5,
+            "row": 6
           },
           {
-            "id": "msa_module",
-            "ref": "modules.msa_module",
-            "label": "MSA Module",
-            "prominence": "primary",
-            "treatment": "block",
-            "col": 9,
-            "row": 4,
-            "board_ref": "msa_module_detail"
+            "id": "token_mask_input",
+            "ref": "value_sites.token_mask_input",
+            "label": "token mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 7
           },
           {
-            "id": "pairformer_stack",
-            "ref": "modules.pairformer_stack",
-            "label": "48-block Pairformer",
+            "id": "pair_mask_input",
+            "ref": "value_sites.pair_mask_input",
+            "label": "pair mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 8
+          },
+          {
+            "id": "trunk_model",
+            "ref": "modules.trunk_model",
+            "label": "Recycling Trunk",
             "prominence": "primary",
-            "treatment": "block",
-            "col": 11,
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
             "row": 4,
-            "board_ref": "pairformer_block"
+            "board_ref": "trunk_model_detail"
           },
           {
             "id": "entity_id",
@@ -23280,7 +23170,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 12,
+            "col": 7,
             "row": 1
           },
           {
@@ -23290,7 +23180,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 12,
+            "col": 7,
             "row": 2
           },
           {
@@ -23301,7 +23191,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 12,
+            "col": 7,
             "row": 3
           },
           {
@@ -23312,7 +23202,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 12,
+            "col": 7,
             "row": 5
           },
           {
@@ -23322,7 +23212,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 12,
+            "col": 7,
             "row": 6
           },
           {
@@ -23332,19 +23222,8 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 12,
+            "col": 7,
             "row": 7
-          },
-          {
-            "id": "sample_diffusion",
-            "ref": "modules.sample_diffusion",
-            "label": "Diffusion Sampler",
-            "prominence": "primary",
-            "treatment": "compact",
-            "density": "compact",
-            "col": 14,
-            "row": 4,
-            "board_ref": "sample_diffusion_detail"
           },
           {
             "id": "relative_position_encoding",
@@ -23353,7 +23232,7 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 13,
+            "col": 8,
             "row": 1,
             "board_ref": "relative_position_encoding_detail"
           },
@@ -23364,8 +23243,19 @@ export const manifest = {
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
-            "col": 14,
+            "col": 8,
             "row": 2
+          },
+          {
+            "id": "sample_diffusion",
+            "ref": "modules.sample_diffusion",
+            "label": "Diffusion Sampler",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 8,
+            "row": 4,
+            "board_ref": "sample_diffusion_detail"
           },
           {
             "id": "final_sampled_atom_positions",
@@ -23374,7 +23264,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 15,
+            "col": 9,
             "row": 4
           },
           {
@@ -23384,7 +23274,7 @@ export const manifest = {
             "prominence": "primary",
             "treatment": "compact",
             "density": "compact",
-            "col": 16,
+            "col": 10,
             "row": 4,
             "board_ref": "confidence_head_detail"
           },
@@ -23395,7 +23285,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 18,
+            "col": 11,
             "row": 2
           },
           {
@@ -23405,7 +23295,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 18,
+            "col": 11,
             "row": 4
           },
           {
@@ -23415,7 +23305,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 18,
+            "col": 11,
             "row": 6
           },
           {
@@ -23425,7 +23315,7 @@ export const manifest = {
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
-            "col": 18,
+            "col": 11,
             "row": 8
           }
         ],
@@ -23454,9 +23344,6 @@ export const manifest = {
           }
         ],
         "elide": [
-          {
-            "ref": "value_sites.pair_state_input"
-          },
           {
             "ref": "value_sites.relative_position_encoding_output"
           }
@@ -23526,9 +23413,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_1e58c1a7866e",
+            "id": "projection_234a22f52308",
             "from": "asym_id",
-            "to": "template_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "conditioning",
@@ -23742,9 +23629,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_2ec3a4250502",
+            "id": "projection_1a9cbcfc5b85",
             "from": "deletion_value_input",
-            "to": "msa_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -23838,9 +23725,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_47ae297573c2",
+            "id": "projection_f5ddda56c1f6",
             "from": "has_deletion_input",
-            "to": "msa_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -23886,9 +23773,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_c21ce4106938",
+            "id": "projection_0ed0031eaab1",
             "from": "msa_input",
-            "to": "msa_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -23910,37 +23797,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_11ee4bd8bcaf",
-            "from": "msa_module",
-            "to": "pairformer_stack",
-            "projection": "contracted",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.msa_module_pair_output_becomes_pair_state_input",
-              "relations.input_pair_state_initializes_block_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.msa_module_pair_output_becomes_pair_state_input"
-              },
-              {
-                "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
-              }
-            ],
-            "hidden_refs": [
-              "value_sites.pair_state_input"
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_7d57332cdd97",
+            "id": "projection_f3612c80a733",
             "from": "pair_mask_input",
-            "to": "pairformer_stack",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "conditioning",
@@ -23962,9 +23821,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_f24e2d2d57f1",
+            "id": "projection_5296708c3b09",
             "from": "pair_mask_input",
-            "to": "pairformer_stack",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "conditioning",
@@ -23986,9 +23845,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_42be7a59d897",
+            "id": "projection_a5025b5bbaec",
             "from": "pair_mask_input",
-            "to": "pairformer_stack",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "conditioning",
@@ -24010,9 +23869,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_fe4f7af85d32",
+            "id": "projection_246795568d21",
             "from": "pair_mask_input",
-            "to": "pairformer_stack",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "conditioning",
@@ -24034,78 +23893,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_55d61b80f1e2",
-            "from": "pair_recycle_projection",
-            "to": "pair_recycle_seed",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.pair_recycle_projection_updates_seed"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.pair_recycle_projection_updates_seed"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_7d6aef7a0b29",
-            "from": "pair_recycle_seed",
-            "to": "template_module",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.z_init_initializes_template_module_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.z_init_initializes_template_module_pair_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_2f82a591dd8a",
-            "from": "pair_state_input_projection",
-            "to": "z_init",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.pair_state_projection_produces_z_init"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.pair_state_projection_produces_z_init"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_f9def5efd485",
             "from": "pair_state_output",
             "to": "confidence_head",
@@ -24118,30 +23905,6 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.trunk_pair_enters_confidence_pair_embedding"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_bbadb0682d12",
-            "from": "pair_state_output",
-            "to": "recycled_pair_state",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.trunk_pair_output_reenters_recycle"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.trunk_pair_output_reenters_recycle"
               }
             ],
             "hidden_refs": [
@@ -24178,18 +23941,18 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_97d1e9fd492c",
-            "from": "pairformer_stack",
-            "to": "pair_state_output",
+            "id": "projection_97c381ff9ad0",
+            "from": "pair_state_output",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "state_update",
             "relation_path": [
-              "relations.final_pair_block_state_becomes_output"
+              "relations.trunk_pair_output_reenters_recycle"
             ],
             "provenance_hops": [
               {
-                "relation_ref": "relations.final_pair_block_state_becomes_output"
+                "relation_ref": "relations.trunk_pair_output_reenters_recycle"
               }
             ],
             "hidden_refs": [
@@ -24199,42 +23962,6 @@ export const manifest = {
               "representations.pair_state"
             ],
             "presentation": {
-              "label": "z^{trunk}",
-              "connection": {
-                "title": "Final pair representation",
-                "role": "downstream pair context",
-                "inside": "After block 48, the ordered token-pair state is exposed to downstream AF3 modules."
-              }
-            }
-          },
-          {
-            "id": "projection_3db1d176a533",
-            "from": "pairformer_stack",
-            "to": "single_state_output",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.final_single_block_state_becomes_output"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.final_single_block_state_becomes_output"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-              "label": "s^{trunk}",
-              "connection": {
-                "title": "Final single representation",
-                "role": "downstream trunk state",
-                "inside": "After block 48, the token-wise state is exposed to downstream AF3 modules."
-              }
             }
           },
           {
@@ -24257,54 +23984,6 @@ export const manifest = {
             ],
             "carries": [
               "representations.profile"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_a4256015a892",
-            "from": "recycled_pair_state",
-            "to": "pair_recycle_projection",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.previous_pair_enters_recycle_projection"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.previous_pair_enters_recycle_projection"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_21d2550a686c",
-            "from": "recycled_single_state",
-            "to": "single_recycle_projection",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.previous_single_enters_recycle_projection"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.previous_single_enters_recycle_projection"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
             ],
             "presentation": {
             }
@@ -24410,54 +24089,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_f4545d04684c",
-            "from": "s_inputs",
-            "to": "msa_module",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.s_inputs_enters_msa_row_embedding"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.s_inputs_enters_msa_row_embedding"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.s_inputs"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_e702e26247ec",
-            "from": "s_inputs",
-            "to": "pair_state_input_projection",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.s_inputs_enters_pair_state_projection"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.s_inputs_enters_pair_state_projection"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.s_inputs"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_c8e9e09d802a",
             "from": "s_inputs",
             "to": "sample_diffusion",
@@ -24482,10 +24113,58 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_3d1249db30c6",
+            "id": "projection_506677c55261",
             "from": "s_inputs",
-            "to": "single_state_input_projection",
-            "projection": "direct",
+            "to": "trunk_model",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_msa_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_msa_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8e0980d807e0",
+            "from": "s_inputs",
+            "to": "trunk_model",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_pair_state_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_pair_state_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d81ddb3a9ddb",
+            "from": "s_inputs",
+            "to": "trunk_model",
+            "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
             "relation_path": [
@@ -24554,102 +24233,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_ebadc5831a85",
-            "from": "single_init",
-            "to": "single_state_input",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.single_anchor_initializes_recycle_pass"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.single_anchor_initializes_recycle_pass"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_7af392f26848",
-            "from": "single_recycle_projection",
-            "to": "single_state_input",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.single_recycle_projection_updates_input"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.single_recycle_projection_updates_input"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_f1044b987a6f",
-            "from": "single_state_input",
-            "to": "pairformer_stack",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.input_single_state_initializes_block_single_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.input_single_state_initializes_block_single_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_d4189605880c",
-            "from": "single_state_input_projection",
-            "to": "single_init",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.single_state_projection_produces_single_state_input"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.single_state_projection_produces_single_state_input"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_c900d293e106",
             "from": "single_state_output",
             "to": "confidence_head",
@@ -24662,30 +24245,6 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.trunk_single_enters_confidence_pairformer"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.single_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_fa1b2dc1179f",
-            "from": "single_state_output",
-            "to": "recycled_single_state",
-            "projection": "direct",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.trunk_single_output_reenters_recycle"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.trunk_single_output_reenters_recycle"
               }
             ],
             "hidden_refs": [
@@ -24746,6 +24305,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_4fa7e09bd988",
+            "from": "single_state_output",
+            "to": "trunk_model",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_single_output_reenters_recycle"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_single_output_reenters_recycle"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_f5b674863e77",
             "from": "sym_id",
             "to": "relative_position_encoding",
@@ -24770,9 +24353,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_edd5f0648941",
+            "id": "projection_940c9260e7a7",
             "from": "template_backbone_frame_mask",
-            "to": "template_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -24794,9 +24377,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_ca4dd43aeb1c",
+            "id": "projection_8c422f1bc15f",
             "from": "template_distogram",
-            "to": "template_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -24818,33 +24401,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_36835f050f46",
-            "from": "template_module",
-            "to": "msa_module",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.template_module_pair_output_updates_msa_module_pair_state"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.pair_state"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_d2fc4d7a136c",
+            "id": "projection_64556e2d7885",
             "from": "template_pseudo_beta_mask",
-            "to": "template_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -24866,9 +24425,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_af2e290cc9fb",
+            "id": "projection_4c9835c3a9bf",
             "from": "template_restype",
-            "to": "template_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -24890,9 +24449,9 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_0b624278ce26",
+            "id": "projection_02df7adf36f3",
             "from": "template_unit_vector",
-            "to": "template_module",
+            "to": "trunk_model",
             "projection": "boundary",
             "origin": "canonical",
             "kind": "data_flow",
@@ -24938,7 +24497,1401 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_d3b940b30ce4",
+            "id": "projection_7dfabc390e1c",
+            "from": "token_mask_input",
+            "to": "trunk_model",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.token_mask_conditions_single_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_mask_conditions_single_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.token_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_bfa456ad702b",
+            "from": "trunk_model",
+            "to": "pair_state_output",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.final_pair_block_state_becomes_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_pair_block_state_becomes_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z^{trunk}",
+              "connection": {
+                "title": "Final pair representation",
+                "role": "downstream pair context",
+                "inside": "After block 48, the ordered token-pair state is exposed to downstream AF3 modules."
+              }
+            }
+          },
+          {
+            "id": "projection_e9551854d7ac",
+            "from": "trunk_model",
+            "to": "single_state_output",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.final_single_block_state_becomes_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_single_block_state_becomes_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+              "label": "s^{trunk}",
+              "connection": {
+                "title": "Final single representation",
+                "role": "downstream trunk state",
+                "inside": "After block 48, the token-wise state is exposed to downstream AF3 modules."
+              }
+            }
+          }
+        ],
+        "classifications": {
+          "modules.atom_attention_decoder": "collapsed:modules.sample_diffusion",
+          "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
+          "modules.atom_attention_encoder_conditioned": "collapsed:modules.sample_diffusion",
+          "modules.atom_decoder_atom_transformer": "collapsed:modules.sample_diffusion",
+          "modules.atom_encoder_atom_transformer": "collapsed:modules.sample_diffusion",
+          "modules.confidence_head": "visible",
+          "modules.confidence_pae_head": "collapsed:modules.confidence_head",
+          "modules.confidence_pair_embedding": "collapsed:modules.confidence_head",
+          "modules.confidence_pairformer_stack": "collapsed:modules.confidence_head",
+          "modules.confidence_pde_head": "collapsed:modules.confidence_head",
+          "modules.confidence_plddt_head": "collapsed:modules.confidence_head",
+          "modules.confidence_resolved_head": "collapsed:modules.confidence_head",
+          "modules.diffusion_conditioning": "collapsed:modules.sample_diffusion",
+          "modules.fourier_embedding": "visible",
+          "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
+          "modules.input_feature_embedder": "visible",
+          "modules.msa_pair_attention_ending_node": "collapsed:modules.trunk_model",
+          "modules.msa_pair_attention_starting_node": "collapsed:modules.trunk_model",
+          "modules.msa_pair_transition": "collapsed:modules.trunk_model",
+          "modules.msa_pair_weighted_averaging": "collapsed:modules.trunk_model",
+          "modules.msa_row_embedding": "collapsed:modules.trunk_model",
+          "modules.msa_transition": "collapsed:modules.trunk_model",
+          "modules.msa_triangle_multiplication_incoming": "collapsed:modules.trunk_model",
+          "modules.msa_triangle_multiplication_outgoing": "collapsed:modules.trunk_model",
+          "modules.outer_product_mean": "collapsed:modules.trunk_model",
+          "modules.pair_attention_ending_node": "collapsed:modules.trunk_model",
+          "modules.pair_attention_starting_node": "collapsed:modules.trunk_model",
+          "modules.pair_recycle_projection": "collapsed:modules.trunk_model",
+          "modules.pair_state_input_projection": "collapsed:modules.trunk_model",
+          "modules.pair_transition": "collapsed:modules.trunk_model",
+          "modules.relative_position_encoding": "visible",
+          "modules.sample_diffusion": "visible",
+          "modules.sampler_coordinate_initializer": "collapsed:modules.sample_diffusion",
+          "modules.sampler_gradient": "collapsed:modules.sample_diffusion",
+          "modules.sampler_noise_injection": "collapsed:modules.sample_diffusion",
+          "modules.sampler_pose_augmentation": "collapsed:modules.sample_diffusion",
+          "modules.sampler_schedule": "collapsed:modules.sample_diffusion",
+          "modules.sampler_update": "collapsed:modules.sample_diffusion",
+          "modules.sequence_local_attention_mask": "collapsed:modules.sample_diffusion",
+          "modules.single_attention_with_pair_bias": "collapsed:modules.trunk_model",
+          "modules.single_pair_logits_projection": "collapsed:modules.trunk_model",
+          "modules.single_recycle_projection": "collapsed:modules.trunk_model",
+          "modules.single_state_input_projection": "collapsed:modules.trunk_model",
+          "modules.single_transition": "collapsed:modules.trunk_model",
+          "modules.template_pair_attention_ending_node": "collapsed:modules.trunk_model",
+          "modules.template_pair_attention_starting_node": "collapsed:modules.trunk_model",
+          "modules.template_pair_conditioning": "collapsed:modules.trunk_model",
+          "modules.template_pair_feature_construction": "collapsed:modules.trunk_model",
+          "modules.template_pair_transition": "collapsed:modules.trunk_model",
+          "modules.template_triangle_multiplication_incoming": "collapsed:modules.trunk_model",
+          "modules.template_triangle_multiplication_outgoing": "collapsed:modules.trunk_model",
+          "modules.token_attention_pair_bias": "collapsed:modules.sample_diffusion",
+          "modules.token_conditioned_transition": "collapsed:modules.sample_diffusion",
+          "modules.triangle_multiplication_incoming": "collapsed:modules.trunk_model",
+          "modules.triangle_multiplication_outgoing": "collapsed:modules.trunk_model",
+          "modules.trunk_model": "visible",
+          "value_sites.asym_id": "visible",
+          "value_sites.atom_attention_decoder_position_update": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_attention_encoder_pair_skip": "excluded",
+          "value_sites.atom_attention_encoder_query_skip": "excluded",
+          "value_sites.atom_attention_encoder_single_conditioning_skip": "excluded",
+          "value_sites.atom_attention_encoder_token_output": "excluded",
+          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_pair_reference_geometry": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_initial": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_query_with_noisy_position": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_reference_features_input": "visible",
+          "value_sites.atom_single_conditioning_base": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.sample_diffusion",
+          "value_sites.block_pair_state": "collapsed:modules.trunk_model",
+          "value_sites.block_single_state": "collapsed:modules.trunk_model",
+          "value_sites.confidence_pair_after_geometry_embedding": "collapsed:modules.confidence_head",
+          "value_sites.confidence_pair_after_input_embedding": "collapsed:modules.confidence_head",
+          "value_sites.confidence_pair_after_stack": "collapsed:modules.confidence_head",
+          "value_sites.confidence_representative_distances": "collapsed:modules.confidence_head",
+          "value_sites.confidence_single_after_stack": "collapsed:modules.confidence_head",
+          "value_sites.deletion_mean_input": "visible",
+          "value_sites.deletion_value_input": "visible",
+          "value_sites.denoised_atom_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_conditioned_pair": "excluded",
+          "value_sites.diffusion_conditioned_single": "excluded",
+          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_activation_conditioned": "excluded",
+          "value_sites.diffusion_token_activation_normalized": "excluded",
+          "value_sites.diffusion_token_attention_branch": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_block_input": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_block_output": "collapsed:modules.sample_diffusion",
+          "value_sites.diffusion_token_transition_branch": "collapsed:modules.sample_diffusion",
+          "value_sites.entity_id": "visible",
+          "value_sites.final_sampled_atom_positions": "visible",
+          "value_sites.fourier_time_embedding": "collapsed:modules.fourier_embedding",
+          "value_sites.has_deletion_input": "visible",
+          "value_sites.msa_activations": "collapsed:modules.trunk_model",
+          "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.trunk_model",
+          "value_sites.msa_activations_after_transition": "collapsed:modules.trunk_model",
+          "value_sites.msa_input": "visible",
+          "value_sites.msa_module_pair_state_read": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_after_ending_attention": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_after_incoming_multiplication": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_after_outgoing_multiplication": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_after_starting_attention": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_after_transition": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_weighted_averaging_gate": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_weighted_averaging_value": "collapsed:modules.trunk_model",
+          "value_sites.msa_pair_weighted_averaging_weights": "collapsed:modules.trunk_model",
+          "value_sites.noise_level": "collapsed:modules.sample_diffusion",
+          "value_sites.noisy_atom_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.outer_product_mean_flattened": "collapsed:modules.trunk_model",
+          "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.trunk_model",
+          "value_sites.outer_product_mean_projection_a": "collapsed:modules.trunk_model",
+          "value_sites.outer_product_mean_projection_b": "collapsed:modules.trunk_model",
+          "value_sites.pair_after_ending_attention": "collapsed:modules.trunk_model",
+          "value_sites.pair_after_incoming_multiplication": "collapsed:modules.trunk_model",
+          "value_sites.pair_after_outgoing_multiplication": "collapsed:modules.trunk_model",
+          "value_sites.pair_after_starting_attention": "collapsed:modules.trunk_model",
+          "value_sites.pair_after_transition": "collapsed:modules.trunk_model",
+          "value_sites.pair_mask_input": "visible",
+          "value_sites.pair_recycle_seed": "collapsed:modules.trunk_model",
+          "value_sites.pair_state_input": "collapsed:modules.trunk_model",
+          "value_sites.pair_state_output": "visible",
+          "value_sites.predicted_aligned_error": "visible",
+          "value_sites.predicted_aligned_error_distribution": "collapsed:modules.confidence_head",
+          "value_sites.predicted_distance_error": "visible",
+          "value_sites.predicted_distance_error_distribution": "collapsed:modules.confidence_head",
+          "value_sites.predicted_experimentally_resolved": "visible",
+          "value_sites.predicted_lddt": "visible",
+          "value_sites.predicted_lddt_distribution": "collapsed:modules.confidence_head",
+          "value_sites.predicted_resolved_distribution": "collapsed:modules.confidence_head",
+          "value_sites.profile_input": "visible",
+          "value_sites.recycled_pair_state": "collapsed:modules.trunk_model",
+          "value_sites.recycled_single_state": "collapsed:modules.trunk_model",
+          "value_sites.relative_chain_offset": "collapsed:modules.relative_position_encoding",
+          "value_sites.relative_position_encoding_output": "elided",
+          "value_sites.relative_residue_offset": "collapsed:modules.relative_position_encoding",
+          "value_sites.relative_token_offset": "collapsed:modules.relative_position_encoding",
+          "value_sites.residue_index": "visible",
+          "value_sites.restype_input": "visible",
+          "value_sites.s_inputs": "visible",
+          "value_sites.same_entity_signal": "collapsed:modules.relative_position_encoding",
+          "value_sites.sampler_augmented_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_current_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_denoising_direction": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_initial_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_next_level": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_previous_level": "collapsed:modules.sample_diffusion",
+          "value_sites.sampler_updated_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.scaled_noisy_atom_positions": "collapsed:modules.sample_diffusion",
+          "value_sites.sequence_local_atom_attention_mask": "excluded",
+          "value_sites.single_after_pair_attention": "collapsed:modules.trunk_model",
+          "value_sites.single_after_transition": "collapsed:modules.trunk_model",
+          "value_sites.single_init": "collapsed:modules.trunk_model",
+          "value_sites.single_pair_attention_logits": "collapsed:modules.trunk_model",
+          "value_sites.single_state_input": "collapsed:modules.trunk_model",
+          "value_sites.single_state_output": "visible",
+          "value_sites.sym_id": "visible",
+          "value_sites.template_backbone_frame_mask": "visible",
+          "value_sites.template_distogram": "visible",
+          "value_sites.template_module_pair_output": "collapsed:modules.trunk_model",
+          "value_sites.template_module_pair_state_read": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_after_ending_attention": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_after_incoming_multiplication": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_after_outgoing_multiplication": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_after_starting_attention": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_after_transition": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_conditioned_state": "collapsed:modules.trunk_model",
+          "value_sites.template_pair_feature": "collapsed:modules.trunk_model",
+          "value_sites.template_pseudo_beta_mask": "visible",
+          "value_sites.template_restype": "visible",
+          "value_sites.template_unit_vector": "visible",
+          "value_sites.token_index": "visible",
+          "value_sites.token_mask_input": "visible",
+          "value_sites.z_init": "collapsed:modules.trunk_model"
+        },
+        "projectionMode": "derived"
+      },
+      {
+        "id": "trunk_model_detail",
+        "title": "Four Trunk Passes",
+        "summary": "Fixed input-derived single and pair anchors are combined with projected previous states on each pass. Template adds structural context, MSA adds evolutionary pair evidence, and the same 48-block Pairformer refines singles and pairs before the next pass or final handoff.",
+        "parent": "pairformer_overview",
+        "subject_ref": "modules.trunk_model",
+        "expansion_depth": 1,
+        "grid": {
+          "columns": 9,
+          "rows": 8,
+          "column_sizing": "content",
+          "col_gap": 20,
+          "row_gap": 18
+        },
+        "regions": [
+          {
+            "id": "one_trunk_recycle",
+            "kind": "repeat",
+            "execution_ref": "execution.loops.trunk_recycling",
+            "label": "one trunk pass",
+            "node_ids": [
+              "template_module",
+              "msa_module",
+              "pairformer_stack",
+              "single_recycle_projection",
+              "pair_recycle_projection",
+              "recycled_single_state",
+              "recycled_pair_state",
+              "single_state_input",
+              "pair_recycle_seed",
+              "single_state_output",
+              "pair_state_output"
+            ],
+            "iteration_relation_refs": [
+              "relations.trunk_single_output_reenters_recycle",
+              "relations.trunk_pair_output_reenters_recycle"
+            ]
+          }
+        ],
+        "nodes": [
+          {
+            "id": "s_inputs",
+            "ref": "value_sites.s_inputs",
+            "label": "input embedding",
+            "notation": "s^{inputs}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "single_state_input_projection",
+            "ref": "modules.single_state_input_projection",
+            "label": "project singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 3
+          },
+          {
+            "id": "pair_state_input_projection",
+            "ref": "modules.pair_state_input_projection",
+            "label": "project pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 5
+          },
+          {
+            "id": "single_init",
+            "ref": "value_sites.single_init",
+            "label": "fixed single anchor",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 3
+          },
+          {
+            "id": "z_init",
+            "ref": "value_sites.z_init",
+            "label": "fixed pair anchor",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 5
+          },
+          {
+            "id": "pair_recycle_seed",
+            "ref": "value_sites.pair_recycle_seed",
+            "label": "this pass's pairs",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 5,
+            "row": 4
+          },
+          {
+            "id": "recycled_single_state",
+            "ref": "value_sites.recycled_single_state",
+            "label": "previous singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 8,
+            "row": 7
+          },
+          {
+            "id": "recycled_pair_state",
+            "ref": "value_sites.recycled_pair_state",
+            "label": "previous pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 8,
+            "row": 8
+          },
+          {
+            "id": "single_recycle_projection",
+            "ref": "modules.single_recycle_projection",
+            "label": "project previous singles",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 7,
+            "row": 2
+          },
+          {
+            "id": "pair_recycle_projection",
+            "ref": "modules.pair_recycle_projection",
+            "label": "project previous pairs",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 7,
+            "row": 7
+          },
+          {
+            "id": "single_state_input",
+            "ref": "value_sites.single_state_input",
+            "label": "this pass's singles",
+            "prominence": "context",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 7,
+            "row": 3
+          },
+          {
+            "id": "token_mask_input",
+            "ref": "value_sites.token_mask_input",
+            "label": "token mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "pair_mask_input",
+            "ref": "value_sites.pair_mask_input",
+            "label": "pair mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 4,
+            "row": 6
+          },
+          {
+            "id": "template_backbone_frame_mask",
+            "ref": "value_sites.template_backbone_frame_mask",
+            "label": "backbone-frame mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 1
+          },
+          {
+            "id": "template_pseudo_beta_mask",
+            "ref": "value_sites.template_pseudo_beta_mask",
+            "label": "pseudo-beta mask",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "template_distogram",
+            "ref": "value_sites.template_distogram",
+            "label": "distogram",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 3
+          },
+          {
+            "id": "template_unit_vector",
+            "ref": "value_sites.template_unit_vector",
+            "label": "unit vector",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 5
+          },
+          {
+            "id": "template_restype",
+            "ref": "value_sites.template_restype",
+            "label": "template restype",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 6
+          },
+          {
+            "id": "asym_id",
+            "ref": "value_sites.asym_id",
+            "label": "chain id (asym_id)",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 7
+          },
+          {
+            "id": "template_module",
+            "ref": "modules.template_module",
+            "label": "Template Module",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 6,
+            "row": 4,
+            "board_ref": "template_module_detail"
+          },
+          {
+            "id": "msa_input",
+            "ref": "value_sites.msa_input",
+            "label": "MSA identity",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "has_deletion_input",
+            "ref": "value_sites.has_deletion_input",
+            "label": "has deletion",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 3
+          },
+          {
+            "id": "deletion_value_input",
+            "ref": "value_sites.deletion_value_input",
+            "label": "deletion value",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 6,
+            "row": 5
+          },
+          {
+            "id": "msa_module",
+            "ref": "modules.msa_module",
+            "label": "MSA Module",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 7,
+            "row": 4,
+            "board_ref": "msa_module_detail"
+          },
+          {
+            "id": "pairformer_stack",
+            "ref": "modules.pairformer_stack",
+            "label": "48-block Pairformer",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 8,
+            "row": 4,
+            "board_ref": "pairformer_block"
+          },
+          {
+            "id": "single_state_output",
+            "ref": "value_sites.single_state_output",
+            "label": "trunk singles",
+            "notation": "s^{trunk}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 9,
+            "row": 3
+          },
+          {
+            "id": "pair_state_output",
+            "ref": "value_sites.pair_state_output",
+            "label": "trunk pairs",
+            "notation": "z^{trunk}",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 9,
+            "row": 5
+          }
+        ],
+        "edge_overrides": [
+          {
+            "match": {
+              "relation_ref": "relations.final_single_block_state_becomes_output"
+            },
+            "label": "s^{trunk}",
+            "connection": {
+              "title": "Final single representation",
+              "role": "downstream trunk state",
+              "inside": "After block 48, the token-wise state is exposed to downstream AF3 modules."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.final_pair_block_state_becomes_output"
+            },
+            "label": "z^{trunk}",
+            "connection": {
+              "title": "Final pair representation",
+              "role": "downstream pair context",
+              "inside": "After block 48, the ordered token-pair state is exposed to downstream AF3 modules."
+            }
+          }
+        ],
+        "elide": [
+          {
+            "ref": "value_sites.pair_state_input"
+          }
+        ],
+        "exclude": [
+          {
+            "ref": "modules.diffusion_conditioning",
+            "reason": "Diffusion conditioning consumes the completed trunk states on the sampler's child boards."
+          },
+          {
+            "ref": "modules.atom_attention_encoder_conditioned",
+            "reason": "The conditioned atom encoder belongs to the downstream diffusion module."
+          },
+          {
+            "ref": "modules.confidence_pairformer_stack",
+            "reason": "The Confidence Head's separate Pairformer is expanded on its own board."
+          },
+          {
+            "ref": "value_sites.confidence_pair_after_input_embedding",
+            "reason": "Confidence pair embedding belongs to the downstream Confidence Head board."
+          }
+        ],
+        "projection_mode": "derived",
+        "edges": [
+          {
+            "id": "projection_be2242fd2058",
+            "from": "asym_id",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.asym_id_conditions_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.asym_id_conditions_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.asym_id"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3573efc5d935",
+            "from": "deletion_value_input",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.deletion_value_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.deletion_value_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.deletion_value"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_5ce485c60422",
+            "from": "has_deletion_input",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.has_deletion_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.has_deletion_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.has_deletion"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9e0a334306b7",
+            "from": "msa_input",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.msa_input_enters_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_input_enters_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.msa_identity"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_e10a08d5ac01",
+            "from": "msa_module",
+            "to": "pairformer_stack",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.msa_module_pair_output_becomes_pair_state_input",
+              "relations.input_pair_state_initializes_block_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.msa_module_pair_output_becomes_pair_state_input"
+              },
+              {
+                "relation_ref": "relations.input_pair_state_initializes_block_pair_state"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.pair_state_input"
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_d58083554b07",
+            "from": "pair_mask_input",
+            "to": "pairformer_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_mask_conditions_ending_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_mask_conditions_ending_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_94fcce7ea3cb",
+            "from": "pair_mask_input",
+            "to": "pairformer_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_mask_conditions_incoming_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_mask_conditions_incoming_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_6777db8fed2f",
+            "from": "pair_mask_input",
+            "to": "pairformer_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_mask_conditions_outgoing_multiplication"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_mask_conditions_outgoing_multiplication"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_71814eb803de",
+            "from": "pair_mask_input",
+            "to": "pairformer_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "conditioning",
+            "relation_path": [
+              "relations.pair_mask_conditions_starting_attention"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_mask_conditions_starting_attention"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_65d7d88ded40",
+            "from": "pair_recycle_projection",
+            "to": "pair_recycle_seed",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_recycle_projection_updates_seed"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_recycle_projection_updates_seed"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3f0e5352ad9a",
+            "from": "pair_recycle_seed",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.z_init_initializes_template_module_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.z_init_initializes_template_module_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_01acfbfef552",
+            "from": "pair_state_input_projection",
+            "to": "z_init",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pair_state_projection_produces_z_init"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pair_state_projection_produces_z_init"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_a9d0a5f2c279",
+            "from": "pair_state_output",
+            "to": "recycled_pair_state",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_pair_output_reenters_recycle"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_pair_output_reenters_recycle"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_274e88e7d828",
+            "from": "pairformer_stack",
+            "to": "pair_state_output",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.final_pair_block_state_becomes_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_pair_block_state_becomes_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z^{trunk}",
+              "connection": {
+                "title": "Final pair representation",
+                "role": "downstream pair context",
+                "inside": "After block 48, the ordered token-pair state is exposed to downstream AF3 modules."
+              }
+            }
+          },
+          {
+            "id": "projection_39d997a65871",
+            "from": "pairformer_stack",
+            "to": "single_state_output",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.final_single_block_state_becomes_output"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.final_single_block_state_becomes_output"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+              "label": "s^{trunk}",
+              "connection": {
+                "title": "Final single representation",
+                "role": "downstream trunk state",
+                "inside": "After block 48, the token-wise state is exposed to downstream AF3 modules."
+              }
+            }
+          },
+          {
+            "id": "projection_b41271aae045",
+            "from": "recycled_pair_state",
+            "to": "pair_recycle_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.previous_pair_enters_recycle_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.previous_pair_enters_recycle_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8aab4431a4fb",
+            "from": "recycled_single_state",
+            "to": "single_recycle_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.previous_single_enters_recycle_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.previous_single_enters_recycle_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_01098aba96aa",
+            "from": "s_inputs",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_msa_row_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_msa_row_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_46a5307ce7cf",
+            "from": "s_inputs",
+            "to": "pair_state_input_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_pair_state_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_pair_state_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_38c9ae88cac7",
+            "from": "s_inputs",
+            "to": "single_state_input_projection",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.s_inputs_enters_single_state_projection"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.s_inputs_enters_single_state_projection"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.s_inputs"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_c9e155870b1a",
+            "from": "single_init",
+            "to": "single_state_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_anchor_initializes_recycle_pass"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_anchor_initializes_recycle_pass"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_253e5f530aa3",
+            "from": "single_recycle_projection",
+            "to": "single_state_input",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_recycle_projection_updates_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_recycle_projection_updates_input"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ebdce764796b",
+            "from": "single_state_input",
+            "to": "pairformer_stack",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.input_single_state_initializes_block_single_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.input_single_state_initializes_block_single_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_16fb13821f0f",
+            "from": "single_state_input_projection",
+            "to": "single_init",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.single_state_projection_produces_single_state_input"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.single_state_projection_produces_single_state_input"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_8fa731e52886",
+            "from": "single_state_output",
+            "to": "recycled_single_state",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.trunk_single_output_reenters_recycle"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.trunk_single_output_reenters_recycle"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.single_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f04cb434f902",
+            "from": "template_backbone_frame_mask",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_backbone_frame_mask_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_backbone_frame_mask_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_backbone_frame_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_60e973311b6c",
+            "from": "template_distogram",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_distogram_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_distogram_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_distogram"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_05e5c3ceab76",
+            "from": "template_module",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.template_module_pair_output_updates_msa_module_pair_state"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_ac94db1d8015",
+            "from": "template_pseudo_beta_mask",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_pseudo_beta_mask_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_pseudo_beta_mask_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_pseudo_beta_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_b5668e83bdda",
+            "from": "template_restype",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_restype_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_restype_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_restype"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_9f99422b340d",
+            "from": "template_unit_vector",
+            "to": "template_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.template_unit_vector_enters_feature_construction"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.template_unit_vector_enters_feature_construction"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.template_unit_vector"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_3d25dd770ab8",
             "from": "token_mask_input",
             "to": "pairformer_stack",
             "projection": "boundary",
@@ -24962,7 +25915,7 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_88002811d4cf",
+            "id": "projection_276bf340ed3e",
             "from": "z_init",
             "to": "pair_recycle_seed",
             "projection": "direct",
@@ -24987,22 +25940,10 @@ export const manifest = {
           }
         ],
         "classifications": {
-          "modules.atom_attention_decoder": "collapsed:modules.sample_diffusion",
-          "modules.atom_attention_encoder_bare": "collapsed:modules.input_feature_embedder",
-          "modules.atom_attention_encoder_conditioned": "collapsed:modules.sample_diffusion",
-          "modules.atom_decoder_atom_transformer": "collapsed:modules.sample_diffusion",
-          "modules.atom_encoder_atom_transformer": "collapsed:modules.sample_diffusion",
-          "modules.confidence_head": "visible",
-          "modules.confidence_pae_head": "collapsed:modules.confidence_head",
-          "modules.confidence_pair_embedding": "collapsed:modules.confidence_head",
-          "modules.confidence_pairformer_stack": "collapsed:modules.confidence_head",
-          "modules.confidence_pde_head": "collapsed:modules.confidence_head",
-          "modules.confidence_plddt_head": "collapsed:modules.confidence_head",
-          "modules.confidence_resolved_head": "collapsed:modules.confidence_head",
-          "modules.diffusion_conditioning": "collapsed:modules.sample_diffusion",
-          "modules.fourier_embedding": "visible",
-          "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
-          "modules.input_feature_embedder": "visible",
+          "modules.atom_attention_encoder_conditioned": "excluded",
+          "modules.atom_encoder_atom_transformer": "excluded",
+          "modules.confidence_pairformer_stack": "excluded",
+          "modules.diffusion_conditioning": "excluded",
           "modules.msa_module": "visible",
           "modules.msa_pair_attention_ending_node": "collapsed:modules.msa_module",
           "modules.msa_pair_attention_starting_node": "collapsed:modules.msa_module",
@@ -25019,15 +25960,6 @@ export const manifest = {
           "modules.pair_state_input_projection": "visible",
           "modules.pair_transition": "collapsed:modules.pairformer_stack",
           "modules.pairformer_stack": "visible",
-          "modules.relative_position_encoding": "visible",
-          "modules.sample_diffusion": "visible",
-          "modules.sampler_coordinate_initializer": "collapsed:modules.sample_diffusion",
-          "modules.sampler_gradient": "collapsed:modules.sample_diffusion",
-          "modules.sampler_noise_injection": "collapsed:modules.sample_diffusion",
-          "modules.sampler_pose_augmentation": "collapsed:modules.sample_diffusion",
-          "modules.sampler_schedule": "collapsed:modules.sample_diffusion",
-          "modules.sampler_update": "collapsed:modules.sample_diffusion",
-          "modules.sequence_local_attention_mask": "collapsed:modules.sample_diffusion",
           "modules.single_attention_with_pair_bias": "collapsed:modules.pairformer_stack",
           "modules.single_pair_logits_projection": "collapsed:modules.pairformer_stack",
           "modules.single_recycle_projection": "visible",
@@ -25041,51 +25973,26 @@ export const manifest = {
           "modules.template_pair_transition": "collapsed:modules.template_module",
           "modules.template_triangle_multiplication_incoming": "collapsed:modules.template_module",
           "modules.template_triangle_multiplication_outgoing": "collapsed:modules.template_module",
-          "modules.token_attention_pair_bias": "collapsed:modules.sample_diffusion",
-          "modules.token_conditioned_transition": "collapsed:modules.sample_diffusion",
           "modules.triangle_multiplication_incoming": "collapsed:modules.pairformer_stack",
           "modules.triangle_multiplication_outgoing": "collapsed:modules.pairformer_stack",
           "value_sites.asym_id": "visible",
-          "value_sites.atom_attention_decoder_position_update": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_attention_encoder_pair_skip": "excluded",
-          "value_sites.atom_attention_encoder_query_skip": "excluded",
-          "value_sites.atom_attention_encoder_single_conditioning_skip": "excluded",
-          "value_sites.atom_attention_encoder_token_output": "excluded",
-          "value_sites.atom_pair_conditioning_refined": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_pair_reference_geometry": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_pair_trunk_broadcast": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_query_after_decoder_transformer": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_query_after_encoder_transformer": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_query_broadcast_with_skip": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_query_initial": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_query_with_noisy_position": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_reference_features_input": "visible",
-          "value_sites.atom_single_conditioning_base": "collapsed:modules.sample_diffusion",
-          "value_sites.atom_single_conditioning_trunk_broadcast": "collapsed:modules.sample_diffusion",
+          "value_sites.atom_pair_conditioning_refined": "excluded",
+          "value_sites.atom_pair_reference_geometry": "excluded",
+          "value_sites.atom_pair_trunk_broadcast": "excluded",
+          "value_sites.atom_query_after_encoder_transformer": "excluded",
+          "value_sites.atom_query_initial": "excluded",
+          "value_sites.atom_query_with_noisy_position": "excluded",
+          "value_sites.atom_single_conditioning_base": "excluded",
+          "value_sites.atom_single_conditioning_trunk_broadcast": "excluded",
           "value_sites.block_pair_state": "collapsed:modules.pairformer_stack",
           "value_sites.block_single_state": "collapsed:modules.pairformer_stack",
-          "value_sites.confidence_pair_after_geometry_embedding": "collapsed:modules.confidence_head",
-          "value_sites.confidence_pair_after_input_embedding": "collapsed:modules.confidence_head",
-          "value_sites.confidence_pair_after_stack": "collapsed:modules.confidence_head",
-          "value_sites.confidence_representative_distances": "collapsed:modules.confidence_head",
-          "value_sites.confidence_single_after_stack": "collapsed:modules.confidence_head",
-          "value_sites.deletion_mean_input": "visible",
+          "value_sites.confidence_pair_after_input_embedding": "excluded",
+          "value_sites.confidence_pair_after_stack": "excluded",
+          "value_sites.confidence_single_after_stack": "excluded",
           "value_sites.deletion_value_input": "visible",
-          "value_sites.denoised_atom_positions": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_conditioned_pair": "excluded",
-          "value_sites.diffusion_conditioned_single": "excluded",
-          "value_sites.diffusion_pair_conditioning_projected": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_single_conditioning_fourier_injected": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_single_conditioning_projected": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_token_activation_conditioned": "excluded",
-          "value_sites.diffusion_token_activation_normalized": "excluded",
-          "value_sites.diffusion_token_attention_branch": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_token_block_input": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_token_block_output": "collapsed:modules.sample_diffusion",
-          "value_sites.diffusion_token_transition_branch": "collapsed:modules.sample_diffusion",
-          "value_sites.entity_id": "visible",
-          "value_sites.final_sampled_atom_positions": "visible",
-          "value_sites.fourier_time_embedding": "collapsed:modules.fourier_embedding",
+          "value_sites.diffusion_pair_conditioning_projected": "excluded",
+          "value_sites.diffusion_single_conditioning_fourier_injected": "excluded",
+          "value_sites.diffusion_single_conditioning_projected": "excluded",
           "value_sites.has_deletion_input": "visible",
           "value_sites.msa_activations": "collapsed:modules.msa_module",
           "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.msa_module",
@@ -25101,8 +26008,6 @@ export const manifest = {
           "value_sites.msa_pair_weighted_averaging_pair_bias": "collapsed:modules.msa_module",
           "value_sites.msa_pair_weighted_averaging_value": "collapsed:modules.msa_module",
           "value_sites.msa_pair_weighted_averaging_weights": "collapsed:modules.msa_module",
-          "value_sites.noise_level": "collapsed:modules.sample_diffusion",
-          "value_sites.noisy_atom_positions": "collapsed:modules.sample_diffusion",
           "value_sites.outer_product_mean_flattened": "collapsed:modules.msa_module",
           "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.msa_module",
           "value_sites.outer_product_mean_projection_a": "collapsed:modules.msa_module",
@@ -25116,41 +26021,15 @@ export const manifest = {
           "value_sites.pair_recycle_seed": "visible",
           "value_sites.pair_state_input": "elided",
           "value_sites.pair_state_output": "visible",
-          "value_sites.predicted_aligned_error": "visible",
-          "value_sites.predicted_aligned_error_distribution": "collapsed:modules.confidence_head",
-          "value_sites.predicted_distance_error": "visible",
-          "value_sites.predicted_distance_error_distribution": "collapsed:modules.confidence_head",
-          "value_sites.predicted_experimentally_resolved": "visible",
-          "value_sites.predicted_lddt": "visible",
-          "value_sites.predicted_lddt_distribution": "collapsed:modules.confidence_head",
-          "value_sites.predicted_resolved_distribution": "collapsed:modules.confidence_head",
-          "value_sites.profile_input": "visible",
           "value_sites.recycled_pair_state": "visible",
           "value_sites.recycled_single_state": "visible",
-          "value_sites.relative_chain_offset": "collapsed:modules.relative_position_encoding",
-          "value_sites.relative_position_encoding_output": "elided",
-          "value_sites.relative_residue_offset": "collapsed:modules.relative_position_encoding",
-          "value_sites.relative_token_offset": "collapsed:modules.relative_position_encoding",
-          "value_sites.residue_index": "visible",
-          "value_sites.restype_input": "visible",
           "value_sites.s_inputs": "visible",
-          "value_sites.same_entity_signal": "collapsed:modules.relative_position_encoding",
-          "value_sites.sampler_augmented_positions": "collapsed:modules.sample_diffusion",
-          "value_sites.sampler_current_positions": "collapsed:modules.sample_diffusion",
-          "value_sites.sampler_denoising_direction": "collapsed:modules.sample_diffusion",
-          "value_sites.sampler_initial_positions": "collapsed:modules.sample_diffusion",
-          "value_sites.sampler_next_level": "collapsed:modules.sample_diffusion",
-          "value_sites.sampler_previous_level": "collapsed:modules.sample_diffusion",
-          "value_sites.sampler_updated_positions": "collapsed:modules.sample_diffusion",
-          "value_sites.scaled_noisy_atom_positions": "collapsed:modules.sample_diffusion",
-          "value_sites.sequence_local_atom_attention_mask": "excluded",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
           "value_sites.single_init": "visible",
           "value_sites.single_pair_attention_logits": "collapsed:modules.pairformer_stack",
           "value_sites.single_state_input": "visible",
           "value_sites.single_state_output": "visible",
-          "value_sites.sym_id": "visible",
           "value_sites.template_backbone_frame_mask": "visible",
           "value_sites.template_distogram": "visible",
           "value_sites.template_module_pair_output": "collapsed:modules.template_module",
@@ -25165,7 +26044,6 @@ export const manifest = {
           "value_sites.template_pseudo_beta_mask": "visible",
           "value_sites.template_restype": "visible",
           "value_sites.template_unit_vector": "visible",
-          "value_sites.token_index": "visible",
           "value_sites.token_mask_input": "visible",
           "value_sites.z_init": "visible"
         },
@@ -25175,7 +26053,7 @@ export const manifest = {
         "id": "pairformer_block",
         "title": "One Pairformer Block, Repeated 48 Times",
         "summary": "Each block first completes the pair-track update. Only then is that updated pair state projected to attention logits that bias the single-track update. The two outputs become the next block's inputs.",
-        "parent": "pairformer_overview",
+        "parent": "trunk_model_detail",
         "subject_ref": "modules.pairformer_stack",
         "expansion_depth": 1,
         "grid": {
@@ -27176,7 +28054,7 @@ export const manifest = {
         "summary": "Raw per-row MSA features are embedded and anchored to s_inputs, then read into OuterProductMean, which contributes evolutionary coupling (correlated variation across the alignment) into the pair representation before that block's pair-stack runs. MSAPairWeightedAveraging updates the MSA rows using attention weights derived entirely from the pair representation, never from row content. Only the final pair state is returned; the MSA representation itself is discarded.",
         "subject_ref": "modules.msa_module",
         "expansion_depth": 1,
-        "parent": "pairformer_overview",
+        "parent": "trunk_model_detail",
         "grid": {
           "columns": 5,
           "rows": 5,
@@ -29019,7 +29897,7 @@ export const manifest = {
         "summary": "Raw per-template geometric evidence (a backbone-frame mask, a pseudo-beta mask, a pairwise distogram, and a pairwise unit vector) is AND-gated, concatenated, and restricted to intra-chain pairs by an asym_id gate; each token's template residue type is concatenated on afterward and is not itself gated, so it reaches every pair, cross-chain included. The result is outer-summed with a projection of the current pair state into one representative template's own 64-channel pair-conditioned state. That state is refined by the template embedder's own pair-only pair-stack (no single-representation step at all, unlike the main trunk), then LayerNorm'd, accumulated across every template, averaged, and projected through a plain ReLU into a 128-channel contribution added into the pair representation before the MSA module runs. Shown for one representative template, not the full N_templates loop; runs once per recycle, immediately before the MSA module.",
         "subject_ref": "modules.template_module",
         "expansion_depth": 1,
-        "parent": "pairformer_overview",
+        "parent": "trunk_model_detail",
         "grid": {
           "columns": 7,
           "rows": 8,
