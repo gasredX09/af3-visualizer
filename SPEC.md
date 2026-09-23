@@ -540,6 +540,80 @@ blocks"), plus an actual rendered check confirming the retargeted
 `single_state_output/pair_state_output -> diffusion_module -> [new output]`
 chain renders correctly and the existing trunk boards are unaffected.
 
+### Sub-project 1, module 5: the Confidence Head
+
+**Teaching question:** Given one completed AF3 structure sample, what does the
+model predict about its local placement, relative placement, pair distances,
+and experimental resolvability? These are predictions about the sample's
+quality, not measured errors against a known structure. A familiar pLDDT
+coloring and a directional PAE matrix make the four outputs concrete.
+
+**Mechanism** (`~/research/src/alphafold3.typ`, "Confidence module";
+`[paper]` Supplementary Section 4.3.5 and Algorithm 31;
+`[code]` `confidence_head.py:84-279`, `model.py:321-339`): one shared
+`ConfidenceHead` receives the unmodified input embedding `s_inputs`, the
+trunk's final single and pair representations, and the *completed sampled
+atom coordinates*. It adds two projections of `s_inputs` to each pair state,
+computes distances between the sample's representative atoms, bins those
+distances, and injects them into the pair state. Its own four-block full
+Pairformer refines the single and pair states before four projections:
+
+- Per-atom pLDDT predicts local distance agreement. The released code returns
+  the expectation over 50 bins on a 0-100 scale. AF3's training target counts
+  distances to polymer atoms, so a ligand atom's pLDDT reflects its polymer
+  contacts rather than its internal ligand geometry.
+- Per-token-pair PAE predicts the aligned placement error of token `j` when
+  anchored in token `i`'s frame. The matrix is directional. The released code
+  returns an expected error in angstroms from 64 bins.
+- Per-token-pair PDE predicts error in the distance between representative
+  atoms. The head symmetrizes its pairwise logits, and the released code
+  returns an expected error in angstroms from 64 bins.
+- Per-atom experimentally resolved probability predicts whether an atom would
+  be observed in experimental structure data. It is a separate two-class
+  projection of the refined single state, not a measure of coordinate error.
+
+`pTM` and `ipTM` are downstream summaries derived from PAE distributions,
+not additional learned output heads. Their aggregation and sample ranking
+belong to a later scoring pass. At training time the confidence head reads a
+short diffusion mini rollout and its input trunk representations and predicted
+coordinates have stopped gradients. The current pass explains that boundary
+but does not expand the training loss or mini rollout into a board.
+
+**Sampler boundary required for accuracy:** the current `diffusion_module`
+board depicts Algorithm 20, one denoising call, and its
+`denoised_atom_positions` is currently marked as the architecture output.
+The confidence head must not consume that value site as if it were a finished
+sample. Add a minimal `sample_diffusion` parent around the existing
+`diffusion_module` occurrence. The parent shows that Algorithm 18 repeatedly
+uses the one-step denoiser and returns `final_sampled_atom_positions` after
+its own updates. Move the architecture output boundary to this new final
+sample and preserve `denoised_atom_positions` as the internal one-step
+estimate. Keep the noise schedule, pose augmentation, stochastic update,
+sampler scrubber, and training mini rollout for the later sampler pass. The
+wrapper's prose must state that the denoiser's one-step estimate feeds a
+sampler update; it is not itself the final sample or the next step's input.
+
+**Architecture and views:** add one `confidence_head` top-level module with
+children for geometry embedding, its four-block Pairformer, and the four
+readouts. Preserve distinct before and after value sites for the pair and
+single states. Keep the existing 48-block trunk Pairformer untouched; the
+confidence head has its own four-block instance of the same full mechanism.
+The root board shows a collapsed sampler, final sampled coordinates, a
+collapsed confidence head, and the four confidence outputs. A sampler child
+board links to the existing one-step Diffusion Module board. A confidence
+child board shows distance injection, four-block refinement, and the four
+readouts. A small PAE-focused board or callout must make its `i,j` direction
+clear and contrast it with symmetric PDE. Use existing declarative view facts
+and source evidence rather than renderer-specific AF3 logic.
+
+**Verification:** source lint, unscoped `alphafold3` verifier, fresh manifest,
+documentation and Pages build tests, then a rendered click-through from the
+root sampler to the one-step Diffusion Module and from the root confidence
+head to each readout. Check that final sampled coordinates, not the one-step
+denoised estimate, feed the head. Check the existing Diffusion, Pairformer,
+MSA, and Template boards for regressions. Review every density warning and
+curate boards that exceed the project's threshold.
+
 ## Core screens
 
 These four carry the main narrative: what AF3 takes in, how it transforms it,
