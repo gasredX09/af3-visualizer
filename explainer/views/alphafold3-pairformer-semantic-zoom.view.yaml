@@ -993,7 +993,7 @@ boards:
       connection:
         title: Communication writes into the pair state
         role: evolutionary-coupling contribution
-        inside: OuterProductMean's averaged cross-covariance is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation.
+        inside: OuterProductMean's averaged, uncentered cross-position product is added into z before this block's MSA stack or pair-stack read it. The projections are learned; this is not a measured contact score.
     - match:
         relation_ref: relations.pair_state_conditions_msa_pair_weighted_averaging
       label: z
@@ -1158,10 +1158,19 @@ boards:
 
   - id: outer_product_mean_detail
     title: "Outer Product Mean: Evolutionary Coupling, Made Architectural"
-    summary: For every token pair, OuterProductMean projects each MSA row's activations into two independent 32-channel factors, forms their outer product, and averages that product over every row in the alignment -- an empirical cross-covariance between two learned features, observed across the MSA's sequences, the same statistic classical coevolution-based contact prediction computes by hand. A final biased Linear layer compresses the flattened 1024-channel result into the pair representation's 128 channels.
+    summary: "For every token pair, OuterProductMean projects each MSA row's activations into two independent 32-channel factors, forms their outer product, and averages over valid alignment rows. This is an uncentered cross-position product, not covariance: no row means are subtracted. A final biased Linear layer compresses the flattened 1024-channel result into the pair representation's 128 channels."
     parent: msa_module_detail
     subject_ref: modules.outer_product_mean
     expansion_depth: 1
+    worked_examples:
+      - id: synthetic_msa_pair
+        kind: msa_pair_outer_product
+        title: From aligned residues to a pair feature
+        sequences: [AGVLSK, AAILTK, AGVLTR, AAILSR, AGVLSR, AAILTR, AGVLTK, AAILSK]
+        initial_pair: [2, 3]
+        caption: Synthetic rows and one-hot residues show the averaging step. AF3 uses learned projections; this is not an AF3 tensor or contact prediction.
+        source_ref: af3_2024
+        locator: Supplementary Algorithm 9 lines 1-4 (learned projections, masked mean outer product, pair-channel projection)
     grid:
       columns: 6
       rows: 3
@@ -1251,9 +1260,9 @@ boards:
       - match: { relation_ref: relations.outer_product_mean_produces_flattened_outer_product }
         label: o_{ij}
         connection:
-          title: Cross-covariance across the alignment
-          role: empirical cross-covariance
-          inside: For every token pair, the 32x32 outer product of a_si and b_sj is averaged over every MSA row and flattened to 1024 channels -- structurally an empirical covariance between two learned features, observed across the alignment's sequences.
+          title: Mean outer product across the alignment
+          role: uncentered cross-position product
+          inside: For every token pair, the 32x32 outer product of a_si and b_sj is averaged over valid MSA rows and flattened to 1024 channels. The implementation does not subtract across-row means, so this is not covariance.
       - match: { relation_ref: relations.outer_product_mean_produces_pair_contribution }
         label: z^{comm}
         connection:

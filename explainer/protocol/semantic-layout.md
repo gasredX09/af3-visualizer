@@ -16,7 +16,7 @@ An explainer board should read as a computational story:
 
 - substantial computation forms a stable middle spine;
 - ordinary information flow advances left to right;
-- task-native inputs and outputs anchor the left and right boundaries;
+- task-native inputs and terminal outputs anchor the left and right boundaries;
 - read-only conditioning and index context sits above its consumers;
 - loop-carried state sits below the computation it re-enters; and
 - feedback uses bottom rails instead of cutting through the main flow.
@@ -46,7 +46,8 @@ The compiler applies these deterministic steps:
 4. Bridge a produced context value for ranking, so its producer still precedes
    every computation it conditions, then assign the remaining acyclic graph
    longest-path columns from left to right.
-5. Anchor task boundary inputs at the first column and outputs at the last.
+5. Anchor task boundary inputs at the first column and terminal outputs at the
+   last. An output that also feeds a downstream module keeps its forward rank.
 6. Move context values above the median column of their visible consumers.
 7. Place primary block modules in a vertically centered main band, ordinary
    values around them, and feedback-source values in a symmetric bottom band.

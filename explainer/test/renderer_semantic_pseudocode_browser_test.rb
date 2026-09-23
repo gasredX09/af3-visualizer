@@ -338,6 +338,7 @@ class RendererSemanticPseudocodeBrowserTest < Minitest::Test
     verify_keyboard_board_traversal(browser, base)
     verify_dictionary_field_selection(browser, base)
     verify_published_reference_panel(browser, base)
+    verify_msa_pair_worked_example(browser, base)
     verify_grouped_inspector_and_stable_status(browser, base)
     verify_inspector_collapse(browser, base)
     verify_math_symbols_and_theme(browser, base)
@@ -902,6 +903,53 @@ class RendererSemanticPseudocodeBrowserTest < Minitest::Test
       return !document.querySelector('#referenceFigureDialog').open;
     JS
     assert closed
+  end
+
+  def verify_msa_pair_worked_example(browser, base)
+    browser.navigate("#{base}?arch=alphafold3&board=outer_product_mean_detail")
+    initial = wait_for(browser, "the synthetic MSA pair example") do
+      browser.execute(<<~JS)
+        const panel = document.querySelector('[data-worked-example-id="synthetic_msa_pair"]');
+        if (!panel || document.querySelector('#architectureCanvas')?.dataset.boardId !== 'outer_product_mean_detail') return null;
+        return {
+          rows: panel.querySelectorAll('.msa-example-row-label').length,
+          counts: [...panel.querySelectorAll('.msa-example-matrix td')].map((cell) => cell.textContent),
+          citation: Boolean(panel.querySelector('.worked-example-citation[href]')),
+        };
+      JS
+    end
+    assert_equal 8, initial["rows"]
+    assert_equal %w[4/8 0/8 0/8 4/8], initial["counts"]
+    assert initial["citation"]
+
+    browser.execute(<<~JS)
+      document.querySelector('.msa-example-column[data-column="2"]').click();
+      document.querySelector('.msa-example-column[data-column="5"]').click();
+    JS
+    changed = wait_for(browser, "the updated MSA pair matrix") do
+      browser.execute(<<~JS)
+        const panel = document.querySelector('[data-worked-example-id="synthetic_msa_pair"]');
+        const title = panel?.querySelector('.msa-example-result-title')?.textContent;
+        if (title !== 'Columns 2 and 5: toy pair feature') return null;
+        return [...panel.querySelectorAll('.msa-example-matrix td')].map((cell) => cell.textContent);
+      JS
+    end
+    assert_equal %w[2/8 2/8 2/8 2/8], changed
+
+    browser.execute("document.querySelector('.worked-example-expand').click()")
+    dialog = wait_for(browser, "the expanded MSA example") do
+      browser.execute(<<~JS)
+        const expanded = document.querySelector('.worked-example-dialog');
+        if (!expanded?.open) return null;
+        return {
+          rows: expanded.querySelectorAll('.msa-example-row-label').length,
+          counts: [...expanded.querySelectorAll('.msa-example-matrix td')].map((cell) => cell.textContent),
+        };
+      JS
+    end
+    assert_equal 8, dialog["rows"]
+    assert_equal %w[4/8 0/8 0/8 4/8], dialog["counts"]
+    browser.execute("document.querySelector('.worked-example-dialog .worked-example-close').click()")
   end
 
   def verify_dictionary_field_selection(browser, base)

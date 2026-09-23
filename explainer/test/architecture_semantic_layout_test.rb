@@ -108,6 +108,30 @@ class ArchitectureSemanticLayoutTest < Minitest::Test
       result.positions.fetch("encoder").fetch("col")
   end
 
+  def test_output_that_feeds_downstream_module_keeps_forward_rank
+    nodes = [
+      { "id" => "sampler", "ref" => "modules.sampler" },
+      { "id" => "completed_sample", "ref" => "value_sites.completed_sample" },
+      { "id" => "confidence", "ref" => "modules.confidence" },
+      { "id" => "score", "ref" => "value_sites.score" },
+    ]
+    edges = [
+      edge("sampler", "completed_sample", "data_flow", "sampler_produces_sample"),
+      edge("completed_sample", "confidence", "data_flow", "sample_enters_confidence"),
+      edge("confidence", "score", "data_flow", "confidence_produces_score"),
+    ]
+    architecture = { "value_sites" => [
+      { "id" => "completed_sample", "boundary" => "output" },
+      { "id" => "score", "boundary" => "output" },
+    ] }
+
+    result = ArchitectureSemanticLayout.compile(nodes: nodes, edges: edges, architecture: architecture)
+
+    assert_operator result.positions.fetch("completed_sample").fetch("col"), :<,
+      result.positions.fetch("confidence").fetch("col")
+    assert_equal result.grid.fetch("columns"), result.positions.fetch("score").fetch("col")
+  end
+
   def test_produced_context_preserves_producer_before_consumer_order
     context_nodes = [
       { "id" => "builder", "ref" => "modules.builder" },

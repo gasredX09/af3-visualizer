@@ -152,6 +152,32 @@ help readers relate a paper figure to the explainer, but it is never evidence
 that silently creates architecture facts; canonical facts and their evidence
 remain in the architecture source.
 
+## Worked Examples
+
+An ordinary board may also carry a small, interactive teaching example in its
+non-panning side rail. The source data and citation belong in the view, while
+the board's canonical module and relations continue to own architecture facts.
+
+```yaml
+worked_examples:
+  - id: synthetic_msa_pair
+    kind: msa_pair_outer_product
+    title: From aligned residues to a pair feature
+    sequences: [AGVLSK, AAILTK, AGVLTR, AAILSR]
+    initial_pair: [2, 3]
+    caption: Synthetic alignment. One-hot residues stand in for learned projections.
+    source_ref: af3_2024
+    locator: Supplementary Algorithm 9 lines 1-4
+```
+
+The pair indices are distinct, one-based alignment columns. All rows must
+have the same length. Clicking two column headers changes the selected pair;
+the panel shows the mean of their one-hot outer products as residue
+co-occurrence frequencies. This is a teaching stand-in for AF3's learned
+32-channel projections, not a model tensor, contact score, or covariance.
+The verifier checks row widths and selected columns before publication.
+The non-panning rail offers a full-size dialog for narrow screens.
+
 ## Reusable-Block Detail Boards
 
 A reusable algorithm detail is the one exception to an architecture board's

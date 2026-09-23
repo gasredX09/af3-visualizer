@@ -481,3 +481,21 @@ the fixed example complex) should stay out of any upstream PR.
 **Supersedes:** none. Extends the 2026-09-18 pivot entry's decision to
 vendor rather than fork/upstream immediately; this entry only adds the
 completion-gated revisit plan.
+
+## 2026-09-23: Source-authored worked examples in the explainer
+
+**Decision:** Put the interactive MSA pair example on the existing
+`outer_product_mean_detail` board. Its synthetic alignment and citation live
+in the view YAML. A reusable `msa_pair_outer_product` panel renders the rows,
+column selection, and one-hot mean outer-product table in the non-panning
+board rail. No model tensor or learned value is fabricated for the example.
+
+**Why:** The existing architecture board accurately shows learned projections
+and tensor flow but cannot show what alignment columns and row averaging look
+like to a new reader. A standalone screen would split the lesson from the
+module it explains. The view format therefore gains a typed worked-example
+field, with schema and verifier checks, while the renderer handles only the
+generic panel interaction. This adds a renderer asset, so the 2026-09-22
+upstreaming note's assumption that this project changes content files only
+no longer holds. Review the engine change separately before any upstream
+contribution.

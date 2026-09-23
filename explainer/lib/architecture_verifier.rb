@@ -639,6 +639,26 @@ module ArchitectureVerifier
             file: file, board: board_id
           )
         end
+        duplicate_ids(Array(board["worked_examples"])).each do |id|
+          diagnostics << diagnostic(
+            "board_layout", "duplicate_worked_example",
+            "worked examples contain duplicate id #{id}", file: file, board: board_id
+          )
+        end
+        Array(board["worked_examples"]).each do |example|
+          sequences = Array(example["sequences"])
+          widths = sequences.map(&:length).uniq
+          pair = Array(example["initial_pair"])
+          valid_pair = pair.length == 2 && pair.uniq.length == 2 &&
+                       widths.length == 1 && pair.all? { |column| column.is_a?(Integer) && column.between?(1, widths.first) }
+          next if sequences.length >= 2 && widths.length == 1 && valid_pair
+
+          diagnostics << diagnostic(
+            "board_layout", "invalid_msa_worked_example",
+            "worked example #{example['id']} needs equal-length sequences and two distinct in-range columns",
+            file: file, board: board_id
+          )
+        end
         Array(board["edge_overrides"]).each_with_index do |override, index|
           if override.key?("route_clearance") && !override["route_side"]
             diagnostics << diagnostic(

@@ -296,13 +296,13 @@ module ArchitectureSemanticLayout
         [node_id, column]
       end
 
-      # Task-native boundaries are durable semantic anchors. This is mostly
-      # redundant with longest-path ranking, but handles disconnected boundary
-      # occurrences without leaving them in an arbitrary interior column.
+      # Task-native boundaries are durable semantic anchors. A value marked as
+      # an output may also feed a downstream module, so only terminal outputs
+      # belong in the last column.
       @nodes_by_id.each_key do |node_id|
         boundary = site_for(node_id)&.fetch("boundary", nil)
         columns[node_id] = 1 if boundary == "input"
-        columns[node_id] = grid_columns if boundary == "output"
+        columns[node_id] = grid_columns if boundary == "output" && @outgoing.fetch(node_id, []).empty?
       end
       [columns, grid_columns]
     end

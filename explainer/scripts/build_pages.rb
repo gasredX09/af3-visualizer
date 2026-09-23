@@ -36,6 +36,7 @@ module PagesBuild
     renderer/architecture/index.html
     renderer/architecture/keyboard-navigation.mjs
     renderer/architecture/math-notation.mjs
+    renderer/architecture/msa-pair-example.mjs
     renderer/architecture/orthogonal-routing.mjs
     renderer/architecture/question-context.mjs
     renderer/architecture/renderer-model.mjs

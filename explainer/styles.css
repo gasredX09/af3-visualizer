@@ -1706,8 +1706,210 @@ code {
   box-shadow: var(--shadow-lg);
 }
 
-.reference-panel + .reference-panel {
+.reference-panel-layer > * + * {
   margin-top: 12px;
+}
+
+.worked-example {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  cursor: default;
+}
+
+.worked-example-eyebrow {
+  color: var(--accent);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.worked-example-title,
+.msa-example-result-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.worked-example-expand,
+.worked-example-close {
+  justify-self: start;
+  padding: 5px 9px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--panel);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.worked-example-expand:hover,
+.worked-example-expand:focus-visible,
+.worked-example-close:hover,
+.worked-example-close:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  outline-offset: 2px;
+}
+
+.worked-example-dialog {
+  width: min(620px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100svh - 24px);
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+}
+
+.worked-example-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 58%, transparent);
+}
+
+.worked-example-dialog .worked-example {
+  margin-top: 10px;
+  box-shadow: none;
+}
+
+.worked-example-dialog .msa-example-alignment {
+  max-width: 500px;
+}
+
+.worked-example-caption,
+.msa-example-instructions,
+.msa-example-legend,
+.msa-example-observation,
+.msa-example-caveat {
+  margin: 0;
+  color: var(--copy-soft);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.msa-example-instructions {
+  color: var(--ink);
+  font-weight: 750;
+}
+
+.msa-example-takeaway {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.msa-example-alignment {
+  display: grid;
+  grid-template-columns: 28px repeat(var(--msa-example-residue-columns), minmax(0, 1fr));
+  gap: 2px;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.msa-example-corner,
+.msa-example-row-label {
+  color: var(--copy-soft);
+  font-size: 0.63rem;
+}
+
+.msa-example-column,
+.msa-example-residue {
+  display: grid;
+  min-width: 0;
+  min-height: 22px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+
+.msa-example-column {
+  padding: 1px;
+  color: var(--ink);
+  background: var(--panel-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.msa-example-column:hover,
+.msa-example-column:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.msa-example-residue.is-conserved {
+  background: color-mix(in srgb, var(--accent) 19%, var(--panel));
+}
+
+.msa-example-residue.is-variable {
+  background: color-mix(in srgb, var(--accent-2) 11%, var(--panel));
+}
+
+.msa-example-column.is-i,
+.msa-example-residue.is-i {
+  border-color: var(--accent);
+}
+
+.msa-example-column.is-j,
+.msa-example-residue.is-j {
+  border-color: var(--accent-2);
+}
+
+.msa-example-result {
+  display: grid;
+  gap: 7px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.msa-example-matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  color: var(--ink);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.msa-example-matrix caption {
+  margin-bottom: 6px;
+  color: var(--copy-soft);
+  font-size: 0.69rem;
+  text-align: left;
+}
+
+.msa-example-matrix th,
+.msa-example-matrix td {
+  padding: 7px 4px;
+  border-radius: 5px;
+  background: var(--panel-strong);
+  font-weight: 650;
+}
+
+.msa-example-matrix td.has-count {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel));
+}
+
+.worked-example-citation {
+  display: block;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.35;
 }
 
 .reference-panel-heading {

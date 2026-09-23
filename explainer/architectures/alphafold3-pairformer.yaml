@@ -549,7 +549,7 @@ representations:
           locator: Supplementary Algorithm 9 lines 1-2 (m_si <- LayerNorm(m_si); a_si, b_si = LinearNoBias(m_si), a_si/b_si in R^c, c=32)
   - id: outer_product_mean_flattened
     scale: token_pair
-    semantic_role: for every token pair, the outer product of projection_a at token i and projection_b at token j, averaged over all MSA rows and flattened; an empirical cross-covariance between the two learned projections, computed across the MSA's rows, the architectural analogue of coevolution-based contact statistics
+    semantic_role: for every token pair, the outer product of projection_a at token i and projection_b at token j, averaged over valid MSA rows and flattened; an uncentered cross-position product statistic, not a covariance because row means are not subtracted
     shape: "N_token x N_token x 1024"
     glyph: pair
     carries:

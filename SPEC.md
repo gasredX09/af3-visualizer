@@ -197,8 +197,8 @@ sequence identity, deletion flags/values) plus `s_inputs`, embeds and
 resamples MSA rows, then runs 4 blocks. Each block: **communication**
 (`OuterProductMean`, Algorithm 9) — the only place evolutionary coupling
 (correlated variation across the MSA at two token positions) enters the
-pair representation, an empirical cross-covariance between two learned
-per-row projections, averaged over MSA rows and flattened into `z_ij`;
+pair representation, an uncentered mean outer product of two learned
+per-row projections, averaged over valid MSA rows and flattened into `z_ij`;
 **MSA stack** (`MSAPairWeightedAveraging`, Algorithm 10) — attention whose
 weights come entirely from the pair representation (`softmax_j(LinearNoBias(
 LayerNorm(z_ij)))`), never from row content, so every MSA row is pulled
@@ -739,11 +739,22 @@ were typical; at 320, most of what's shown is the actual repeating
 pattern, matching what any real molecule looks like regardless of size.
 No model needed.
 
-**MSA plus OuterProductMean.** A stacked alignment with conservation coloring,
-then two columns co-varying and that co-variation becoming a pair feature. This
+**MSA plus OuterProductMean. Built:** `outer_product_mean_detail` in
+`explainer/views/alphafold3-pairformer-semantic-zoom.view.yaml`. A stacked
+alignment with conservation coloring shows two columns co-varying and that
+co-variation becoming a pair feature. This
 is the strongest CS-to-bio bridge in the whole project: bio students know MSAs,
 CS students often do not, and the co-evolution-to-contacts logic is what makes
-the pair representation make sense at all.
+the pair representation make sense at all. The worked view belongs on the
+existing `outer_product_mean_detail` explainer board, with a synthetic eight-row,
+six-column alignment beginning with the fixed AGVLSK peptide and columns 2 and 3
+selected initially. Readers can select any two columns and inspect their
+residue co-occurrence matrix. The one-hot vectors and normalized counts make
+the *averaging operation* visible, but they
+are explicitly labeled as teaching stand-ins for AF3's learned 32-channel
+projections. The resulting matrix is not a model tensor, measured contact, or
+predicted confidence score. The code computes an uncentered mean outer product,
+so the board must not call it covariance.
 
 ### Curves that demystify formulas
 

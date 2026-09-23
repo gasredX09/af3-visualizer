@@ -103,6 +103,20 @@ class ArchitectureVerifierTest < Minitest::Test
     assert_operator result.summary.fetch("error_count"), :>=, 1
   end
 
+  def test_msa_worked_example_rejects_unequal_rows_and_out_of_range_columns
+    mutate_view("alphafold3") do |view|
+      target = board(view, "outer_product_mean_detail")
+      example = target.fetch("worked_examples").first
+      example["sequences"][0] = "AVD"
+      example["initial_pair"] = [2, 20]
+    end
+
+    result = @verifier.verify(source_set_id: "alphafold3", board_id: "outer_product_mean_detail")
+
+    assert_equal "failed", result.status
+    assert_equal "board_layout", diagnostic(result, "invalid_msa_worked_example").fetch("check")
+  end
+
   def test_repeat_region_references_are_checked_against_architecture_and_board
     mutate_view("generic") do |view|
       target = board(view, "refinement_pipeline")

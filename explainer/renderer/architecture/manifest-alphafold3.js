@@ -4,8 +4,8 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
-      "architectures/alphafold3-pairformer.yaml": "2cd1090ace5a32d452c562372a4cd3ed3bc5f2a73962e56c3fd8f013c71cf830",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4124c0545b6916512721cc4c239e9d2722f0dbbfaf55d0f80c9a084a5b748d39",
+      "architectures/alphafold3-pairformer.yaml": "bd1b6843028f307e7aeefc7cf9808414941a29c19a6fde231259ce2e102139a1",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "7a9f1e9c874481e228736a0da8c52295822ecf30a54c7b9e9ea13a5f074f5686",
       "pseudocode/alphafold3-pairformer.yaml": "babbe2e580f0f283bc953051127f5cba2fe2905f215334f3850e3794b229de27",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
@@ -5999,7 +5999,7 @@ export const manifest = {
       {
         "id": "outer_product_mean_flattened",
         "scale": "token_pair",
-        "semantic_role": "for every token pair, the outer product of projection_a at token i and projection_b at token j, averaged over all MSA rows and flattened; an empirical cross-covariance between the two learned projections, computed across the MSA's rows, the architectural analogue of coevolution-based contact statistics",
+        "semantic_role": "for every token pair, the outer product of projection_a at token i and projection_b at token j, averaged over valid MSA rows and flattened; an uncentered cross-position product statistic, not a covariance because row means are not subtracted",
         "shape": "N_token x N_token x 1024",
         "glyph": "pair",
         "carries": [
@@ -24054,7 +24054,7 @@ export const manifest = {
             "connection": {
               "title": "Communication writes into the pair state",
               "role": "evolutionary-coupling contribution",
-              "inside": "OuterProductMean's averaged cross-covariance is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation."
+              "inside": "OuterProductMean's averaged, uncentered cross-position product is added into z before this block's MSA stack or pair-stack read it. The projections are learned; this is not a measured contact score."
             }
           },
           {
@@ -24217,7 +24217,7 @@ export const manifest = {
               "connection": {
                 "title": "Communication writes into the pair state",
                 "role": "evolutionary-coupling contribution",
-                "inside": "OuterProductMean's averaged cross-covariance is added into z before this block's MSA stack or pair-stack read it -- the only place evolutionary coupling enters the pair representation."
+                "inside": "OuterProductMean's averaged, uncentered cross-position product is added into z before this block's MSA stack or pair-stack read it. The projections are learned; this is not a measured contact score."
               }
             }
           },
@@ -24942,10 +24942,34 @@ export const manifest = {
       {
         "id": "outer_product_mean_detail",
         "title": "Outer Product Mean: Evolutionary Coupling, Made Architectural",
-        "summary": "For every token pair, OuterProductMean projects each MSA row's activations into two independent 32-channel factors, forms their outer product, and averages that product over every row in the alignment -- an empirical cross-covariance between two learned features, observed across the MSA's sequences, the same statistic classical coevolution-based contact prediction computes by hand. A final biased Linear layer compresses the flattened 1024-channel result into the pair representation's 128 channels.",
+        "summary": "For every token pair, OuterProductMean projects each MSA row's activations into two independent 32-channel factors, forms their outer product, and averages over valid alignment rows. This is an uncentered cross-position product, not covariance: no row means are subtracted. A final biased Linear layer compresses the flattened 1024-channel result into the pair representation's 128 channels.",
         "parent": "msa_module_detail",
         "subject_ref": "modules.outer_product_mean",
         "expansion_depth": 1,
+        "worked_examples": [
+          {
+            "id": "synthetic_msa_pair",
+            "kind": "msa_pair_outer_product",
+            "title": "From aligned residues to a pair feature",
+            "sequences": [
+              "AGVLSK",
+              "AAILTK",
+              "AGVLTR",
+              "AAILSR",
+              "AGVLSR",
+              "AAILTR",
+              "AGVLTK",
+              "AAILSK"
+            ],
+            "initial_pair": [
+              2,
+              3
+            ],
+            "caption": "Synthetic rows and one-hot residues show the averaging step. AF3 uses learned projections; this is not an AF3 tensor or contact prediction.",
+            "source_ref": "af3_2024",
+            "locator": "Supplementary Algorithm 9 lines 1-4 (learned projections, masked mean outer product, pair-channel projection)"
+          }
+        ],
         "grid": {
           "columns": 6,
           "rows": 3,
@@ -25069,9 +25093,9 @@ export const manifest = {
             },
             "label": "o_{ij}",
             "connection": {
-              "title": "Cross-covariance across the alignment",
-              "role": "empirical cross-covariance",
-              "inside": "For every token pair, the 32x32 outer product of a_si and b_sj is averaged over every MSA row and flattened to 1024 channels -- structurally an empirical covariance between two learned features, observed across the alignment's sequences."
+              "title": "Mean outer product across the alignment",
+              "role": "uncentered cross-position product",
+              "inside": "For every token pair, the 32x32 outer product of a_si and b_sj is averaged over valid MSA rows and flattened to 1024 channels. The implementation does not subtract across-row means, so this is not covariance."
             }
           },
           {
@@ -25123,9 +25147,9 @@ export const manifest = {
             "presentation": {
               "label": "o_{ij}",
               "connection": {
-                "title": "Cross-covariance across the alignment",
-                "role": "empirical cross-covariance",
-                "inside": "For every token pair, the 32x32 outer product of a_si and b_sj is averaged over every MSA row and flattened to 1024 channels -- structurally an empirical covariance between two learned features, observed across the alignment's sequences."
+                "title": "Mean outer product across the alignment",
+                "role": "uncentered cross-position product",
+                "inside": "For every token pair, the 32x32 outer product of a_si and b_sj is averaged over valid MSA rows and flattened to 1024 channels. The implementation does not subtract across-row means, so this is not covariance."
               }
             }
           },
