@@ -647,6 +647,25 @@ still require the offline AF3 tensor dump and remain on hold.
 These four carry the main narrative: what AF3 takes in, how it transforms it,
 and what comes out.
 
+### Synthetic execution trace (2026-09-24)
+
+The site now has a separate `/trace/` execution view alongside the source-backed
+architecture boards. It uses the fixed Ala-Gly-Val-Leu-Ser-Lys, ATP, and Mg2+
+complex and walks through 16 major checkpoints from tokenization to confidence
+output contracts. Controls inspect four recycling passes, 48 Pairformer blocks,
+200 sampler steps, and five deterministic synthetic seeds. The shape labels and
+stage links come from the compiled AF3 architecture manifest. Small numeric
+previews use toy rules and are conspicuously labeled as teaching values.
+
+The trace is an initial major-stage walkthrough. It does not claim to replay
+every internal operation or a trained AF3 run. Its toy sampler uses the
+source-backed power-seven noise schedule and a simple denoiser estimate, but
+omits pose augmentation and churn. A synthetic template signal and eight-row
+MSA are teaching inputs, not captured features for the fixed complex.
+Confidence output shapes are shown without scores because no trained head is
+available. The real-tensor input tracer and sampler scrubber below remain
+planned for the offline AF3 dump.
+
 ### 1. Input flow tracer
 
 **Shows.** One small complex (for example a 6-residue peptide, an ATP ligand,

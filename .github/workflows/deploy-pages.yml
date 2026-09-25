@@ -34,6 +34,8 @@ jobs:
         run: ruby explainer/scripts/build_pages.rb --source-set alphafold3 --output dist
       - name: Build legacy screens (dist/screens/)
         run: node scripts/build-pages.mjs
+      - name: Build synthetic AF3 trace (dist/trace/)
+        run: node scripts/build-trace.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

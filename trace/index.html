@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Follow an illustrative AlphaFold 3 tensor trace through input, recycling, diffusion, and output stages." />
+    <title>AlphaFold 3 Trace</title>
+    <script src="../theme-init.js"></script>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./trace.css" />
+  </head>
+  <body class="trace-page">
+    <a class="trace-skip" href="#stageTitle">Skip to current stage</a>
+    <main class="trace-shell">
+      <header class="trace-header">
+        <div>
+          <nav class="trace-top-links" aria-label="Site navigation">
+            <a href="../">← All architectures</a>
+            <a href="../renderer/architecture/?arch=alphafold3">Architecture map</a>
+          </nav>
+          <p class="trace-eyebrow">AlphaFold 3 · execution view</p>
+          <h1>Follow the state</h1>
+          <p class="trace-lede">Walk one small complex through tokenization, the recycling trunk, diffusion sampling, and output contracts.</p>
+        </div>
+        <label class="trace-theme" for="traceTheme"><span>Appearance</span><select id="traceTheme"></select></label>
+      </header>
+
+      <div class="trace-notice" role="note">
+        <strong>Synthetic teaching trace</strong>
+        <span>Shapes and stage order come from the AF3 architecture source. Preview numbers are deterministic toy values. No AF3 weights, activations, predictions, or confidence scores are used.</span>
+      </div>
+
+      <section class="trace-example" aria-label="Fixed example complex">
+        <div><span>Peptide</span><strong>Ala-Gly-Val-Leu-Ser-Lys</strong></div>
+        <div><span>Ligand</span><strong>ATP</strong></div>
+        <div><span>Ion</span><strong>Mg²⁺</strong></div>
+        <div><span>Heavy atoms</span><strong>71</strong></div>
+        <div><span>Tokens</span><strong>38</strong></div>
+      </section>
+
+      <section class="trace-workspace" aria-label="Tensor trace workspace">
+        <aside class="trace-rail" aria-label="Trace stages">
+          <div class="trace-rail-header"><span>Journey</span><span id="stageCount"></span></div>
+          <nav id="stageList" aria-label="Select a stage"></nav>
+        </aside>
+
+        <div class="trace-main">
+          <div class="trace-progress" aria-hidden="true"><span id="traceProgress"></span></div>
+          <section class="trace-stage" aria-labelledby="stageTitle">
+            <div class="trace-stage-head">
+              <div>
+                <p id="stagePhase" class="trace-eyebrow"></p>
+                <h2 id="stageTitle" tabindex="-1"></h2>
+              </div>
+              <span id="stagePosition" class="trace-stage-position"></span>
+            </div>
+            <p id="stageTakeaway" class="trace-takeaway"></p>
+
+            <div class="trace-tensor-flow" aria-label="Input and output previews">
+              <article class="trace-tensor-card" aria-labelledby="inputTitle">
+                <div class="trace-card-header"><span class="trace-card-kicker">Before</span><h3 id="inputTitle"></h3></div>
+                <p id="inputShape" class="trace-shape"></p>
+                <div id="inputValues" class="trace-values"></div>
+                <p id="inputNote" class="trace-card-note"></p>
+              </article>
+              <div class="trace-flow-arrow" aria-hidden="true">→</div>
+              <article class="trace-tensor-card" aria-labelledby="outputTitle">
+                <div class="trace-card-header"><span class="trace-card-kicker">After</span><h3 id="outputTitle"></h3></div>
+                <p id="outputShape" class="trace-shape"></p>
+                <div id="outputValues" class="trace-values"></div>
+                <p id="outputNote" class="trace-card-note"></p>
+              </article>
+            </div>
+
+            <div class="trace-explanation">
+              <div><span class="trace-detail-label">Transformation</span><p id="stageOperation"></p></div>
+              <div><span class="trace-detail-label">Source-backed architecture</span><p><a id="stageBoardLink" href="#">Open this stage on the architecture map ↗</a></p></div>
+            </div>
+            <div class="trace-stage-actions">
+              <button type="button" id="previousStage">← Previous</button>
+              <button type="button" id="playStages">Play journey</button>
+              <button type="button" id="nextStage">Next →</button>
+              <button type="button" id="copyTraceLink">Copy link</button>
+            </div>
+          </section>
+
+          <section class="trace-controls" aria-labelledby="controlsTitle">
+            <div class="trace-controls-header"><h2 id="controlsTitle">Inspect a loop</h2><p>These controls change the selected teaching checkpoint.</p></div>
+            <div class="trace-control-grid">
+              <label for="recycleRange"><span>Recycle pass <output id="recycleValue">1</output> / 4</span><input id="recycleRange" type="range" min="1" max="4" value="1" /><small>The first pass has zero previous state.</small></label>
+              <label for="blockRange"><span>Pairformer block <output id="blockValue">1</output> / 48</span><input id="blockRange" type="range" min="1" max="48" value="1" /><small>Preview one repeated block within a pass.</small></label>
+              <label for="sampleRange"><span>Sampler step <output id="sampleValue">1</output> / 200</span><input id="sampleRange" type="range" min="1" max="200" value="1" /><small>Follow the toy coordinate update.</small></label>
+              <label for="seedRange"><span>Synthetic seed <output id="seedValue">1</output> / 5</span><input id="seedRange" type="range" min="1" max="5" value="1" /><small>Compare different starting noise.</small></label>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <footer class="trace-footer">
+        <p>The fixed complex has 71 heavy atoms and 38 tokens. The eight-row MSA and template update in this trace are illustrative teaching inputs. Confidence values remain unavailable until a trained run is captured.</p>
+        <p><a href="../renderer/architecture/?arch=alphafold3">Explore the full AF3 architecture</a></p>
+      </footer>
+    </main>
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>

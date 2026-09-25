@@ -533,3 +533,24 @@ zoom. The trunk's child board now owns the fixed anchors and previous-pass
 states, so the root can show input embedding, trunk execution, sampling, and
 confidence as distinct stages without hiding required inputs. The underlying
 relations and evidence remain canonical and unchanged.
+
+## 2026-09-24: Add a synthetic execution view alongside the architecture map
+
+**Decision:** Build a separate `/trace/` view in this site's original code,
+linked from the Explainer landing page. It follows the fixed 71-atom,
+38-token complex through major AF3 stages using deterministic toy values.
+Shape labels and links are checked against the compiled AF3 source set. The
+first slice supports recycle, Pairformer block, sampler step, and seed controls.
+It does not add synthetic values to the canonical architecture YAML or to the
+upstream Explainer pull request.
+
+**Why:** The architecture map answers where components fit. The execution
+view lets students inspect what state changes at a chosen point in one
+walkthrough. These are complementary lessons. Synthetic values make the
+interaction usable before the offline tensor dump exists, provided the UI
+states plainly that they are teaching values. Operations that need learned
+weights, including meaningful confidence outputs, remain unavailable or are
+shown only through clearly identified toy rules. The real-output data-source
+decision remains in force for the later real-tensor tracer and sampler
+scrubber. A later trace-data adapter can replace toy previews with captured
+output without changing the architecture map.
