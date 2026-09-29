@@ -5,7 +5,7 @@ export const manifest = {
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
       "architectures/alphafold3-pairformer.yaml": "0ddfad5092a78566e19fdadc78c15fe9b7013a069a469b5a079da94af5d758cd",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4e423d2223b4a69991720d78a63a237ae9d727113ebe8bca28b525ecee6b15d0",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4f697cd463e839c68c88d7990d07a31ebe1e3720ba2b13aa254d848699c3234f",
       "pseudocode/alphafold3-pairformer.yaml": "fcdf63593c26d4b2b373c11c7c6192318dab2fdb3f456d3463571613640e90c8",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
@@ -31126,6 +31126,7 @@ export const manifest = {
           {
             "id": "template_pair_conditioning",
             "ref": "modules.template_pair_conditioning",
+            "role": "Combine pair state with template features, then pool the refined template states.",
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
@@ -31228,6 +31229,8 @@ export const manifest = {
               "relation_ref": "relations.conditioning_produces_template_module_pair_output"
             },
             "label": "u_{ij}",
+            "route_side": "top",
+            "route_clearance": 32,
             "connection": {
               "title": "Average and project",
               "role": "module output",
@@ -31260,6 +31263,8 @@ export const manifest = {
             ],
             "presentation": {
               "label": "u_{ij}",
+              "route_side": "top",
+              "route_clearance": 32,
               "connection": {
                 "title": "Average and project",
                 "role": "module output",

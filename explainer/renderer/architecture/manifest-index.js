@@ -58,7 +58,7 @@ export const comparisonIndex = {
       "architectures/alphafold2.yaml": "a754a17dc83303c7dff50f6925771b01dc51d237dae382476b8bf87fbead77fe",
       "views/alphafold2-semantic-zoom.view.yaml": "6b317c6d224a7e3b8416839247c0c12d6b9e0cd34d859475f4529a939d51fe8e",
       "architectures/alphafold3-pairformer.yaml": "0ddfad5092a78566e19fdadc78c15fe9b7013a069a469b5a079da94af5d758cd",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4e423d2223b4a69991720d78a63a237ae9d727113ebe8bca28b525ecee6b15d0",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4f697cd463e839c68c88d7990d07a31ebe1e3720ba2b13aa254d848699c3234f",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7",
       "architectures/genie2.yaml": "dc70626daca21c212b372e601a3a064ee1a1ea01e226b955b21e00e4c308bdb0",

@@ -1977,6 +1977,7 @@ boards:
         row: 3
       - id: template_pair_conditioning
         ref: modules.template_pair_conditioning
+        role: Combine pair state with template features, then pool the refined template states.
         prominence: primary
         treatment: block
         col: 2
@@ -2043,6 +2044,8 @@ boards:
           inside: After template_pair_track's pair-only stack refines v_ij, this same conditioning mechanism LayerNorms and accumulates the result across every template -- the module reads its own inputs once early (the outer sum) and once again late (the pooling accumulation).
       - match: { relation_ref: relations.conditioning_produces_template_module_pair_output }
         label: u_{ij}
+        route_side: top
+        route_clearance: 32
         connection:
           title: Average and project
           role: module output
