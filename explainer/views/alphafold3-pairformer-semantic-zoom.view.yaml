@@ -1036,6 +1036,7 @@ boards:
       row: 4
     - id: module_atom_attention_encoder_bare
       ref: modules.atom_attention_encoder_bare
+      role: Encode each token's reference atoms into one local geometry and identity vector.
       prominence: primary
       treatment: block
       col: 2
@@ -1114,12 +1115,14 @@ boards:
       row: 5
     - id: module_msa_row_embedding
       ref: modules.msa_row_embedding
+      role: Embed each MSA row's residue and deletion features, then add the shared input embedding.
       prominence: primary
       treatment: block
       col: 2
       row: 2
     - id: module_outer_product_mean
       ref: modules.outer_product_mean
+      role: Average pairwise outer products across MSA rows to update the pair state.
       prominence: primary
       treatment: block
       col: 3
@@ -1136,6 +1139,7 @@ boards:
       row: 5
     - id: module_msa_pair_weighted_averaging
       ref: modules.msa_pair_weighted_averaging
+      role: Use pair-derived attention weights to mix each MSA row, then add the gated result back.
       prominence: primary
       treatment: block
       col: 4
@@ -1143,6 +1147,7 @@ boards:
       board_ref: msa_pair_weighted_averaging_detail
     - id: module_msa_pair_update_stage
       ref: modules.msa_pair_update_stage
+      role: Apply five pair-state residual updates, repeated four times.
       prominence: primary
       treatment: block
       col: 4
@@ -1150,6 +1155,7 @@ boards:
       board_ref: msa_pair_track
     - id: module_msa_transition
       ref: modules.msa_transition
+      role: Apply a pointwise SwiGLU transition to each MSA row.
       prominence: primary
       treatment: block
       col: 5
@@ -1382,6 +1388,7 @@ boards:
         row: 2
       - id: outer_product_mean
         ref: modules.outer_product_mean
+        role: Average MSA row outer products to produce a pair-state update.
         prominence: primary
         treatment: block
         col: 2
@@ -1502,6 +1509,7 @@ boards:
         row: 4
       - id: msa_pair_weighted_averaging
         ref: modules.msa_pair_weighted_averaging
+        role: Use pair-derived attention weights to mix each MSA row; add the gated result back.
         prominence: primary
         treatment: block
         col: 2
@@ -1670,6 +1678,7 @@ boards:
       row: 8
     - id: module_template_pair_feature_construction
       ref: modules.template_pair_feature_construction
+      role: Build template pair features from geometry, masks, chain identity, and residue types.
       prominence: primary
       treatment: block
       col: 2
@@ -1685,6 +1694,7 @@ boards:
       row: 4
     - id: module_template_pair_conditioning
       ref: modules.template_pair_conditioning
+      role: Combine pair state with each template's features, then pool the refined states.
       prominence: primary
       treatment: block
       col: 4
@@ -1710,6 +1720,7 @@ boards:
       row: 5
     - id: module_template_pair_update_stage
       ref: modules.template_pair_update_stage
+      role: Refine each template's pair state with two pair-only Pairformer blocks.
       prominence: primary
       treatment: block
       col: 6
@@ -1794,6 +1805,8 @@ boards:
     - match:
         relation_ref: relations.conditioning_produces_template_module_pair_output
       label: u_{ij}
+      route_side: top
+      route_clearance: 32
       connection:
         title: Pool, average, and project
         role: module output

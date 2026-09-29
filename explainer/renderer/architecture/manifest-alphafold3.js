@@ -5,7 +5,7 @@ export const manifest = {
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
       "architectures/alphafold3-pairformer.yaml": "0ddfad5092a78566e19fdadc78c15fe9b7013a069a469b5a079da94af5d758cd",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "4f697cd463e839c68c88d7990d07a31ebe1e3720ba2b13aa254d848699c3234f",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "ae69cd16c277ccd8d5a4a769135d4592a205d1847383314a2c32d3e047091db6",
       "pseudocode/alphafold3-pairformer.yaml": "fcdf63593c26d4b2b373c11c7c6192318dab2fdb3f456d3463571613640e90c8",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
@@ -27864,6 +27864,7 @@ export const manifest = {
           {
             "id": "module_atom_attention_encoder_bare",
             "ref": "modules.atom_attention_encoder_bare",
+            "role": "Encode each token's reference atoms into one local geometry and identity vector.",
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
@@ -28118,6 +28119,7 @@ export const manifest = {
           {
             "id": "module_msa_row_embedding",
             "ref": "modules.msa_row_embedding",
+            "role": "Embed each MSA row's residue and deletion features, then add the shared input embedding.",
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
@@ -28126,6 +28128,7 @@ export const manifest = {
           {
             "id": "module_outer_product_mean",
             "ref": "modules.outer_product_mean",
+            "role": "Average pairwise outer products across MSA rows to update the pair state.",
             "prominence": "primary",
             "treatment": "block",
             "col": 3,
@@ -28146,6 +28149,7 @@ export const manifest = {
           {
             "id": "module_msa_pair_weighted_averaging",
             "ref": "modules.msa_pair_weighted_averaging",
+            "role": "Use pair-derived attention weights to mix each MSA row, then add the gated result back.",
             "prominence": "primary",
             "treatment": "block",
             "col": 4,
@@ -28155,6 +28159,7 @@ export const manifest = {
           {
             "id": "module_msa_pair_update_stage",
             "ref": "modules.msa_pair_update_stage",
+            "role": "Apply five pair-state residual updates, repeated four times.",
             "prominence": "primary",
             "treatment": "block",
             "col": 4,
@@ -28164,6 +28169,7 @@ export const manifest = {
           {
             "id": "module_msa_transition",
             "ref": "modules.msa_transition",
+            "role": "Apply a pointwise SwiGLU transition to each MSA row.",
             "prominence": "primary",
             "treatment": "block",
             "col": 5,
@@ -29155,6 +29161,7 @@ export const manifest = {
           {
             "id": "outer_product_mean",
             "ref": "modules.outer_product_mean",
+            "role": "Average MSA row outer products to produce a pair-state update.",
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
@@ -29518,6 +29525,7 @@ export const manifest = {
           {
             "id": "msa_pair_weighted_averaging",
             "ref": "modules.msa_pair_weighted_averaging",
+            "role": "Use pair-derived attention weights to mix each MSA row; add the gated result back.",
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
@@ -29980,6 +29988,7 @@ export const manifest = {
           {
             "id": "module_template_pair_feature_construction",
             "ref": "modules.template_pair_feature_construction",
+            "role": "Build template pair features from geometry, masks, chain identity, and residue types.",
             "prominence": "primary",
             "treatment": "block",
             "col": 2,
@@ -29999,6 +30008,7 @@ export const manifest = {
           {
             "id": "module_template_pair_conditioning",
             "ref": "modules.template_pair_conditioning",
+            "role": "Combine pair state with each template's features, then pool the refined states.",
             "prominence": "primary",
             "treatment": "block",
             "col": 4,
@@ -30030,6 +30040,7 @@ export const manifest = {
           {
             "id": "module_template_pair_update_stage",
             "ref": "modules.template_pair_update_stage",
+            "role": "Refine each template's pair state with two pair-only Pairformer blocks.",
             "prominence": "primary",
             "treatment": "block",
             "col": 6,
@@ -30159,6 +30170,8 @@ export const manifest = {
               "relation_ref": "relations.conditioning_produces_template_module_pair_output"
             },
             "label": "u_{ij}",
+            "route_side": "top",
+            "route_clearance": 32,
             "connection": {
               "title": "Pool, average, and project",
               "role": "module output",
@@ -30191,6 +30204,8 @@ export const manifest = {
             ],
             "presentation": {
               "label": "u_{ij}",
+              "route_side": "top",
+              "route_clearance": 32,
               "connection": {
                 "title": "Pool, average, and project",
                 "role": "module output",
