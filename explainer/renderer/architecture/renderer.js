@@ -18,7 +18,7 @@ import {
   shapeDimsLabel,
   tensorGlyphSvg,
 } from "./representation-glyphs.mjs";
-import { equationMarkup, notationMarkup, texMarkup } from "./math-notation.mjs";
+import { equationMarkup, mathProseMarkup, notationMarkup, svgMathLabelParts, texMarkup } from "./math-notation.mjs";
 import {
   PAYLOAD_FLOW_FAMILIES,
   edgeFlowProfile,
@@ -4052,7 +4052,7 @@ function renderRepresentationNode(node) {
   card.innerHTML = `
     ${symbolHtml}
     ${box(dims ? `<small class="tensor-dims">${dims}</small>` : "")}
-    ${displayMeaning ? `<span class="tensor-meaning">${escapeHtml(displayMeaning)}</span>` : ""}
+    ${displayMeaning ? `<span class="tensor-meaning">${mathProseMarkup(displayMeaning)}</span>` : ""}
   `;
   attachQuestionMenuHandlers(card, { kind: "node", node });
   const pointerHighlightKey = `pointer:representation:${node.id}`;
@@ -4154,7 +4154,7 @@ function repFocusHtml(node, rep) {
   const carries = rep?.carries || [];
   return `
     <div class="focus-section">
-      <p>${escapeHtml(node.role || rep?.semantic_role || "")}</p>
+      <p>${mathProseMarkup(node.role || rep?.semantic_role || "")}</p>
       <dl class="focus-dl">
         ${shape ? `<dt>shape</dt><dd><code>${escapeHtml(shape)}</code></dd>` : ""}
         <dt>scale</dt><dd>${escapeHtml(node.scale || rep?.scale || "unknown")}</dd>
@@ -4163,8 +4163,8 @@ function repFocusHtml(node, rep) {
         ${valueSiteInterface?.consumerRefs?.length ? `<dt>consumed by</dt><dd>${escapeHtml(readableRefs(valueSiteInterface.consumerRefs))}</dd>` : ""}
       </dl>
       ${renderRepresentationFieldTable(rep)}
-      ${semantics?.notes?.length ? semantics.notes.map((note) => `<p>${escapeHtml(note)}</p>`).join("") : ""}
-      ${carries.length ? `<h3>Carries</h3><ul class="claim-list">${carries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+      ${semantics?.notes?.length ? semantics.notes.map((note) => `<p>${mathProseMarkup(note)}</p>`).join("") : ""}
+      ${carries.length ? `<h3>Carries</h3><ul class="claim-list">${carries.map((item) => `<li>${mathProseMarkup(item)}</li>`).join("")}</ul>` : ""}
       ${node.template_fact_ref ? `<p><strong>Reusable template:</strong> <code>${escapeHtml(node.template_fact_ref)}</code></p>` : ""}
       ${rep?.evidence ? renderReferences(rep) : ""}
     </div>
@@ -4858,7 +4858,25 @@ function renderEdges() {
           String(annotationY + EDGE_TEXT_STYLES.label.fontSize
             + lineIndex * EDGE_ANNOTATION_METRICS.labelHeight),
         );
-        span.textContent = line;
+        const mathParts = svgMathLabelParts(line);
+        if (mathParts.some((part) => part.kind !== "plain")) {
+          label.classList.add("is-math");
+          mathParts.forEach((part) => {
+            const token = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+            token.textContent = part.text;
+            token.classList.add(`math-${part.kind}`);
+            if (part.kind === "sub" || part.kind === "sup") {
+              token.setAttribute("baseline-shift", part.kind === "sub" ? "sub" : "super");
+              token.setAttribute("font-size", "9px");
+            }
+            if (part.kind === "sup" && part.overlap) {
+              token.setAttribute("dx", `${-0.52 * part.overlap}em`);
+            }
+            span.appendChild(token);
+          });
+        } else {
+          span.textContent = line;
+        }
         label.appendChild(span);
       });
       annotationLayer.appendChild(label);
@@ -5521,7 +5539,7 @@ function connectionInspectorHtml(edge, { expanded = false } = {}) {
     : null;
   return `
     <div class="focus-section">
-      <p>${escapeHtml(edge.connection.inside)}</p>
+      <p>${mathProseMarkup(edge.connection.inside)}</p>
       ${contracted
         ? contractedTooltipHtml(edge, expanded, "Select to keep details")
         : `<dl class="focus-dl">
@@ -5607,7 +5625,7 @@ function contractedTooltipHtml(edge, pinned, hint = "click edge to pin details")
       (segment) => `
         <li>
           <strong>${escapeHtml(nodeLabelById(segment.from))} → ${escapeHtml(nodeLabelById(segment.to))}</strong>
-          <p>${escapeHtml(segment.connection?.inside || "")}</p>
+          <p>${mathProseMarkup(segment.connection?.inside || "")}</p>
         </li>
       `,
     )
@@ -5693,9 +5711,9 @@ function focusOverview() {
   const notes = (board.notes || []).map((note) => String(note).trim()).filter(Boolean);
   setFocusBody(`
     <div class="focus-section focus-takeaway">
-      <p>${escapeHtml(summary || "Explore the board to see how information moves through this level.")}</p>
+      <p>${mathProseMarkup(summary || "Explore the board to see how information moves through this level.")}</p>
       ${notes.length
-        ? `<ul>${notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>`
+        ? `<ul>${notes.map((note) => `<li>${mathProseMarkup(note)}</li>`).join("")}</ul>`
         : ""}
       <p class="focus-guidance">Select a block or connection to inspect it. Use a block's magnifying-glass button to move deeper.</p>
     </div>
@@ -5749,7 +5767,7 @@ function focusModule(module, node) {
   const blockHtml = renderStandardBlocks(module);
   setFocusBody(`
     <div class="focus-section">
-      <p>${escapeHtml(module.role)}</p>
+      <p>${mathProseMarkup(module.role)}</p>
       ${equationMarkup(module.equation)}
       ${renderAttentionSummary(module)}
       ${module.accepts_but_does_not_use ? renderUnusedInputs(module.accepts_but_does_not_use) : ""}
@@ -5770,7 +5788,7 @@ function focusOperation(node) {
   elements.focusTitle.textContent = node.label || node.id;
   setFocusBody(`
     <div class="focus-section">
-      <p>${escapeHtml(node.role || "")}</p>
+      <p>${mathProseMarkup(node.role || "")}</p>
       <dl class="focus-dl">
         <dt>scale</dt><dd>${escapeHtml(node.scale || "operation")}</dd>
         <dt>node</dt><dd>${escapeHtml(node.id)}</dd>

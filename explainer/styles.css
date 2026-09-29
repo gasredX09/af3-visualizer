@@ -2648,6 +2648,18 @@ code {
   stroke-width: 5px;
 }
 
+.arch-edge-label.is-math {
+  font-family: "STIX Two Math", "Cambria Math", Georgia, serif;
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.arch-edge-label.is-math .math-plain {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+}
+
 .arch-edge-label.flow-family-single,
 .arch-edge-badge.flow-family-single {
   fill: var(--representation-single);
