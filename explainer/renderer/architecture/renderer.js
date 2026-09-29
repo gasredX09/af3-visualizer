@@ -4754,6 +4754,7 @@ function longestHorizontalSegment(points) {
 
 function renderEdges() {
   const board = currentBoard();
+  const boardNodes = visibleNodes(board);
   const width = elements.moduleLayer.offsetWidth;
   const height = elements.moduleLayer.offsetHeight;
   elements.edgeLayer.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -4768,9 +4769,14 @@ function renderEdges() {
   elements.edgeLayer.append(pathLayer, annotationLayer, hitLayer);
 
   const edges = state.displayEdges || displayGraph(board).edges;
+  const denseBoard = boardNodes.length > 20 || edges.length > 30;
+  const contextNodeIds = new Set(boardNodes
+    .filter((node) => node.prominence === "context")
+    .map((node) => node.id));
+  elements.canvas.classList.toggle("is-dense-board", denseBoard);
   const orthoRoutes = buildOrthoRoutes(edges);
   const renderedRoutes = new Map();
-  const annotationObstacles = visibleNodes(board)
+  const annotationObstacles = boardNodes
     .map((node) => nodeBox(node.id))
     .filter(Boolean);
   const occupiedAnnotationBoxes = [];
@@ -4803,6 +4809,9 @@ function renderEdges() {
     path.setAttribute("marker-end", `url(#${edgeMarkerId(edge)})`);
     path.dataset.edgeIndex = String(index);
     if (contracted) path.classList.add("is-contracted");
+    if (contextNodeIds.has(edge.from) || contextNodeIds.has(edge.to)) {
+      path.classList.add("is-context-flow");
+    }
     applyEdgeTone(path, edge);
     pathLayer.appendChild(path);
 

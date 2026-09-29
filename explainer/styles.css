@@ -951,7 +951,7 @@ code {
 
 .directory-shell {
   width: min(760px, calc(100vw - 32px));
-  padding: clamp(48px, 10vh, 112px) 0 64px;
+  padding: clamp(40px, 8vh, 88px) 0 clamp(32px, 6vh, 64px);
 }
 
 .directory-header {
@@ -959,20 +959,50 @@ code {
   justify-content: space-between;
   gap: 32px;
   align-items: start;
-  padding-bottom: 24px;
+  padding-bottom: 32px;
   border-bottom: 1px solid var(--line);
 }
 
 .directory-header h1 {
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   font-size: clamp(2rem, 6vw, 3.25rem);
   letter-spacing: -0.035em;
 }
 
-.directory-header > div > p:not(.eyebrow) {
+.directory-header .directory-lede {
   margin: 0;
   color: var(--copy-soft);
   font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.directory-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.directory-shortcuts a {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-link);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.directory-shortcuts a:hover,
+.directory-shortcuts a:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface-link-hover);
 }
 
 .architecture-list {
@@ -987,11 +1017,11 @@ code {
 
 .architecture-list-link {
   display: flex;
-  min-height: 76px;
+  min-height: 88px;
   justify-content: space-between;
   gap: 24px;
   align-items: center;
-  padding: 18px 4px;
+  padding: 22px 4px;
   color: inherit;
   text-decoration: none;
   transition: color 120ms ease, padding 120ms ease;
@@ -1018,6 +1048,13 @@ code {
   font-weight: 850;
 }
 
+.directory-attribution {
+  margin: 36px 0 0;
+  color: var(--copy-soft);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
 .directory-page .directory-loading,
 .directory-page .directory-empty,
 .directory-page .directory-error {
@@ -1036,15 +1073,24 @@ code {
 
   .directory-header {
     gap: 18px;
-    align-items: end;
+    align-items: start;
   }
 
-  .directory-header > div > p:not(.eyebrow) {
+  .directory-header .directory-lede {
     max-width: 28ch;
   }
 
   .directory-header .theme-switcher-label {
     width: 108px;
+  }
+
+  .directory-header .theme-switcher {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .directory-shortcuts {
+    margin-top: 18px;
   }
 }
 
@@ -1439,10 +1485,10 @@ code {
 }
 
 .architecture-canvas {
-  --board-inset-x: 32px;
+  --board-inset-x: 26px;
   --board-inset-right: var(--board-inset-x);
-  --board-inset-top: 76px;
-  --board-inset-bottom: 74px;
+  --board-inset-top: 62px;
+  --board-inset-bottom: 62px;
   --board-layer-guides: 0;
   --board-layer-regions: 1;
   --board-layer-representation-lanes: 2;
@@ -2559,6 +2605,11 @@ code {
   opacity: 0.14;
 }
 
+.architecture-canvas.is-dense-board .arch-edge.is-context-flow:not(.is-connectivity-input):not(.is-connectivity-output):not(.is-connectivity-muted):not(.is-selected) {
+  opacity: 0.48;
+  stroke-width: 2.5;
+}
+
 .arch-edge-label.is-connectivity-muted,
 .arch-edge-badge.is-connectivity-muted {
   opacity: 0.18;
@@ -3213,7 +3264,7 @@ code {
 
 .semantic-trace-list {
   display: grid;
-  gap: 5px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3225,7 +3276,7 @@ code {
   display: grid;
   grid-template-columns: 3ch minmax(0, 1fr);
   gap: 6px;
-  padding: 7px 8px 7px 5px;
+  padding: 9px 8px 9px 5px;
   border: 1px solid transparent;
   border-radius: 7px;
   color: var(--copy);
