@@ -24,12 +24,26 @@ jobs:
           ruby-version: '3.3'
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Lint explainer sources
         run: ruby explainer/scripts/lint_sources.rb
-      - name: Verify published entry points
-        run: ruby -Ilib:test test/pages_build_test.rb
+      - name: Verify every explainer source set
+        run: |
+          for set in $(ruby -ryaml -e 'puts YAML.load_file("architectures/index.yaml").fetch("source_sets").map { |s| s.fetch("id") }'); do
+            ruby scripts/verify_architecture.rb --source-set "$set"
+          done
         working-directory: explainer
+      # lib/architecture_review.rb requires webrick, which Ruby has not bundled since 3.0.
+      - name: Install webrick for the review tests
+        run: gem install webrick --version 1.9.2 --no-document
+      - name: Run explainer Ruby tests (includes the published entry-point test)
+        run: ruby -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| require File.expand_path(f) }'
+        working-directory: explainer
+      - name: Run explainer JS tests
+        run: node --test test/*.mjs
+        working-directory: explainer
+      - name: Run trace tests
+        run: node --test trace/model.test.mjs
       - name: Build architecture explainer (site root)
         run: ruby explainer/scripts/build_pages.rb --source-set alphafold3 --output dist
       - name: Build legacy screens (dist/screens/)

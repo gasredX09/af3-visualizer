@@ -572,3 +572,28 @@ project, which is not where this deployment's visitors should be measured.
 The tool has no current need for its own analytics. This is a deliberate,
 deployment-specific divergence from upstream, so any sync between this copy
 and `ramithuh/explainer` must preserve it in both directions.
+
+## 2026-10-17: Gate the Pages deploy on the explainer verifier and test suites
+
+**Decision:** The `deploy-pages.yml` build job now verifies every registered
+explainer source set and runs the explainer's full Ruby suite, its JS suite,
+and the trace tests before it builds `dist/`. Any failure stops the deploy.
+The full Ruby suite replaces the single `pages_build_test.rb` step, which it
+includes. CI installs `webrick` 1.9.2 as a gem, because
+`lib/architecture_review.rb` requires it and Ruby has not bundled it since
+3.0. CI moves from Node 20 to Node 24, the version the JS tests were run on
+locally; Node 20 reached end of life in April 2026.
+
+**Options considered:** Keep CI at lint plus the entry-point test and rely on
+running the suites locally before each push; run the suites in a separate
+workflow that does not block deployment; gate the deploy on them.
+
+**Why:** CI already linted every source, and `build_pages.rb` already
+compiles fresh manifests and verifies the published `alphafold3` set. It did
+not run any test beyond the entry-point check. So a renderer, trace, or
+compiler regression could reach the live site whenever a local test run was
+skipped. It also never checked the other five source sets or the committed
+manifests, which the upstream pull request and local development rely on.
+The added checks take well under a minute, so gating costs little. A
+separate, non-blocking workflow would report a failure only after the broken
+build was already live.
