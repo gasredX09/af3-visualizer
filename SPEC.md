@@ -354,7 +354,9 @@ coevolution signal, not from the raw `z_init` projection alone.
   lines 4-5's other contributors to `z_init`'s construction) is a different
   edge and stays deferred as its own future task — decided explicitly in
   brainstorming rather than bundled in just because the module lands in
-  the same neighborhood of the graph.
+  the same neighborhood of the graph. (Later superseded: both terms were
+  wired into `z_init` on 2026-10-17; see "Source-only architecture
+  coverage" below.)
 
 **New facts to add** (`explainer/architectures/alphafold3-pairformer.yaml`,
 hand-edited per `DECISIONS.md`'s 2026-09-19 hand-edit entry, not via
@@ -495,6 +497,9 @@ misrepresent that as three different things.
   The `token_bonds` embedding (a separate, small contributor to `z_init`'s
   own construction, not read by `DiffusionConditioning`) is not needed by
   this module and stays open under a narrower open-questions entry.
+  (Later superseded: `token_bonds` and the relative-position term were
+  wired into `z_init` on 2026-10-17, closing that entry; see "Source-only
+  architecture coverage" below.)
 
 **New facts to add** (`explainer/architectures/alphafold3-pairformer.yaml`,
 hand-edited per the standing precedent, plus two new files under
@@ -655,7 +660,24 @@ contribution added onto the pair state it was given (Algorithm 1 line 9,
 `z += TemplateEmbedder(...)`; the released code returns
 `pair_activations + template_act`). The MSA Module therefore starts from
 this pass's pair seed plus the template contribution, and the boards and
-pseudocode show both terms. These boards and the pseudocode are source-grounded teaching
+pseudocode show both terms.
+
+The fixed pair anchor `z_init` now has all three of its terms (Algorithm 1
+lines 3-5): the outer sum of projected `s_inputs`, the relative-position
+encoding, and a no-bias projection of the user-supplied `token_bonds`
+matrix. `token_bonds` marks token pairs joined by a polymer-ligand or
+ligand-ligand bond, so ordinary chain bonds are not in it. It is a root
+input. The trunk board shows all three feeding the anchor, and the
+pseudocode trace now opens with the line that builds it. The graph still
+draws one relative-position output for both of its readers, the trunk
+anchor and diffusion conditioning. That follows the paper, which does not
+say whether the two calls share Algorithm 3's final projection. The
+released code shares none of it: the trunk projects the raw relative
+features with its own layer, and the diffusion head concatenates the raw
+139-channel features with the trunk pairs before its only projection. The
+architecture records this as an open question.
+
+These boards and the pseudocode are source-grounded teaching
 views, not real tensor playback. The input flow tracer and sampler scrubber
 still require the offline AF3 tensor dump and remain on hold.
 

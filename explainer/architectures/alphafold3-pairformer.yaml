@@ -789,6 +789,22 @@ representations:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Table 5 token_index [N_token] ("Token number. Increases monotonically; does not restart at 1 for new chains."); Supplementary Algorithm 3 line 6 (d_token_ij built from f_i^token_index - f_j^token_index); Section 3.1.2 ("we introduce a relative token encoding, applied to tokens within the same residue")
+  - id: token_bonds
+    scale: token_pair
+    semantic_role: raw token-pair bond indicator, 1 where some atom of token i is bonded to some atom of token j. It covers only polymer-ligand and ligand-ligand bonds, so the ordinary backbone bonds along a protein or nucleic-acid chain are not in it; chain order reaches the pair state through RelativePositionEncoding instead
+    shape: "N_token x N_token"
+    glyph: matrix
+    carries:
+      - whether any atom of token i is bonded to any atom of token j
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Table 5 token_bonds [N_token, N_token] ("A 2D matrix indicating if there is a bond between any atom in token i and token j, restricted to just polymer-ligand and ligand-ligand bonds and bonds less than 2.4 Å during training"); Section 3.1 ("Any bonds provided by the user (via the token_bonds feature) are linearly embedded in Algorithm 1")
+        - source_ref: af3_evoformer_code
+          role: implementation_evidence
+          locator: "Evoformer._embed_bonds (contact_matrix set to 1.0 at the token pairs gathered from polymer_ligand_bond_info and ligand_ligand_bond_info)"
   - id: relative_residue_offset
     scale: token_pair
     semantic_role: RelativePositionEncoding's residue-index offset signal (a_rel_pos) -- the clipped, one-hot-encoded residue_index difference between two tokens, restricted to pairs in the same physical chain (b_same_chain, built from asym_id equality); cross-chain pairs fall into a dedicated catch-all bucket instead of a real offset. The original AlphaFold 2 single-chain relative position encoding
@@ -1323,7 +1339,7 @@ value_sites:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 lines 3-5 (fixed z_init built once from input features, relative positions, and token bonds); line 8 adds a projected previous pair state at the beginning of every recycle
+          locator: Supplementary Algorithm 1 lines 3-5 (fixed z_init built once from input features, relative positions, and token bonds; each of the three terms arrives through its own relation); line 8 adds a projected previous pair state at the beginning of every recycle
   - id: block_pair_state
     representation_ref: representations.pair_state
     scope_ref: modules.pairformer_stack
@@ -1527,6 +1543,17 @@ value_sites:
         - source_ref: af3_2024
           role: paper_evidence
           locator: Supplementary Algorithm 3 line 6 (f_i^token_index, f_j^token_index)
+  - id: token_bonds_input
+    representation_ref: representations.token_bonds
+    scope_ref: architecture
+    boundary: input
+    role: raw_token_bonds_input
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 5 (f_ij^token_bonds)
   - id: relative_residue_offset
     representation_ref: representations.relative_residue_offset
     scope_ref: modules.relative_position_encoding
@@ -1576,7 +1603,7 @@ value_sites:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 3 line 10 (p_ij = LinearNoBias(concat([a_rel_pos_ij, a_rel_token_ij, b_same_entity_ij, a_rel_chain_ij])), p_ij in R^c_z, c_z=128); Section 3.1.2 -- this exact algorithm runs twice in AF3 (seeding z_init via Algorithm 1 line 4, and again inside DiffusionConditioning via Algorithm 21 line 1, which has no access to z_init and needs its own fresh copy of this static positional prior); this value site is the module's single shared output, ready to be consumed by either call site
+          locator: Supplementary Algorithm 3 line 10 (p_ij = LinearNoBias(concat([a_rel_pos_ij, a_rel_token_ij, b_same_entity_ij, a_rel_chain_ij])), p_ij in R^c_z, c_z=128); Section 3.1.2 -- this exact algorithm runs twice in AF3 (seeding z_init via Algorithm 1 line 4, and again inside DiffusionConditioning via Algorithm 21 line 1, which has no access to z_init and needs its own fresh copy of this static positional prior); this value site is the module's single shared output, read by both call sites (relations.relative_position_encoding_output_seeds_z_init and relations.relative_position_encoding_output_enters_diffusion_conditioning). It stands for the same four signals reaching both places, not one learned projection shared between them; see open_questions.relative_position_encoding_call_sites_paper_code_divergence
   - id: msa_activations
     representation_ref: representations.msa_activations
     scope_ref: modules.msa_row_embedding
@@ -2570,7 +2597,7 @@ modules:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this module)
+          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds terms are added to z_init by their own relations, not by this module)
   - id: relative_position_encoding
     parent_ref: architecture
     decomposition:
@@ -2586,7 +2613,7 @@ modules:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 3 (RelativePositionEncoding); Section 3.1.2 (r_max=32, s_max=2) -- this exact algorithm is invoked twice in AF3, seeding z_init (Algorithm 1 line 4) and again inside DiffusionConditioning (Algorithm 21 line 1); only this one shared module is modeled here, feeding value_sites.relative_position_encoding_output
+          locator: Supplementary Algorithm 3 (RelativePositionEncoding); Section 3.1.2 (r_max=32, s_max=2) -- this exact algorithm is invoked twice in AF3, seeding z_init (Algorithm 1 line 4) and again inside DiffusionConditioning (Algorithm 21 line 1); only this one shared module is modeled here, feeding value_sites.relative_position_encoding_output (open_questions.relative_position_encoding_call_sites_paper_code_divergence records how the released code's two call sites differ)
   - id: msa_module
     parent_ref: modules.trunk_model
     decomposition:
@@ -3814,7 +3841,37 @@ relations:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8).
+          locator: Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5 add the other two terms through relations.relative_position_encoding_output_seeds_z_init and relations.token_bonds_embedded_into_z_init). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8).
+  - id: relative_position_encoding_output_seeds_z_init
+    from: value_sites.relative_position_encoding_output
+    to: value_sites.z_init
+    kind: data_flow
+    carries: [representations.pair_state]
+    operation: add_relative_position_encoding_to_z_init
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 4 (z_init_ij += RelativePositionEncoding({f*})); the encoding is computed from fixed token identifiers, so it is added once to the fixed anchor and reaches every trunk pass through it
+        - source_ref: af3_evoformer_code
+          role: implementation_evidence
+          locator: "Evoformer._relative_encoding (pair_activations += Linear(pair_channel, name='position_activations')(create_relative_encoding(...)))"
+  - id: token_bonds_embedded_into_z_init
+    from: value_sites.token_bonds_input
+    to: value_sites.z_init
+    kind: data_flow
+    carries: [representations.token_bonds]
+    operation: linear_no_bias_embed_token_bonds_into_z_init
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 1 line 5 (z_init_ij += LinearNoBias(f_ij^token_bonds)), projecting the one-channel bond indicator to c_z=128
+        - source_ref: af3_evoformer_code
+          role: implementation_evidence
+          locator: "Evoformer._embed_bonds (bonds_act = Linear(pair_channel, name='bond_embedding')(contact_matrix[:, :, None]); return pair_activations + bonds_act; haiku_modules.Linear defaults to use_bias=False)"
   - id: single_anchor_initializes_recycle_pass
     from: value_sites.single_init
     to: value_sites.single_state_input
@@ -4623,7 +4680,7 @@ relations:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- this call has no access to z_init and needs its own fresh copy of the static positional prior, distinct from the copy that seeded z_init at Algorithm 1 line 4
+          locator: Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- this call has no access to z_init and needs its own fresh copy of the static positional prior, distinct from the copy that seeded z_init at Algorithm 1 line 4. The released code concatenates the unprojected relative features here instead (open_questions.relative_position_encoding_call_sites_paper_code_divergence)
   - id: single_state_output_enters_diffusion_conditioning
     from: value_sites.single_state_output
     to: modules.diffusion_conditioning
@@ -5772,20 +5829,30 @@ claims:
           locator: Fig. 2a caption
 
 open_questions:
-  - id: token_bonds_embedding_unmodeled
-    question: Algorithm 1 line 5 adds a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3) and RelativePositionEncoding (line 4). RelativePositionEncoding is now modeled by modules.relative_position_encoding and reachable via value_sites.relative_position_encoding_output, but no relation wires that output into value_sites.z_init itself -- only s_inputs (via relations.pair_state_projection_produces_z_init) is a graph-connected contributor to z_init today. The token_bonds embedding -- a separate, small contributor to z_init built from user-provided bond information, unrelated to modules.relative_position_encoding -- is not yet represented as its own value site, module, or relation at all.
+  - id: relative_position_encoding_call_sites_paper_code_divergence
+    question: The paper calls RelativePositionEncoding twice, and Algorithm 3 ends in a learned projection (line 10, p_ij = LinearNoBias(concat(...)) into c_z=128). At Algorithm 1 line 4 that projected output is added into z_init; at Algorithm 21 line 1 it is concatenated with z_trunk before DiffusionConditioning's LayerNorm and LinearNoBias. The paper does not say whether the two calls share the line 10 projection. The released code shares none of it. The trunk projects the raw relative features with its own Linear (position_activations), while the diffusion head concatenates the raw 139-channel one-hot features (66 residue-offset bins, 66 token-offset bins, 1 same-entity channel, 6 chain-offset bins) directly with the trunk pair tensor and lets its pair_cond_initial_projection do the only projection. The graph follows the paper and draws one shared output value site for both consumers.
     status: deferred
     affected_refs:
-      - value_sites.z_init
-      - relations.pair_state_projection_produces_z_init
-      - modules.pair_state_input_projection
-    resolution_criteria: Model the token_bonds embedding (a LinearNoBias projection of the user-provided token_bonds feature) as its own boundary:input value site and relation feeding z_init, alongside the existing s_inputs contribution (relations.pair_state_projection_produces_z_init). Separately, and only if wanted, also add a relation from value_sites.relative_position_encoding_output into z_init -- RelativePositionEncoding is modeled but that specific wire does not exist yet.
+      - value_sites.relative_position_encoding_output
+      - relations.relative_position_encoding_output_seeds_z_init
+      - relations.relative_position_encoding_output_enters_diffusion_conditioning
+      - modules.diffusion_conditioning
+    resolution_criteria: If a board needs to show the difference, split the projection into a trunk-side value site and model the diffusion side as reading the four raw signals (value_sites.relative_residue_offset, relative_token_offset, same_entity_signal, relative_chain_offset) directly, with evidence from the released code.
     evidence:
       status: open_question
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 1 line 5
+          locator: Supplementary Algorithm 1 line 4; Algorithm 3 line 10; Algorithm 21 lines 1-2
+        - source_ref: af3_evoformer_code
+          role: implementation_evidence
+          locator: "Evoformer._relative_encoding (Linear named position_activations applied to create_relative_encoding output)"
+        - source_ref: af3_diffusion_head_code
+          role: implementation_evidence
+          locator: "DiffusionHead._conditioning (features_2d = jnp.concatenate([pair_embedding, rel_features], axis=-1), then pair_cond_initial_norm and pair_cond_initial_projection)"
+        - source_ref: af3_featurization_code
+          role: implementation_evidence
+          locator: "create_relative_encoding() (one_hot widths 2*max_relative_idx+2, 2*max_relative_idx+2, 1, 2*max_relative_chain+2 with max_relative_idx=32 and max_relative_chain=2)"
   - id: relative_chain_offset_gate_paper_code_divergence
     question: Supplementary Algorithm 3 line 8 (paper) gates a_rel_chain's offset on "not b_same_chain" (built from asym_id) -- same-chain token pairs fall into the catch-all bucket, cross-chain pairs get a real offset. The reference implementation's create_relative_encoding() instead gates the equivalent computation on entity_id_same. These are not equivalent conditions -- same-chain implies same-entity, but same-entity does not imply same-chain (e.g. two different physical copies of a homotrimer share entity_id but not asym_id), so a same-chain token pair gets the catch-all bucket per the paper but a real (zero) offset per the code. representations.relative_chain_offset and its producing relation are grounded in the paper's literal condition, not the code's.
     status: deferred

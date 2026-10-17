@@ -116,6 +116,14 @@ boards:
       density: micro
       col: 4
       row: 7
+    - id: token_bonds_input
+      ref: value_sites.token_bonds_input
+      label: token bonds
+      prominence: context
+      treatment: chip
+      density: micro
+      col: 5
+      row: 1
     - id: msa_input
       ref: value_sites.msa_input
       label: MSA identity
@@ -352,6 +360,8 @@ boards:
       row: 5
     - { id: single_init, ref: value_sites.single_init, label: fixed single anchor, prominence: context, treatment: chip, density: micro, col: 4, row: 3 }
     - { id: z_init, ref: value_sites.z_init, label: fixed pair anchor, prominence: context, treatment: chip, density: micro, col: 4, row: 5 }
+    - { id: relative_position_encoding_output, ref: value_sites.relative_position_encoding_output, label: relative positions, prominence: context, treatment: chip, density: micro, col: 3, row: 6 }
+    - { id: token_bonds_input, ref: value_sites.token_bonds_input, label: token bonds, prominence: context, treatment: chip, density: micro, col: 3, row: 7 }
     - { id: pair_recycle_seed, ref: value_sites.pair_recycle_seed, label: this pass's pairs, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
     - { id: recycled_single_state, ref: value_sites.recycled_single_state, label: previous singles, prominence: context, treatment: chip, density: micro, col: 8, row: 7 }
     - { id: recycled_pair_state, ref: value_sites.recycled_pair_state, label: previous pairs, prominence: context, treatment: chip, density: micro, col: 8, row: 8 }
@@ -506,6 +516,18 @@ boards:
         title: Final pair representation
         role: downstream pair context
         inside: After block 48, the ordered token-pair state is exposed to downstream AF3 modules.
+    - match:
+        relation_ref: relations.relative_position_encoding_output_seeds_z_init
+      connection:
+        title: Relative positions are added
+        role: fixed positional prior
+        inside: The projected residue-offset, token-offset, same-entity, and chain-copy signals are added to the pair anchor once, before the first pass.
+    - match:
+        relation_ref: relations.token_bonds_embedded_into_z_init
+      connection:
+        title: Token bonds are added
+        role: bonds involving ligands
+        inside: A one-channel bond indicator is projected to the pair width and added to the pair anchor once, before the first pass.
     elide:
     - ref: value_sites.pair_state_input
     exclude:
@@ -2136,7 +2158,7 @@ boards:
     parent: sample_diffusion_detail
     subject_ref: modules.sampler_update
     expansion_depth: 1
-    grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    grid: { columns: 5, rows: 4, column_sizing: content, row_sizing: content, col_gap: 28, row_gap: 24 }
     nodes:
       - { id: update_noisy, ref: value_sites.noisy_atom_positions, label: noisy coordinates, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
       - { id: update_estimate, ref: value_sites.denoised_atom_positions, label: denoiser estimate, prominence: context, treatment: compact, density: compact, col: 1, row: 3 }
@@ -2177,7 +2199,7 @@ boards:
     parent: confidence_head_detail
     subject_ref: modules.confidence_pair_embedding
     expansion_depth: 1
-    grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    grid: { columns: 5, rows: 4, column_sizing: content, row_sizing: content, col_gap: 28, row_gap: 24 }
     nodes:
       - { id: embed_raw_input, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
       - { id: embed_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
@@ -2310,7 +2332,7 @@ boards:
     parent: diffusion_module_detail
     subject_ref: modules.diffusion_transformer_token_level
     expansion_depth: 1
-    grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
+    grid: { columns: 5, rows: 4, column_sizing: content, row_sizing: content, col_gap: 28, row_gap: 24 }
     nodes:
       - { id: token_conditioned_activation, ref: value_sites.diffusion_token_activation_conditioned, label: token input plus singles, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
       - { id: token_conditioned_singles, ref: value_sites.diffusion_conditioned_single, label: single conditioning, notation: "s_{i}", prominence: context, treatment: chip, density: micro, col: 2, row: 1 }

@@ -4,9 +4,9 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
-      "architectures/alphafold3-pairformer.yaml": "7bf18fd94c48351ce0cdb7e09daf65a25e6c08143bb941ae60e7ce3084e75422",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "642997375536f9107bdb27a831e5b49b02a35ebfc83289f8407f48172aa77e5a",
-      "pseudocode/alphafold3-pairformer.yaml": "848018a0da1b1e0adb8a8120050d6cb84729bd1270ffa94b126bc8b6d6e40c15",
+      "architectures/alphafold3-pairformer.yaml": "921a7591ef72bfc1f5e99f250c82bfaf6023e43d92ab0ad92cc3b330b55624fe",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "2e83f0565cdda75a93e7d4f9499f5295407bfc5f620250aab842c02ef51ec570",
+      "pseudocode/alphafold3-pairformer.yaml": "d463e9d2d1e0607e098794df7fb05ad31a86085c5ed1453b5164b4c961dde07b",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
     }
@@ -1265,7 +1265,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this module)"
+              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds terms are added to z_init by their own relations, not by this module)"
             }
           ]
         }
@@ -1294,7 +1294,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 3 (RelativePositionEncoding); Section 3.1.2 (r_max=32, s_max=2) -- this exact algorithm is invoked twice in AF3, seeding z_init (Algorithm 1 line 4) and again inside DiffusionConditioning (Algorithm 21 line 1); only this one shared module is modeled here, feeding value_sites.relative_position_encoding_output"
+              "locator": "Supplementary Algorithm 3 (RelativePositionEncoding); Section 3.1.2 (r_max=32, s_max=2) -- this exact algorithm is invoked twice in AF3, seeding z_init (Algorithm 1 line 4) and again inside DiffusionConditioning (Algorithm 21 line 1); only this one shared module is modeled here, feeding value_sites.relative_position_encoding_output (open_questions.relative_position_encoding_call_sites_paper_code_divergence records how the released code's two call sites differ)"
             }
           ]
         }
@@ -6560,6 +6560,31 @@ export const manifest = {
         }
       },
       {
+        "id": "token_bonds",
+        "scale": "token_pair",
+        "semantic_role": "raw token-pair bond indicator, 1 where some atom of token i is bonded to some atom of token j. It covers only polymer-ligand and ligand-ligand bonds, so the ordinary backbone bonds along a protein or nucleic-acid chain are not in it; chain order reaches the pair state through RelativePositionEncoding instead",
+        "shape": "N_token x N_token",
+        "glyph": "matrix",
+        "carries": [
+          "whether any atom of token i is bonded to any atom of token j"
+        ],
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Table 5 token_bonds [N_token, N_token] (\"A 2D matrix indicating if there is a bond between any atom in token i and token j, restricted to just polymer-ligand and ligand-ligand bonds and bonds less than 2.4 Å during training\"); Section 3.1 (\"Any bonds provided by the user (via the token_bonds feature) are linearly embedded in Algorithm 1\")"
+            },
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "Evoformer._embed_bonds (contact_matrix set to 1.0 at the token pairs gathered from polymer_ligand_bond_info and ligand_ligand_bond_info)"
+            }
+          ]
+        }
+      },
+      {
         "id": "relative_residue_offset",
         "scale": "token_pair",
         "semantic_role": "RelativePositionEncoding's residue-index offset signal (a_rel_pos) -- the clipped, one-hot-encoded residue_index difference between two tokens, restricted to pairs in the same physical chain (b_same_chain, built from asym_id equality); cross-chain pairs fall into a dedicated catch-all bucket instead of a real offset. The original AlphaFold 2 single-chain relative position encoding",
@@ -7554,7 +7579,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 lines 3-5 (fixed z_init built once from input features, relative positions, and token bonds); line 8 adds a projected previous pair state at the beginning of every recycle"
+              "locator": "Supplementary Algorithm 1 lines 3-5 (fixed z_init built once from input features, relative positions, and token bonds; each of the three terms arrives through its own relation); line 8 adds a projected previous pair state at the beginning of every recycle"
             }
           ]
         }
@@ -8008,6 +8033,23 @@ export const manifest = {
         }
       },
       {
+        "id": "token_bonds_input",
+        "representation_ref": "representations.token_bonds",
+        "scope_ref": "architecture",
+        "boundary": "input",
+        "role": "raw_token_bonds_input",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 5 (f_ij^token_bonds)"
+            }
+          ]
+        }
+      },
+      {
         "id": "relative_residue_offset",
         "representation_ref": "representations.relative_residue_offset",
         "scope_ref": "modules.relative_position_encoding",
@@ -8082,7 +8124,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 3 line 10 (p_ij = LinearNoBias(concat([a_rel_pos_ij, a_rel_token_ij, b_same_entity_ij, a_rel_chain_ij])), p_ij in R^c_z, c_z=128); Section 3.1.2 -- this exact algorithm runs twice in AF3 (seeding z_init via Algorithm 1 line 4, and again inside DiffusionConditioning via Algorithm 21 line 1, which has no access to z_init and needs its own fresh copy of this static positional prior); this value site is the module's single shared output, ready to be consumed by either call site"
+              "locator": "Supplementary Algorithm 3 line 10 (p_ij = LinearNoBias(concat([a_rel_pos_ij, a_rel_token_ij, b_same_entity_ij, a_rel_chain_ij])), p_ij in R^c_z, c_z=128); Section 3.1.2 -- this exact algorithm runs twice in AF3 (seeding z_init via Algorithm 1 line 4, and again inside DiffusionConditioning via Algorithm 21 line 1, which has no access to z_init and needs its own fresh copy of this static positional prior); this value site is the module's single shared output, read by both call sites (relations.relative_position_encoding_output_seeds_z_init and relations.relative_position_encoding_output_enters_diffusion_conditioning). It stands for the same four signals reaching both places, not one learned projection shared between them; see open_questions.relative_position_encoding_call_sites_paper_code_divergence"
             }
           ]
         }
@@ -9631,13 +9673,17 @@ export const manifest = {
       },
       "z_init": {
         "incomingRelationRefs": [
-          "relations.pair_state_projection_produces_z_init"
+          "relations.pair_state_projection_produces_z_init",
+          "relations.relative_position_encoding_output_seeds_z_init",
+          "relations.token_bonds_embedded_into_z_init"
         ],
         "outgoingRelationRefs": [
           "relations.pair_anchor_initializes_recycle_pass"
         ],
         "producerRefs": [
-          "modules.pair_state_input_projection"
+          "modules.pair_state_input_projection",
+          "value_sites.relative_position_encoding_output",
+          "value_sites.token_bonds_input"
         ],
         "consumerRefs": [
           "value_sites.pair_recycle_seed"
@@ -10015,6 +10061,20 @@ export const manifest = {
           "modules.relative_position_encoding"
         ]
       },
+      "token_bonds_input": {
+        "incomingRelationRefs": [
+
+        ],
+        "outgoingRelationRefs": [
+          "relations.token_bonds_embedded_into_z_init"
+        ],
+        "producerRefs": [
+
+        ],
+        "consumerRefs": [
+          "value_sites.z_init"
+        ]
+      },
       "relative_residue_offset": {
         "incomingRelationRefs": [
           "relations.relative_position_encoding_produces_residue_offset"
@@ -10076,12 +10136,14 @@ export const manifest = {
           "relations.relative_position_encoding_produces_output"
         ],
         "outgoingRelationRefs": [
+          "relations.relative_position_encoding_output_seeds_z_init",
           "relations.relative_position_encoding_output_enters_diffusion_conditioning"
         ],
         "producerRefs": [
           "modules.relative_position_encoding"
         ],
         "consumerRefs": [
+          "value_sites.z_init",
           "modules.diffusion_conditioning"
         ]
       },
@@ -13245,7 +13307,57 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5's RelativePositionEncoding and token_bonds contributions to z_init are separate inputs not modeled by this relation). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8)."
+              "locator": "Supplementary Algorithm 1 line 3 (z_init_ij = LinearNoBias(s_i^inputs) + LinearNoBias(s_j^inputs); lines 4-5 add the other two terms through relations.relative_position_encoding_output_seeds_z_init and relations.token_bonds_embedded_into_z_init). Retargeted from producing value_sites.pair_state_input directly (module 1's original wiring, when nothing sat between the projection and the Pairformer's own input) to producing value_sites.z_init, now that value_sites.z_init -> modules.msa_module -> value_sites.pair_state_input is the real chain (Algorithm 1 line 10; Algorithm 8)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "relative_position_encoding_output_seeds_z_init",
+        "from": "value_sites.relative_position_encoding_output",
+        "to": "value_sites.z_init",
+        "kind": "data_flow",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "add_relative_position_encoding_to_z_init",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 4 (z_init_ij += RelativePositionEncoding({f*})); the encoding is computed from fixed token identifiers, so it is added once to the fixed anchor and reaches every trunk pass through it"
+            },
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "Evoformer._relative_encoding (pair_activations += Linear(pair_channel, name='position_activations')(create_relative_encoding(...)))"
+            }
+          ]
+        }
+      },
+      {
+        "id": "token_bonds_embedded_into_z_init",
+        "from": "value_sites.token_bonds_input",
+        "to": "value_sites.z_init",
+        "kind": "data_flow",
+        "carries": [
+          "representations.token_bonds"
+        ],
+        "operation": "linear_no_bias_embed_token_bonds_into_z_init",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 1 line 5 (z_init_ij += LinearNoBias(f_ij^token_bonds)), projecting the one-channel bond indicator to c_z=128"
+            },
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "Evoformer._embed_bonds (bonds_act = Linear(pair_channel, name='bond_embedding')(contact_matrix[:, :, None]); return pair_activations + bonds_act; haiku_modules.Linear defaults to use_bias=False)"
             }
           ]
         }
@@ -14770,7 +14882,7 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- this call has no access to z_init and needs its own fresh copy of the static positional prior, distinct from the copy that seeded z_init at Algorithm 1 line 4"
+              "locator": "Supplementary Algorithm 21 line 1 (z_ij = concat([z_ij^trunk, RelativePositionEncoding({f*})])) -- this call has no access to z_init and needs its own fresh copy of the static positional prior, distinct from the copy that seeded z_init at Algorithm 1 line 4. The released code concatenates the unprojected relative features here instead (open_questions.relative_position_encoding_call_sites_paper_code_divergence)"
             }
           ]
         }
@@ -17123,22 +17235,38 @@ export const manifest = {
     ],
     "openQuestions": [
       {
-        "id": "token_bonds_embedding_unmodeled",
-        "question": "Algorithm 1 line 5 adds a LinearNoBias(token_bonds) embedding into z_init, on top of the outer-sum projection of s_inputs (line 3) and RelativePositionEncoding (line 4). RelativePositionEncoding is now modeled by modules.relative_position_encoding and reachable via value_sites.relative_position_encoding_output, but no relation wires that output into value_sites.z_init itself -- only s_inputs (via relations.pair_state_projection_produces_z_init) is a graph-connected contributor to z_init today. The token_bonds embedding -- a separate, small contributor to z_init built from user-provided bond information, unrelated to modules.relative_position_encoding -- is not yet represented as its own value site, module, or relation at all.",
+        "id": "relative_position_encoding_call_sites_paper_code_divergence",
+        "question": "The paper calls RelativePositionEncoding twice, and Algorithm 3 ends in a learned projection (line 10, p_ij = LinearNoBias(concat(...)) into c_z=128). At Algorithm 1 line 4 that projected output is added into z_init; at Algorithm 21 line 1 it is concatenated with z_trunk before DiffusionConditioning's LayerNorm and LinearNoBias. The paper does not say whether the two calls share the line 10 projection. The released code shares none of it. The trunk projects the raw relative features with its own Linear (position_activations), while the diffusion head concatenates the raw 139-channel one-hot features (66 residue-offset bins, 66 token-offset bins, 1 same-entity channel, 6 chain-offset bins) directly with the trunk pair tensor and lets its pair_cond_initial_projection do the only projection. The graph follows the paper and draws one shared output value site for both consumers.",
         "status": "deferred",
         "affected_refs": [
-          "value_sites.z_init",
-          "relations.pair_state_projection_produces_z_init",
-          "modules.pair_state_input_projection"
+          "value_sites.relative_position_encoding_output",
+          "relations.relative_position_encoding_output_seeds_z_init",
+          "relations.relative_position_encoding_output_enters_diffusion_conditioning",
+          "modules.diffusion_conditioning"
         ],
-        "resolution_criteria": "Model the token_bonds embedding (a LinearNoBias projection of the user-provided token_bonds feature) as its own boundary:input value site and relation feeding z_init, alongside the existing s_inputs contribution (relations.pair_state_projection_produces_z_init). Separately, and only if wanted, also add a relation from value_sites.relative_position_encoding_output into z_init -- RelativePositionEncoding is modeled but that specific wire does not exist yet.",
+        "resolution_criteria": "If a board needs to show the difference, split the projection into a trunk-side value site and model the diffusion side as reading the four raw signals (value_sites.relative_residue_offset, relative_token_offset, same_entity_signal, relative_chain_offset) directly, with evidence from the released code.",
         "evidence": {
           "status": "open_question",
           "refs": [
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 1 line 5"
+              "locator": "Supplementary Algorithm 1 line 4; Algorithm 3 line 10; Algorithm 21 lines 1-2"
+            },
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "Evoformer._relative_encoding (Linear named position_activations applied to create_relative_encoding output)"
+            },
+            {
+              "source_ref": "af3_diffusion_head_code",
+              "role": "implementation_evidence",
+              "locator": "DiffusionHead._conditioning (features_2d = jnp.concatenate([pair_embedding, rel_features], axis=-1), then pair_cond_initial_norm and pair_cond_initial_projection)"
+            },
+            {
+              "source_ref": "af3_featurization_code",
+              "role": "implementation_evidence",
+              "locator": "create_relative_encoding() (one_hot widths 2*max_relative_idx+2, 2*max_relative_idx+2, 1, 2*max_relative_chain+2 with max_relative_idx=32 and max_relative_chain=2)"
             }
           ]
         }
@@ -19936,6 +20064,17 @@ export const manifest = {
           "architectureRef": "value_sites.s_inputs"
         },
         {
+          "id": "raw_token_bonds",
+          "name": "token_bonds",
+          "type": "input",
+          "shape": "N_token x N_token",
+          "representationRef": "representations.token_bonds",
+          "scale": "token_pair",
+          "glyph": "matrix",
+          "scopeRef": "scopes.pairformer",
+          "architectureRef": "value_sites.token_bonds_input"
+        },
+        {
           "id": "fixed_single_anchor",
           "name": "s_init",
           "type": "state",
@@ -20465,6 +20604,95 @@ export const manifest = {
         }
       ],
       "lines": [
+        {
+          "id": "build_pair_anchor",
+          "text": "z_init = ProjectPairs(s_inputs) + RelativePositionEncoding(token_ids) + LinearNoBias(token_bonds)",
+          "comment": "Built once, before the first pass, from three fixed inputs. None of the three terms changes between passes.",
+          "refs": "Evoformer.__call__ (_seq_pair_embedding, _relative_encoding, _embed_bonds)",
+          "sourceRefs": [
+            {
+              "source": "evoformer_code",
+              "locator": "Evoformer.__call__ (_seq_pair_embedding, _relative_encoding, _embed_bonds)"
+            }
+          ],
+          "scopeRef": "scopes.pairformer",
+          "statementRef": "modules.pair_state_input_projection",
+          "architectureRefs": [
+            "modules.pair_state_input_projection",
+            "modules.relative_position_encoding",
+            "relations.pair_state_projection_produces_z_init",
+            "relations.relative_position_encoding_output_seeds_z_init",
+            "relations.token_bonds_embedded_into_z_init"
+          ],
+          "operation": "build_fixed_pair_anchor",
+          "inputs": [
+            "raw_input_embedding",
+            "raw_token_bonds"
+          ],
+          "outputs": [
+            "fixed_pair_anchor"
+          ],
+          "codeBindings": [
+            {
+              "lexeme": "z_init",
+              "access": "write",
+              "symbolId": "fixed_pair_anchor",
+              "architectureRef": "value_sites.z_init",
+              "occurrences": [
+                {
+                  "start": 0,
+                  "end": 6
+                }
+              ]
+            },
+            {
+              "lexeme": "ProjectPairs",
+              "access": "call",
+              "architectureRef": "modules.pair_state_input_projection",
+              "occurrences": [
+                {
+                  "start": 9,
+                  "end": 21
+                }
+              ]
+            },
+            {
+              "lexeme": "s_inputs",
+              "access": "read",
+              "symbolId": "raw_input_embedding",
+              "architectureRef": "value_sites.s_inputs",
+              "occurrences": [
+                {
+                  "start": 22,
+                  "end": 30
+                }
+              ]
+            },
+            {
+              "lexeme": "RelativePositionEncoding",
+              "access": "call",
+              "architectureRef": "modules.relative_position_encoding",
+              "occurrences": [
+                {
+                  "start": 34,
+                  "end": 58
+                }
+              ]
+            },
+            {
+              "lexeme": "token_bonds",
+              "access": "read",
+              "symbolId": "raw_token_bonds",
+              "architectureRef": "value_sites.token_bonds_input",
+              "occurrences": [
+                {
+                  "start": 85,
+                  "end": 96
+                }
+              ]
+            }
+          ]
+        },
         {
           "id": "seed_pair_recycle",
           "text": "z_seed = z_init + ProjectPairRecycle(prev_pair)",
@@ -23189,6 +23417,16 @@ export const manifest = {
             "row": 7
           },
           {
+            "id": "token_bonds_input",
+            "ref": "value_sites.token_bonds_input",
+            "label": "token bonds",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 5,
+            "row": 1
+          },
+          {
             "id": "msa_input",
             "ref": "value_sites.msa_input",
             "label": "MSA identity",
@@ -24069,6 +24307,34 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_f83ee62ec188",
+            "from": "relative_position_encoding",
+            "to": "trunk_model",
+            "projection": "contracted",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_produces_output",
+              "relations.relative_position_encoding_output_seeds_z_init"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_produces_output"
+              },
+              {
+                "relation_ref": "relations.relative_position_encoding_output_seeds_z_init"
+              }
+            ],
+            "hidden_refs": [
+              "value_sites.relative_position_encoding_output"
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_8c257d252623",
             "from": "residue_index",
             "to": "relative_position_encoding",
@@ -24501,6 +24767,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_55763208769d",
+            "from": "token_bonds_input",
+            "to": "trunk_model",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_bonds_embedded_into_z_init"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_bonds_embedded_into_z_init"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.token_bonds"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_3eedca20663f",
             "from": "token_index",
             "to": "relative_position_encoding",
@@ -24786,6 +25076,7 @@ export const manifest = {
           "value_sites.template_pseudo_beta_mask": "visible",
           "value_sites.template_restype": "visible",
           "value_sites.template_unit_vector": "visible",
+          "value_sites.token_bonds_input": "visible",
           "value_sites.token_index": "visible",
           "value_sites.token_mask_input": "visible",
           "value_sites.z_init": "collapsed:modules.trunk_model"
@@ -24883,6 +25174,26 @@ export const manifest = {
             "density": "micro",
             "col": 4,
             "row": 5
+          },
+          {
+            "id": "relative_position_encoding_output",
+            "ref": "value_sites.relative_position_encoding_output",
+            "label": "relative positions",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 6
+          },
+          {
+            "id": "token_bonds_input",
+            "ref": "value_sites.token_bonds_input",
+            "label": "token bonds",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 3,
+            "row": 7
           },
           {
             "id": "pair_recycle_seed",
@@ -25131,6 +25442,26 @@ export const manifest = {
               "title": "Final pair representation",
               "role": "downstream pair context",
               "inside": "After block 48, the ordered token-pair state is exposed to downstream AF3 modules."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.relative_position_encoding_output_seeds_z_init"
+            },
+            "connection": {
+              "title": "Relative positions are added",
+              "role": "fixed positional prior",
+              "inside": "The projected residue-offset, token-offset, same-entity, and chain-copy signals are added to the pair anchor once, before the first pass."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.token_bonds_embedded_into_z_init"
+            },
+            "connection": {
+              "title": "Token bonds are added",
+              "role": "bonds involving ligands",
+              "inside": "A one-channel bond indicator is projected to the pair width and added to the pair anchor once, before the first pass."
             }
           }
         ],
@@ -25608,6 +25939,35 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_6b5a520db0d1",
+            "from": "relative_position_encoding_output",
+            "to": "z_init",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.relative_position_encoding_output_seeds_z_init"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.relative_position_encoding_output_seeds_z_init"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "connection": {
+                "title": "Relative positions are added",
+                "role": "fixed positional prior",
+                "inside": "The projected residue-offset, token-offset, same-entity, and chain-copy signals are added to the pair anchor once, before the first pass."
+              }
+            }
+          },
+          {
             "id": "projection_01098aba96aa",
             "from": "s_inputs",
             "to": "msa_module",
@@ -25944,6 +26304,35 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_1aa8632d07b6",
+            "from": "token_bonds_input",
+            "to": "z_init",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.token_bonds_embedded_into_z_init"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.token_bonds_embedded_into_z_init"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.token_bonds"
+            ],
+            "presentation": {
+              "connection": {
+                "title": "Token bonds are added",
+                "role": "bonds involving ligands",
+                "inside": "A one-channel bond indicator is projected to the pair width and added to the pair anchor once, before the first pass."
+              }
+            }
+          },
+          {
             "id": "projection_3d25dd770ab8",
             "from": "token_mask_input",
             "to": "pairformer_stack",
@@ -26078,6 +26467,7 @@ export const manifest = {
           "value_sites.pair_state_output": "visible",
           "value_sites.recycled_pair_state": "visible",
           "value_sites.recycled_single_state": "visible",
+          "value_sites.relative_position_encoding_output": "visible",
           "value_sites.s_inputs": "visible",
           "value_sites.single_after_pair_attention": "collapsed:modules.pairformer_stack",
           "value_sites.single_after_transition": "collapsed:modules.pairformer_stack",
@@ -26099,6 +26489,7 @@ export const manifest = {
           "value_sites.template_pseudo_beta_mask": "visible",
           "value_sites.template_restype": "visible",
           "value_sites.template_unit_vector": "visible",
+          "value_sites.token_bonds_input": "visible",
           "value_sites.token_mask_input": "visible",
           "value_sites.z_init": "visible"
         },
@@ -32734,6 +33125,7 @@ export const manifest = {
           "columns": 5,
           "rows": 4,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
         },
@@ -33495,6 +33887,7 @@ export const manifest = {
           "columns": 5,
           "rows": 4,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
         },
@@ -36140,6 +36533,7 @@ export const manifest = {
           "columns": 5,
           "rows": 4,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
         },

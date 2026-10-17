@@ -49,6 +49,7 @@ scopes:
 
 symbols:
   - { id: raw_input_embedding, name: s_inputs, type: input, scope_ref: scopes.pairformer, architecture_ref: value_sites.s_inputs }
+  - { id: raw_token_bonds, name: token_bonds, type: input, scope_ref: scopes.pairformer, architecture_ref: value_sites.token_bonds_input }
   - { id: fixed_single_anchor, name: s_init, type: state, scope_ref: scopes.pairformer, architecture_ref: value_sites.single_init }
   - { id: fixed_pair_anchor, name: z_init, type: state, scope_ref: scopes.pairformer, architecture_ref: value_sites.z_init }
   - { id: previous_single, name: prev_single, type: state, scope_ref: scopes.pairformer, architecture_ref: value_sites.recycled_single_state }
@@ -235,6 +236,22 @@ symbols:
     architecture_ref: value_sites.single_after_transition
 
 lines:
+  - id: build_pair_anchor
+    text: "z_init = ProjectPairs(s_inputs) + RelativePositionEncoding(token_ids) + LinearNoBias(token_bonds)"
+    comment: Built once, before the first pass, from three fixed inputs. None of the three terms changes between passes.
+    scope_ref: scopes.pairformer
+    statement_ref: modules.pair_state_input_projection
+    operation: build_fixed_pair_anchor
+    inputs: [raw_input_embedding, raw_token_bonds]
+    outputs: [fixed_pair_anchor]
+    architecture_refs: [modules.relative_position_encoding, relations.pair_state_projection_produces_z_init, relations.relative_position_encoding_output_seeds_z_init, relations.token_bonds_embedded_into_z_init]
+    source_refs: [{ source: evoformer_code, locator: "Evoformer.__call__ (_seq_pair_embedding, _relative_encoding, _embed_bonds)" }]
+    code_bindings:
+      - { lexeme: z_init, symbol_ref: fixed_pair_anchor, access: write }
+      - { lexeme: ProjectPairs, architecture_ref: modules.pair_state_input_projection, access: call }
+      - { lexeme: s_inputs, symbol_ref: raw_input_embedding, access: read }
+      - { lexeme: RelativePositionEncoding, architecture_ref: modules.relative_position_encoding, access: call }
+      - { lexeme: token_bonds, symbol_ref: raw_token_bonds, access: read }
   - id: seed_pair_recycle
     text: "z_seed = z_init + ProjectPairRecycle(prev_pair)"
     comment: At each pass, restart from the fixed pair anchor and add a normalized projection of the previous pass; prev_pair is zero for the first pass.
