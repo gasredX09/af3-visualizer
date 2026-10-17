@@ -194,9 +194,9 @@ export function snapshot(stageId, options = {}) {
       takeaway: "Sampling waits for the final trunk representation.",
     },
     sampler_init: {
-      input: preview("Illustrative seed noise", null, sampler.initial, "Shown for one representative atom and one synthetic seed."),
+      input: preview("Illustrative starting noise", null, sampler.initial, "Shown for one representative atom and one synthetic diffusion sample."),
       output: preview("Initial coordinate state", "sampler_coordinate_state", sampler.initial),
-      operation: `Seed ${seed} initializes a noisy coordinate cloud. The preview shows x, y, z for one representative atom.`,
+      operation: `Diffusion sample ${seed} of 5 starts from its own noisy coordinate cloud. AF3 draws these samples from one run, so they share the same trunk output. The preview shows x, y, z for one representative atom.`,
       takeaway: "The sampler starts from noise, not from a finished structure.",
     },
     noise_schedule: {
