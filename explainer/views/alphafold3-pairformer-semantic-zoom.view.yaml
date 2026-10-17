@@ -14,6 +14,7 @@ boards:
       columns: 11
       rows: 8
       column_sizing: content
+      row_sizing: content
       col_gap: 24
       row_gap: 20
     nodes:
@@ -223,14 +224,6 @@ boards:
       col: 8
       row: 1
       board_ref: relative_position_encoding_detail
-    - id: fourier_embedding
-      ref: modules.fourier_embedding
-      label: noise embedding
-      prominence: context
-      treatment: chip
-      density: micro
-      col: 8
-      row: 2
     - id: sample_diffusion
       ref: modules.sample_diffusion
       label: Diffusion Sampler
@@ -308,6 +301,7 @@ boards:
       columns: 9
       rows: 8
       column_sizing: content
+      row_sizing: content
       col_gap: 20
       row_gap: 18
     regions:
@@ -1066,8 +1060,9 @@ boards:
     parent: trunk_model_detail
     grid:
       columns: 5
-      rows: 5
+      rows: 6
       column_sizing: content
+      row_sizing: content
       col_gap: 24
       row_gap: 26
     nodes:
@@ -1104,6 +1099,15 @@ boards:
       density: compact
       col: 1
       row: 4
+    - id: value_pair_recycle_seed
+      ref: value_sites.pair_recycle_seed
+      label: this pass's pairs
+      notation: z
+      prominence: secondary
+      treatment: compact
+      density: compact
+      col: 1
+      row: 5
     - id: value_template_module_pair_output
       ref: value_sites.template_module_pair_output
       label: template contribution
@@ -1112,7 +1116,7 @@ boards:
       treatment: compact
       density: compact
       col: 1
-      row: 5
+      row: 6
     - id: module_msa_row_embedding
       ref: modules.msa_row_embedding
       role: Embed each MSA row's residue and deletion features, then add the shared input embedding.
@@ -1180,12 +1184,19 @@ boards:
         role: shared row anchor
         inside: The same raw input embedding used everywhere else in AF3 is added identically into every MSA row.
     - match:
-        relation_ref: relations.template_module_pair_output_updates_msa_module_pair_state
+        relation_ref: relations.pre_template_pair_state_carries_into_msa_module
       label: z
       connection:
         title: Pair state enters the block
-        role: block-input pair state
-        inside: The pair representation arrives here after the Template Module's own pooled, cross-template contribution has been added into it -- what msa_module_pair_state_read now holds is z_init plus every template's evidence, not straight from the input projection; the Pairformer only ever sees what this module returns.
+        role: residual base
+        inside: This pass's pair state (z_init plus the projected previous pass) passes through unchanged. The template contribution and the OuterProductMean update are both added on top of it; the Pairformer only ever sees what this module returns.
+    - match:
+        relation_ref: relations.template_module_pair_output_updates_msa_module_pair_state
+      label: '+ u_{ij}'
+      connection:
+        title: Template evidence is added
+        role: template contribution
+        inside: The Template Module returns a fresh pooled contribution u_ij that starts at zero, so it is added onto the pair state it was given rather than replacing it.
     - match:
         relation_ref: relations.outer_product_mean_contribution_updates_msa_module_pair_state
       label: '+ Δz_comm'
@@ -1616,6 +1627,7 @@ boards:
       columns: 7
       rows: 8
       column_sizing: content
+      row_sizing: content
       col_gap: 24
       row_gap: 20
     nodes:
@@ -2070,7 +2082,7 @@ boards:
     parent: pairformer_overview
     subject_ref: modules.sample_diffusion
     expansion_depth: 2
-    grid: { columns: 11, rows: 6, column_sizing: content, col_gap: 28, row_gap: 24 }
+    grid: { columns: 11, rows: 6, column_sizing: content, row_sizing: content, col_gap: 28, row_gap: 24 }
     regions:
       - id: one_sampler_step
         kind: repeat
@@ -2098,13 +2110,13 @@ boards:
       - { id: sampler_reference_atoms, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
       - { id: sampler_initializer, ref: modules.sampler_coordinate_initializer, label: Gaussian start, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
       - { id: sampler_initial_positions, ref: value_sites.sampler_initial_positions, label: first noisy cloud, prominence: context, treatment: compact, density: compact, col: 1, row: 6 }
-      - { id: sampler_previous_level, ref: value_sites.sampler_previous_level, label: previous level, prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
+      - { id: sampler_previous_level, ref: value_sites.sampler_previous_level, label: previous level, notation: "c_{τ-1}", prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
       - { id: sampler_current_positions, ref: value_sites.sampler_current_positions, label: current atom cloud, prominence: secondary, treatment: compact, density: compact, col: 2, row: 5 }
       - { id: sampler_schedule, ref: modules.sampler_schedule, label: select noise level, prominence: primary, treatment: compact, density: compact, col: 3, row: 1 }
       - { id: sampler_pose_augmentation, ref: modules.sampler_pose_augmentation, label: random pose, prominence: primary, treatment: compact, density: compact, col: 3, row: 5 }
-      - { id: sampler_next_level, ref: value_sites.sampler_next_level, label: next level, prominence: context, treatment: chip, density: micro, col: 4, row: 1 }
+      - { id: sampler_next_level, ref: value_sites.sampler_next_level, label: next level, notation: "c_{τ}", prominence: context, treatment: chip, density: micro, col: 4, row: 1 }
       - { id: sampler_augmented_positions, ref: value_sites.sampler_augmented_positions, label: reoriented cloud, prominence: secondary, treatment: compact, density: compact, col: 4, row: 5 }
-      - { id: sampler_noise_level, ref: value_sites.noise_level, label: churned level t_hat, prominence: context, treatment: chip, density: micro, col: 5, row: 1 }
+      - { id: sampler_noise_level, ref: value_sites.noise_level, label: churned level, notation: "t̂", prominence: context, treatment: chip, density: micro, col: 5, row: 1 }
       - { id: sampler_noise_injection, ref: modules.sampler_noise_injection, label: add Gaussian noise, prominence: primary, treatment: compact, density: compact, col: 5, row: 5 }
       - { id: sampler_noisy_positions, ref: value_sites.noisy_atom_positions, label: noisy atoms, prominence: secondary, treatment: compact, density: compact, col: 6, row: 5 }
       - { id: sampler_denoiser, ref: modules.diffusion_module, label: one denoising call, prominence: primary, treatment: compact, density: compact, col: 7, row: 4, board_ref: diffusion_module_detail }
@@ -2117,7 +2129,6 @@ boards:
     exclude:
       - { ref: modules.relative_position_encoding, reason: Relative-position internals are shown on their own board; this sampler board focuses on the repeated coordinate call. }
       - { ref: value_sites.relative_position_encoding_output, reason: The positional prior is expanded on the one-step Diffusion Module board. }
-      - { ref: modules.fourier_embedding, reason: Noise embedding is expanded inside the one-step Diffusion Module boards. }
 
   - id: sampler_update_detail
     title: Fixed Sampler Update
@@ -2129,11 +2140,11 @@ boards:
     nodes:
       - { id: update_noisy, ref: value_sites.noisy_atom_positions, label: noisy coordinates, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
       - { id: update_estimate, ref: value_sites.denoised_atom_positions, label: denoiser estimate, prominence: context, treatment: compact, density: compact, col: 1, row: 3 }
-      - { id: update_t_hat, ref: value_sites.noise_level, label: churned level t_hat, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
-      - { id: update_gradient, ref: modules.sampler_gradient, label: (noisy - estimate) / t_hat, prominence: primary, treatment: compact, density: compact, col: 2, row: 2 }
+      - { id: update_t_hat, ref: value_sites.noise_level, label: churned level, notation: "t̂", prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
+      - { id: update_gradient, ref: modules.sampler_gradient, label: "(noisy − estimate) / t̂", prominence: primary, treatment: compact, density: compact, col: 2, row: 2 }
       - { id: update_direction, ref: value_sites.sampler_denoising_direction, label: denoising direction, prominence: secondary, treatment: compact, density: compact, col: 3, row: 2 }
-      - { id: update_next_level, ref: value_sites.sampler_next_level, label: next level, prominence: context, treatment: chip, density: micro, col: 3, row: 1 }
-      - { id: update_operator, ref: modules.sampler_update, label: noisy + 1.5 × (next - t_hat) × direction, prominence: primary, treatment: block, col: 4, row: 2 }
+      - { id: update_next_level, ref: value_sites.sampler_next_level, label: next level, notation: "c_{τ}", prominence: context, treatment: chip, density: micro, col: 3, row: 1 }
+      - { id: update_operator, ref: modules.sampler_update, label: "noisy + 1.5 × (next − t̂) × direction", prominence: primary, treatment: block, col: 4, row: 2 }
       - { id: update_output, ref: value_sites.sampler_updated_positions, label: next sampler state, prominence: secondary, treatment: compact, density: compact, col: 5, row: 2 }
 
   - id: confidence_head_detail
@@ -2212,24 +2223,23 @@ boards:
 
   - id: diffusion_module_detail
     title: One Diffusion Module Denoising Step
-    summary: Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. This one-step denoised estimate returns to the sampler for its own update.
+    summary: Trunk states and the current noise level form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. This one-step denoised estimate returns to the sampler for its own update.
     parent: sample_diffusion_detail
     subject_ref: modules.diffusion_module
     expansion_depth: 1
-    grid: { columns: 8, rows: 7, column_sizing: content, col_gap: 28, row_gap: 24 }
+    grid: { columns: 8, rows: 7, column_sizing: content, row_sizing: content, col_gap: 28, row_gap: 24 }
     nodes:
       - { id: step_trunk_singles, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
       - { id: step_trunk_pairs, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
-      - { id: step_noise_level, ref: value_sites.noise_level, label: current noise level, prominence: context, treatment: chip, density: micro, col: 1, row: 7 }
+      - { id: step_noise_level, ref: value_sites.noise_level, label: noise level, notation: "t̂", prominence: context, treatment: chip, density: micro, col: 1, row: 7 }
       - { id: step_noisy_atoms, ref: value_sites.noisy_atom_positions, label: current noisy atoms, prominence: context, treatment: chip, density: micro, col: 2, row: 6 }
       - { id: step_relative_output, ref: value_sites.relative_position_encoding_output, label: relative pair encoding, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
-      - { id: step_fourier_output, ref: value_sites.fourier_time_embedding, label: Fourier noise features, prominence: context, treatment: chip, density: micro, col: 2, row: 3 }
       - { id: step_raw_input_embedding, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
       - { id: step_scaled_noisy_atoms, ref: value_sites.scaled_noisy_atom_positions, label: scaled noisy atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
       - { id: step_reference_atoms, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 6 }
       - { id: step_conditioning, ref: modules.diffusion_conditioning, label: diffusion conditioning, prominence: primary, treatment: compact, density: compact, col: 3, row: 2, board_ref: diffusion_conditioning_detail }
-      - { id: step_conditioned_pair, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
-      - { id: step_conditioned_single, ref: value_sites.diffusion_conditioned_single, label: conditioned singles, prominence: secondary, treatment: compact, density: compact, col: 4, row: 1 }
+      - { id: step_conditioned_pair, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, notation: "z_{ij}", prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
+      - { id: step_conditioned_single, ref: value_sites.diffusion_conditioned_single, label: conditioned singles, notation: "s_{i}", prominence: secondary, treatment: compact, density: compact, col: 4, row: 1 }
       - { id: step_atom_encoder, ref: modules.atom_attention_encoder_conditioned, label: atom encoder, prominence: primary, treatment: compact, density: compact, col: 4, row: 4, board_ref: atom_attention_encoder_detail }
       - { id: step_encoder_tokens, ref: value_sites.atom_attention_encoder_token_output, label: pooled atom tokens, prominence: secondary, treatment: compact, density: compact, col: 4, row: 3 }
       - { id: step_token_with_singles, ref: value_sites.diffusion_token_activation_conditioned, label: token input plus singles, prominence: secondary, treatment: compact, density: compact, col: 5, row: 2 }
@@ -2258,7 +2268,7 @@ boards:
     parent: pairformer_overview
     subject_ref: modules.relative_position_encoding
     expansion_depth: 1
-    grid: { columns: 4, rows: 5, column_sizing: content, col_gap: 26, row_gap: 22 }
+    grid: { columns: 4, rows: 5, column_sizing: content, row_sizing: content, col_gap: 26, row_gap: 22 }
     nodes:
       - { id: rpe_asym_id, ref: value_sites.asym_id, label: physical chain id, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
       - { id: rpe_entity_id, ref: value_sites.entity_id, label: entity id, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
@@ -2278,19 +2288,21 @@ boards:
     parent: diffusion_module_detail
     subject_ref: modules.diffusion_conditioning
     expansion_depth: 1
-    grid: { columns: 5, rows: 5, column_sizing: content, col_gap: 26, row_gap: 22 }
+    grid: { columns: 5, rows: 6, column_sizing: content, row_sizing: content, col_gap: 26, row_gap: 22 }
     nodes:
       - { id: cond_trunk_pair, ref: value_sites.pair_state_output, label: trunk pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
       - { id: cond_relative_position, ref: value_sites.relative_position_encoding_output, label: relative positions, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
       - { id: cond_trunk_single, ref: value_sites.single_state_output, label: trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 4 }
       - { id: cond_input_single, ref: value_sites.s_inputs, label: raw input embedding, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
+      - { id: cond_noise_level, ref: value_sites.noise_level, label: noise level, notation: "t̂", prominence: context, treatment: chip, density: micro, col: 1, row: 6 }
       - { id: cond_module, ref: modules.diffusion_conditioning, label: concatenate and project, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
+      - { id: cond_fourier_module, ref: modules.fourier_embedding, label: frozen Fourier features, prominence: primary, treatment: compact, density: compact, col: 2, row: 6 }
       - { id: cond_pair_projected, ref: value_sites.diffusion_pair_conditioning_projected, label: pair projection, prominence: secondary, treatment: compact, density: compact, col: 3, row: 1 }
-      - { id: cond_pair_final, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, prominence: secondary, treatment: compact, density: compact, col: 5, row: 1 }
+      - { id: cond_pair_final, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, notation: "z_{ij}", prominence: secondary, treatment: compact, density: compact, col: 5, row: 1 }
       - { id: cond_single_projected, ref: value_sites.diffusion_single_conditioning_projected, label: single projection, prominence: secondary, treatment: compact, density: compact, col: 3, row: 4 }
-      - { id: cond_fourier_value, ref: value_sites.fourier_time_embedding, label: time embedding, prominence: secondary, treatment: compact, density: compact, col: 3, row: 5 }
+      - { id: cond_fourier_value, ref: value_sites.fourier_time_embedding, label: time embedding, prominence: secondary, treatment: compact, density: compact, col: 3, row: 6 }
       - { id: cond_single_injected, ref: value_sites.diffusion_single_conditioning_fourier_injected, label: noise added, prominence: secondary, treatment: compact, density: compact, col: 4, row: 4 }
-      - { id: cond_single_final, ref: value_sites.diffusion_conditioned_single, label: conditioned singles, prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
+      - { id: cond_single_final, ref: value_sites.diffusion_conditioned_single, label: conditioned singles, notation: "s_{i}", prominence: secondary, treatment: compact, density: compact, col: 5, row: 4 }
 
   - id: diffusion_transformer_token_detail
     title: Token-Level Diffusion Transformer
@@ -2301,8 +2313,8 @@ boards:
     grid: { columns: 5, rows: 4, column_sizing: content, col_gap: 28, row_gap: 24 }
     nodes:
       - { id: token_conditioned_activation, ref: value_sites.diffusion_token_activation_conditioned, label: token input plus singles, prominence: context, treatment: compact, density: compact, col: 1, row: 2 }
-      - { id: token_conditioned_singles, ref: value_sites.diffusion_conditioned_single, label: single conditioning, prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
-      - { id: token_conditioned_pairs, ref: value_sites.diffusion_conditioned_pair, label: pair conditioning, prominence: context, treatment: chip, density: micro, col: 3, row: 1 }
+      - { id: token_conditioned_singles, ref: value_sites.diffusion_conditioned_single, label: single conditioning, notation: "s_{i}", prominence: context, treatment: chip, density: micro, col: 2, row: 1 }
+      - { id: token_conditioned_pairs, ref: value_sites.diffusion_conditioned_pair, label: pair conditioning, notation: "z_{ij}", prominence: context, treatment: chip, density: micro, col: 3, row: 1 }
       - { id: token_block_input, ref: value_sites.diffusion_token_block_input, label: block input, prominence: secondary, treatment: compact, density: compact, col: 2, row: 3 }
       - { id: token_attention, ref: modules.token_attention_pair_bias, label: attention branch, prominence: primary, treatment: compact, density: compact, col: 3, row: 2, board_ref: token_attention_pair_bias_internals }
       - { id: token_transition, ref: modules.token_conditioned_transition, label: transition branch, prominence: primary, treatment: compact, density: compact, col: 3, row: 4, board_ref: token_conditioned_transition_internals }
@@ -2320,8 +2332,8 @@ boards:
     grid: { columns: 6, rows: 7, column_sizing: content, col_gap: 26, row_gap: 22 }
     nodes:
       - { id: enc_reference, ref: value_sites.atom_reference_features_input, label: reference atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 1 }
-      - { id: enc_trunk_single, ref: value_sites.single_state_output, label: raw trunk singles, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
-      - { id: enc_conditioned_pair, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
+      - { id: enc_trunk_single, ref: value_sites.single_state_output, label: raw trunk singles, notation: "s^{trunk}", prominence: context, treatment: chip, density: micro, col: 1, row: 2 }
+      - { id: enc_conditioned_pair, ref: value_sites.diffusion_conditioned_pair, label: conditioned pairs, notation: "z_{ij}", prominence: context, treatment: chip, density: micro, col: 1, row: 3 }
       - { id: enc_scaled_positions, ref: value_sites.scaled_noisy_atom_positions, label: scaled noisy atoms, prominence: context, treatment: chip, density: micro, col: 1, row: 5 }
       - { id: enc_local_mask, ref: value_sites.sequence_local_atom_attention_mask, label: local attention mask, prominence: context, treatment: chip, density: micro, col: 1, row: 7 }
       - { id: enc_module, ref: modules.atom_attention_encoder_conditioned, label: embed and broadcast, prominence: primary, treatment: compact, density: compact, col: 2, row: 3 }
@@ -2348,7 +2360,7 @@ boards:
     parent: diffusion_module_detail
     subject_ref: modules.atom_attention_decoder
     expansion_depth: 1
-    grid: { columns: 5, rows: 6, column_sizing: content, col_gap: 26, row_gap: 22 }
+    grid: { columns: 5, rows: 6, column_sizing: content, row_sizing: content, col_gap: 26, row_gap: 22 }
     nodes:
       - { id: dec_token_input, ref: value_sites.diffusion_token_activation_normalized, label: refined tokens, prominence: context, treatment: compact, density: compact, col: 1, row: 1 }
       - { id: dec_query_skip, ref: value_sites.atom_attention_encoder_query_skip, label: query skip, prominence: context, treatment: chip, density: micro, col: 1, row: 2 }

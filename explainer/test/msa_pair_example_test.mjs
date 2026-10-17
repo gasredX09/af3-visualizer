@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { summarizeMsaPair } from "../renderer/architecture/msa-pair-example.mjs";
+import { describeMsaPair, summarizeMsaPair } from "../renderer/architecture/msa-pair-example.mjs";
 
 const sequences = ["AGVLSK", "AAILTK", "AGVLTR", "AAILSR", "AGVLSR", "AAILTR", "AGVLTK", "AAILSK"];
 
@@ -19,6 +19,15 @@ test("one-hot mean outer product exposes coupled and balanced toy columns", () =
   assert.deepEqual(balanced.counts, [[2, 2], [2, 2]]);
   assert.equal(balanced.oneToOne, false);
   assert.equal(balanced.observedCombinations, 4);
+});
+
+test("MSA example explains coupled, balanced, and conserved column pairs", () => {
+  const describe = (first, second) => describeMsaPair(summarizeMsaPair(sequences, first, second), first, second);
+  assert.match(describe(2, 3), /vary together/);
+  assert.match(describe(5, 6), /Every residue combination appears/);
+  assert.match(describe(1, 2), /Column 1 is identical in every row/);
+  assert.match(describe(3, 1), /Column 1 is identical in every row/);
+  assert.match(describe(1, 4), /Both columns are identical/);
 });
 
 test("MSA example rejects malformed rows and pair choices", () => {

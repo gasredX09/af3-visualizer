@@ -251,14 +251,15 @@ lines:
       - { lexeme: ProjectPairRecycle, architecture_ref: modules.pair_recycle_projection, access: call }
       - { lexeme: prev_pair, symbol_ref: previous_pair, access: read }
   - id: run_template_per_recycle
-    text: "z_template = TemplateEmbedder(z_seed, template_features)"
+    text: "z_template = z_seed + TemplateEmbedder(z_seed, template_features)"
+    comment: The template module returns a fresh contribution that is added onto the pair state, not a replacement for it.
     scope_ref: scopes.pairformer
     statement_ref: modules.template_module
     operation: add_template_pair_evidence_each_recycle
     inputs: [pair_seed]
     outputs: [pair_after_template]
-    architecture_refs: [execution.loops.trunk_recycling]
-    source_refs: [{ source: evoformer_code, locator: "Evoformer.__call__ _embed_template_pair" }]
+    architecture_refs: [execution.loops.trunk_recycling, relations.pre_template_pair_state_carries_into_msa_module, relations.template_module_pair_output_updates_msa_module_pair_state]
+    source_refs: [{ source: evoformer_code, locator: "Evoformer._embed_template_pair returns pair_activations + template_act" }]
     code_bindings:
       - { lexeme: z_template, symbol_ref: pair_after_template, access: write }
       - { lexeme: TemplateEmbedder, architecture_ref: modules.template_module, access: call }
@@ -457,6 +458,7 @@ lines:
       - { lexeme: t_hat, symbol_ref: sampler_t_hat, access: read }
   - id: compute_sampler_direction
     text: "direction = (x_noisy - x_estimate) / t_hat"
+    comment: This follows the released code. The paper's Algorithm 18 line 9 subtracts from the pre-churn position instead; the two agree whenever no churn noise is added.
     scope_ref: scopes.sampler_update_math
     statement_ref: modules.sampler_gradient
     operation: compute_denoising_direction

@@ -4,9 +4,9 @@ export const manifest = {
     "generator": "architecture-manifest-builder-v0.5.0",
     "inputDigests": {
       "references/bibliography.yaml": "1f7c08a9305dee24a1a218bac4467d3fbd00abebdde7710609aaa2edd31a0966",
-      "architectures/alphafold3-pairformer.yaml": "0ddfad5092a78566e19fdadc78c15fe9b7013a069a469b5a079da94af5d758cd",
-      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "ae69cd16c277ccd8d5a4a769135d4592a205d1847383314a2c32d3e047091db6",
-      "pseudocode/alphafold3-pairformer.yaml": "fcdf63593c26d4b2b373c11c7c6192318dab2fdb3f456d3463571613640e90c8",
+      "architectures/alphafold3-pairformer.yaml": "7bf18fd94c48351ce0cdb7e09daf65a25e6c08143bb941ae60e7ce3084e75422",
+      "views/alphafold3-pairformer-semantic-zoom.view.yaml": "642997375536f9107bdb27a831e5b49b02a35ebfc83289f8407f48172aa77e5a",
+      "pseudocode/alphafold3-pairformer.yaml": "848018a0da1b1e0adb8a8120050d6cb84729bd1270ffa94b126bc8b6d6e40c15",
       "standard_blocks/attention-pair-bias.yaml": "2bdfb518fbe89761c0ecfee35de45fc78d3580194b627294d2b3387d89b37ecc",
       "standard_blocks/conditioned-transition-block.yaml": "24f6641f449fcfd60452ce2193c16fa0deec4e9434ba0422f2a4608cabf751f7"
     }
@@ -117,14 +117,13 @@ export const manifest = {
         "architecture": {
           "status": "complete",
           "depth": 0,
-          "immediateModuleCount": 6,
+          "immediateModuleCount": 5,
           "immediateModuleRefs": [
             "modules.trunk_model",
             "modules.input_feature_embedder",
             "modules.relative_position_encoding",
             "modules.sample_diffusion",
-            "modules.confidence_head",
-            "modules.fourier_embedding"
+            "modules.confidence_head"
           ]
         },
         "modules.trunk_model": {
@@ -634,16 +633,16 @@ export const manifest = {
         },
         "modules.diffusion_conditioning": {
           "status": "partial",
-          "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being \"used inside\" this module's pair branch.",
+          "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity, matching the depth already given to modules.outer_product_mean. The one child module is modules.fourier_embedding (Algorithm 22), called only at Algorithm 21 line 8 and given its own module because it is a separately paper-named algorithm with a distinguishing property (frozen, randomly initialized, never trained). modules.relative_position_encoding stays a top-level sibling instead, because Algorithm 1 line 4 also calls it outside the diffusion module.",
           "depth": 3,
-          "immediateModuleCount": 0,
+          "immediateModuleCount": 1,
           "immediateModuleRefs": [
-
+            "modules.fourier_embedding"
           ]
         },
         "modules.fourier_embedding": {
           "status": "leaf",
-          "depth": 1,
+          "depth": 4,
           "immediateModuleCount": 0,
           "immediateModuleRefs": [
 
@@ -719,12 +718,12 @@ export const manifest = {
       },
       "summary": {
         "scopeCount": 68,
-        "expandedScopeCount": 19,
+        "expandedScopeCount": 20,
         "completeExpandedScopeCount": 17,
         "partialScopeCount": 8,
         "leafFrontierCount": 42,
         "opaqueFrontierCount": 1,
-        "partialFrontierCount": 6,
+        "partialFrontierCount": 5,
         "maximumAuthoredDepth": 4
       },
       "opaqueFrontierRefs": [
@@ -2054,7 +2053,7 @@ export const manifest = {
         "mechanisms": [
           "denoising_direction"
         ],
-        "role": "compute (positions_noisy minus positions_denoised) divided by t_hat; this points away from the denoiser estimate, while the following negative time step moves toward it",
+        "role": "compute (positions_noisy minus positions_denoised) divided by t_hat, following the released code; this points away from the denoiser estimate, while the following negative time step moves toward it. The paper's Algorithm 18 line 9 instead subtracts from the pre-churn positions; see open_questions.sampler_direction_reference_point_paper_code_divergence",
         "scale": "atom",
         "evidence": {
           "status": "confirmed_from_code",
@@ -2367,7 +2366,7 @@ export const manifest = {
         "parent_ref": "modules.diffusion_module",
         "decomposition": {
           "status": "partial",
-          "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being \"used inside\" this module's pair branch."
+          "reason": "Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity, matching the depth already given to modules.outer_product_mean. The one child module is modules.fourier_embedding (Algorithm 22), called only at Algorithm 21 line 8 and given its own module because it is a separately paper-named algorithm with a distinguishing property (frozen, randomly initialized, never trained). modules.relative_position_encoding stays a top-level sibling instead, because Algorithm 1 line 4 also calls it outside the diffusion module."
         },
         "label": "Diffusion Conditioning",
         "kind": "operator",
@@ -2394,7 +2393,7 @@ export const manifest = {
       },
       {
         "id": "fourier_embedding",
-        "parent_ref": "architecture",
+        "parent_ref": "modules.diffusion_conditioning",
         "decomposition": {
           "status": "leaf"
         },
@@ -9488,14 +9487,16 @@ export const manifest = {
           "relations.pair_recycle_projection_updates_seed"
         ],
         "outgoingRelationRefs": [
-          "relations.z_init_initializes_template_module_pair_state"
+          "relations.z_init_initializes_template_module_pair_state",
+          "relations.pre_template_pair_state_carries_into_msa_module"
         ],
         "producerRefs": [
           "value_sites.z_init",
           "modules.pair_recycle_projection"
         ],
         "consumerRefs": [
-          "value_sites.template_module_pair_state_read"
+          "value_sites.template_module_pair_state_read",
+          "value_sites.msa_module_pair_state_read"
         ]
       },
       "pair_state_input": {
@@ -10215,7 +10216,8 @@ export const manifest = {
       "msa_module_pair_state_read": {
         "incomingRelationRefs": [
           "relations.outer_product_mean_contribution_updates_msa_module_pair_state",
-          "relations.template_module_pair_output_updates_msa_module_pair_state"
+          "relations.template_module_pair_output_updates_msa_module_pair_state",
+          "relations.pre_template_pair_state_carries_into_msa_module"
         ],
         "outgoingRelationRefs": [
           "relations.pair_state_conditions_msa_pair_weighted_averaging",
@@ -10223,7 +10225,8 @@ export const manifest = {
         ],
         "producerRefs": [
           "value_sites.outer_product_mean_pair_contribution",
-          "value_sites.template_module_pair_output"
+          "value_sites.template_module_pair_output",
+          "value_sites.pair_recycle_seed"
         ],
         "consumerRefs": [
           "modules.msa_pair_weighted_averaging",
@@ -10717,6 +10720,7 @@ export const manifest = {
           "relations.trunk_single_added_to_atom_conditioning"
         ],
         "outgoingRelationRefs": [
+          "relations.atom_conditioning_projected_into_atom_pairs",
           "relations.atom_conditioning_drives_encoder_atom_transformer",
           "relations.encoder_saves_conditioning_skip"
         ],
@@ -10724,6 +10728,7 @@ export const manifest = {
           "value_sites.atom_single_conditioning_base"
         ],
         "consumerRefs": [
+          "value_sites.atom_pair_conditioning_refined",
           "modules.atom_encoder_atom_transformer",
           "value_sites.atom_attention_encoder_single_conditioning_skip"
         ]
@@ -10758,14 +10763,16 @@ export const manifest = {
       },
       "atom_pair_conditioning_refined": {
         "incomingRelationRefs": [
-          "relations.atom_conditioning_folded_into_atom_pair"
+          "relations.atom_conditioning_folded_into_atom_pair",
+          "relations.atom_conditioning_projected_into_atom_pairs"
         ],
         "outgoingRelationRefs": [
           "relations.atom_pair_biases_encoder_atom_transformer",
           "relations.encoder_saves_pair_skip"
         ],
         "producerRefs": [
-          "value_sites.atom_pair_trunk_broadcast"
+          "value_sites.atom_pair_trunk_broadcast",
+          "value_sites.atom_single_conditioning_trunk_broadcast"
         ],
         "consumerRefs": [
           "modules.atom_encoder_atom_transformer",
@@ -14698,7 +14705,32 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's own returned contribution lands in z_ij before the MSA module reads its own entry state, taking over the role relations.z_init_initializes_template_module_pair_state's predecessor relation used to play for msa_module directly before this task retargeted it"
+              "locator": "Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's returned contribution u_ij is added onto the pair state it was given, not substituted for it; relations.pre_template_pair_state_carries_into_msa_module carries that unchanged base forward, so the MSA module's entry state is the recycled pair seed plus this contribution"
+            }
+          ]
+        }
+      },
+      {
+        "id": "pre_template_pair_state_carries_into_msa_module",
+        "from": "value_sites.pair_recycle_seed",
+        "to": "value_sites.msa_module_pair_state_read",
+        "kind": "state_update",
+        "carries": [
+          "representations.pair_state"
+        ],
+        "operation": "carry_pre_template_pair_state_as_residual_base",
+        "evidence": {
+          "status": "confirmed_from_code",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- a residual add. Algorithm 16 returns a fresh u_ij that starts at zero and never contains z_ij, so the pair state after line 9 is the line 8 state plus u_ij. Without this base, the graph would claim z_init and the recycled pair state reach the MSA module only through the template module's own conditioning input"
+            },
+            {
+              "source_ref": "af3_evoformer_code",
+              "role": "implementation_evidence",
+              "locator": "Evoformer._embed_template_pair, which returns pair_activations + template_act, so the pre-template pair activations pass through unchanged and the template output is added on top"
             }
           ]
         }
@@ -15153,7 +15185,27 @@ export const manifest = {
             {
               "source_ref": "af3_2024",
               "role": "paper_evidence",
-              "locator": "Supplementary Algorithm 5 lines 13-14. In conditioned mode the c_l folded in here already carries line 9's trunk broadcast, so the pair tensor receives a second, denser context injection beyond the raw geometry features"
+              "locator": "Supplementary Algorithm 5 lines 13-14. In conditioned mode the c_l folded in here already carries line 9's trunk broadcast, so the pair tensor receives a second, denser context injection beyond the raw geometry features; relations.atom_conditioning_projected_into_atom_pairs carries that c_l term itself"
+            }
+          ]
+        }
+      },
+      {
+        "id": "atom_conditioning_projected_into_atom_pairs",
+        "from": "value_sites.atom_single_conditioning_trunk_broadcast",
+        "to": "value_sites.atom_pair_conditioning_refined",
+        "kind": "state_update",
+        "carries": [
+          "representations.atom_single_conditioning"
+        ],
+        "operation": "add_projected_endpoint_atom_conditioning_to_atom_pairs",
+        "evidence": {
+          "status": "confirmed_from_paper",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 5 line 13 (p_lm += LinearNoBias(relu(c_l)) + LinearNoBias(relu(c_m))). Both endpoint atoms' conditioning vectors, which in conditioned mode already include line 9's trunk single broadcast, are projected and added to every atom pair"
             }
           ]
         }
@@ -17189,6 +17241,31 @@ export const manifest = {
               "source_ref": "af3_atom_cross_attention_code",
               "role": "implementation_evidence",
               "locator": "atom_cross_attention.py atom_cross_att_encoder, which adds the projected trunk_single_cond into queries_single_cond and then sets queries_act to the projected positions plus queries_single_cond"
+            }
+          ]
+        }
+      },
+      {
+        "id": "sampler_direction_reference_point_paper_code_divergence",
+        "question": "Supplementary Algorithm 18 line 9 computes the denoising direction as (x_l - x_l^denoised) / t_hat, where x_l is the pose-augmented position before line 7 adds the churn noise. The released sampler instead computes grad = (positions_noisy - positions_denoised) / t_hat, from the churned position, which is also the form used by the published EDM stochastic sampler that Algorithm 18 otherwise follows. The two agree whenever gamma is zero (no churn noise is added) and differ during the high-noise steps where churn is active. This architecture models the released code, which is why modules.sampler_gradient reads value_sites.noisy_atom_positions rather than value_sites.sampler_augmented_positions.",
+        "status": "deferred",
+        "affected_refs": [
+          "modules.sampler_gradient",
+          "value_sites.sampler_denoising_direction"
+        ],
+        "resolution_criteria": "Decide whether the paper's line 9 is a typo for x_l^noisy. The released code and the EDM reference sampler both use the churned position, so keeping the code reading is likely correct; if the paper's literal reading is preferred, retarget the direction's input from value_sites.noisy_atom_positions to value_sites.sampler_augmented_positions.",
+        "evidence": {
+          "status": "open_question",
+          "refs": [
+            {
+              "source_ref": "af3_2024",
+              "role": "paper_evidence",
+              "locator": "Supplementary Algorithm 18 lines 6-9, where line 9 subtracts the denoised estimate from x_l rather than from x_l^noisy"
+            },
+            {
+              "source_ref": "af3_sampler_code",
+              "role": "implementation_evidence",
+              "locator": "diffusion_head.py:349 (grad = (positions_noisy - positions_denoised) / t_hat)"
             }
           ]
         }
@@ -20471,19 +20548,22 @@ export const manifest = {
         },
         {
           "id": "run_template_per_recycle",
-          "text": "z_template = TemplateEmbedder(z_seed, template_features)",
-          "refs": "Evoformer.__call__ _embed_template_pair",
+          "text": "z_template = z_seed + TemplateEmbedder(z_seed, template_features)",
+          "comment": "The template module returns a fresh contribution that is added onto the pair state, not a replacement for it.",
+          "refs": "Evoformer._embed_template_pair returns pair_activations + template_act",
           "sourceRefs": [
             {
               "source": "evoformer_code",
-              "locator": "Evoformer.__call__ _embed_template_pair"
+              "locator": "Evoformer._embed_template_pair returns pair_activations + template_act"
             }
           ],
           "scopeRef": "scopes.pairformer",
           "statementRef": "modules.template_module",
           "architectureRefs": [
             "modules.template_module",
-            "execution.loops.trunk_recycling"
+            "execution.loops.trunk_recycling",
+            "relations.pre_template_pair_state_carries_into_msa_module",
+            "relations.template_module_pair_output_updates_msa_module_pair_state"
           ],
           "operation": "add_template_pair_evidence_each_recycle",
           "inputs": [
@@ -20511,8 +20591,8 @@ export const manifest = {
               "architectureRef": "modules.template_module",
               "occurrences": [
                 {
-                  "start": 13,
-                  "end": 29
+                  "start": 22,
+                  "end": 38
                 }
               ]
             },
@@ -20523,8 +20603,12 @@ export const manifest = {
               "architectureRef": "value_sites.pair_recycle_seed",
               "occurrences": [
                 {
-                  "start": 30,
-                  "end": 36
+                  "start": 13,
+                  "end": 19
+                },
+                {
+                  "start": 39,
+                  "end": 45
                 }
               ]
             }
@@ -21414,6 +21498,7 @@ export const manifest = {
         {
           "id": "compute_sampler_direction",
           "text": "direction = (x_noisy - x_estimate) / t_hat",
+          "comment": "This follows the released code. The paper's Algorithm 18 line 9 subtracts from the pre-churn position instead; the two agree whenever no churn noise is added.",
           "refs": "diffusion_head.py:349-350",
           "sourceRefs": [
             {
@@ -22976,6 +23061,7 @@ export const manifest = {
           "columns": 11,
           "rows": 8,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 24,
           "row_gap": 20
         },
@@ -23235,16 +23321,6 @@ export const manifest = {
             "col": 8,
             "row": 1,
             "board_ref": "relative_position_encoding_detail"
-          },
-          {
-            "id": "fourier_embedding",
-            "ref": "modules.fourier_embedding",
-            "label": "noise embedding",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 8,
-            "row": 2
           },
           {
             "id": "sample_diffusion",
@@ -23696,30 +23772,6 @@ export const manifest = {
             ],
             "carries": [
               "representations.final_sampled_atom_positions"
-            ],
-            "presentation": {
-            }
-          },
-          {
-            "id": "projection_5290506dfc92",
-            "from": "fourier_embedding",
-            "to": "sample_diffusion",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.fourier_time_embedding"
             ],
             "presentation": {
             }
@@ -24209,30 +24261,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_2a959956cbf2",
-            "from": "sample_diffusion",
-            "to": "fourier_embedding",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "data_flow",
-            "relation_path": [
-              "relations.noise_level_enters_fourier_embedding"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.noise_level_enters_fourier_embedding"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.noise_level"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_c900d293e106",
             "from": "single_state_output",
             "to": "confidence_head",
@@ -24595,7 +24623,7 @@ export const manifest = {
           "modules.confidence_plddt_head": "collapsed:modules.confidence_head",
           "modules.confidence_resolved_head": "collapsed:modules.confidence_head",
           "modules.diffusion_conditioning": "collapsed:modules.sample_diffusion",
-          "modules.fourier_embedding": "visible",
+          "modules.fourier_embedding": "collapsed:modules.sample_diffusion",
           "modules.input_feature_concatenation": "collapsed:modules.input_feature_embedder",
           "modules.input_feature_embedder": "visible",
           "modules.msa_pair_attention_ending_node": "collapsed:modules.trunk_model",
@@ -24678,7 +24706,7 @@ export const manifest = {
           "value_sites.diffusion_token_transition_branch": "collapsed:modules.sample_diffusion",
           "value_sites.entity_id": "visible",
           "value_sites.final_sampled_atom_positions": "visible",
-          "value_sites.fourier_time_embedding": "collapsed:modules.fourier_embedding",
+          "value_sites.fourier_time_embedding": "collapsed:modules.sample_diffusion",
           "value_sites.has_deletion_input": "visible",
           "value_sites.msa_activations": "collapsed:modules.trunk_model",
           "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.trunk_model",
@@ -24775,6 +24803,7 @@ export const manifest = {
           "columns": 9,
           "rows": 8,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 20,
           "row_gap": 18
         },
@@ -25375,6 +25404,30 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_b82338bb4033",
+            "from": "pair_recycle_seed",
+            "to": "msa_module",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pre_template_pair_state_carries_into_msa_module"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pre_template_pair_state_carries_into_msa_module"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+            }
+          },
+          {
             "id": "projection_3f0e5352ad9a",
             "from": "pair_recycle_seed",
             "to": "template_module",
@@ -25944,6 +25997,7 @@ export const manifest = {
           "modules.atom_encoder_atom_transformer": "excluded",
           "modules.confidence_pairformer_stack": "excluded",
           "modules.diffusion_conditioning": "excluded",
+          "modules.fourier_embedding": "excluded",
           "modules.msa_module": "visible",
           "modules.msa_pair_attention_ending_node": "collapsed:modules.msa_module",
           "modules.msa_pair_attention_starting_node": "collapsed:modules.msa_module",
@@ -25993,6 +26047,7 @@ export const manifest = {
           "value_sites.diffusion_pair_conditioning_projected": "excluded",
           "value_sites.diffusion_single_conditioning_fourier_injected": "excluded",
           "value_sites.diffusion_single_conditioning_projected": "excluded",
+          "value_sites.fourier_time_embedding": "excluded",
           "value_sites.has_deletion_input": "visible",
           "value_sites.msa_activations": "collapsed:modules.msa_module",
           "value_sites.msa_activations_after_pair_weighted_averaging": "collapsed:modules.msa_module",
@@ -28058,8 +28113,9 @@ export const manifest = {
         "parent": "trunk_model_detail",
         "grid": {
           "columns": 5,
-          "rows": 5,
+          "rows": 6,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 24,
           "row_gap": 26
         },
@@ -28106,6 +28162,17 @@ export const manifest = {
             "row": 4
           },
           {
+            "id": "value_pair_recycle_seed",
+            "ref": "value_sites.pair_recycle_seed",
+            "label": "this pass's pairs",
+            "notation": "z",
+            "prominence": "secondary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 1,
+            "row": 5
+          },
+          {
             "id": "value_template_module_pair_output",
             "ref": "value_sites.template_module_pair_output",
             "label": "template contribution",
@@ -28114,7 +28181,7 @@ export const manifest = {
             "treatment": "compact",
             "density": "compact",
             "col": 1,
-            "row": 5
+            "row": 6
           },
           {
             "id": "module_msa_row_embedding",
@@ -28206,13 +28273,24 @@ export const manifest = {
           },
           {
             "match": {
-              "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
+              "relation_ref": "relations.pre_template_pair_state_carries_into_msa_module"
             },
             "label": "z",
             "connection": {
               "title": "Pair state enters the block",
-              "role": "block-input pair state",
-              "inside": "The pair representation arrives here after the Template Module's own pooled, cross-template contribution has been added into it -- what msa_module_pair_state_read now holds is z_init plus every template's evidence, not straight from the input projection; the Pairformer only ever sees what this module returns."
+              "role": "residual base",
+              "inside": "This pass's pair state (z_init plus the projected previous pass) passes through unchanged. The template contribution and the OuterProductMean update are both added on top of it; the Pairformer only ever sees what this module returns."
+            }
+          },
+          {
+            "match": {
+              "relation_ref": "relations.template_module_pair_output_updates_msa_module_pair_state"
+            },
+            "label": "+ u_{ij}",
+            "connection": {
+              "title": "Template evidence is added",
+              "role": "template contribution",
+              "inside": "The Template Module returns a fresh pooled contribution u_ij that starts at zero, so it is added onto the pair state it was given rather than replacing it."
             }
           },
           {
@@ -28517,6 +28595,36 @@ export const manifest = {
             }
           },
           {
+            "id": "projection_6968b77f10c3",
+            "from": "value_pair_recycle_seed",
+            "to": "value_msa_module_pair_state_read",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.pre_template_pair_state_carries_into_msa_module"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.pre_template_pair_state_carries_into_msa_module"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.pair_state"
+            ],
+            "presentation": {
+              "label": "z",
+              "connection": {
+                "title": "Pair state enters the block",
+                "role": "residual base",
+                "inside": "This pass's pair state (z_init plus the projected previous pass) passes through unchanged. The template contribution and the OuterProductMean update are both added on top of it; the Pairformer only ever sees what this module returns."
+              }
+            }
+          },
+          {
             "id": "projection_17c1759edf95",
             "from": "value_s_inputs",
             "to": "module_msa_row_embedding",
@@ -28568,11 +28676,11 @@ export const manifest = {
               "representations.pair_state"
             ],
             "presentation": {
-              "label": "z",
+              "label": "+ u_{ij}",
               "connection": {
-                "title": "Pair state enters the block",
-                "role": "block-input pair state",
-                "inside": "The pair representation arrives here after the Template Module's own pooled, cross-template contribution has been added into it -- what msa_module_pair_state_read now holds is z_init plus every template's evidence, not straight from the input projection; the Pairformer only ever sees what this module returns."
+                "title": "Template evidence is added",
+                "role": "template contribution",
+                "inside": "The Template Module returns a fresh pooled contribution u_ij that starts at zero, so it is added onto the pair state it was given rather than replacing it."
               }
             }
           }
@@ -28608,6 +28716,7 @@ export const manifest = {
           "value_sites.outer_product_mean_pair_contribution": "collapsed:modules.outer_product_mean",
           "value_sites.outer_product_mean_projection_a": "collapsed:modules.outer_product_mean",
           "value_sites.outer_product_mean_projection_b": "collapsed:modules.outer_product_mean",
+          "value_sites.pair_recycle_seed": "visible",
           "value_sites.pair_state_input": "visible",
           "value_sites.s_inputs": "visible",
           "value_sites.template_module_pair_output": "visible"
@@ -29910,6 +30019,7 @@ export const manifest = {
           "columns": 7,
           "rows": 8,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 24,
           "row_gap": 20
         },
@@ -31434,6 +31544,7 @@ export const manifest = {
           "columns": 11,
           "rows": 6,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
         },
@@ -31527,6 +31638,7 @@ export const manifest = {
             "id": "sampler_previous_level",
             "ref": "value_sites.sampler_previous_level",
             "label": "previous level",
+            "notation": "c_{τ-1}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -31567,6 +31679,7 @@ export const manifest = {
             "id": "sampler_next_level",
             "ref": "value_sites.sampler_next_level",
             "label": "next level",
+            "notation": "c_{τ}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -31586,7 +31699,8 @@ export const manifest = {
           {
             "id": "sampler_noise_level",
             "ref": "value_sites.noise_level",
-            "label": "churned level t_hat",
+            "label": "churned level",
+            "notation": "t̂",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -31694,10 +31808,6 @@ export const manifest = {
           {
             "ref": "value_sites.relative_position_encoding_output",
             "reason": "The positional prior is expanded on the one-step Diffusion Module board."
-          },
-          {
-            "ref": "modules.fourier_embedding",
-            "reason": "Noise embedding is expanded inside the one-step Diffusion Module boards."
           }
         ],
         "projection_mode": "derived",
@@ -32003,6 +32113,30 @@ export const manifest = {
             "provenance_hops": [
               {
                 "relation_ref": "relations.sampler_noise_level_sets_denoiser_rescaling"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_91755c76bb1e",
+            "from": "sampler_noise_level",
+            "to": "sampler_denoiser",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noise_level_enters_fourier_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noise_level_enters_fourier_embedding"
               }
             ],
             "hidden_refs": [
@@ -32526,7 +32660,7 @@ export const manifest = {
           "modules.atom_encoder_atom_transformer": "collapsed:modules.diffusion_module",
           "modules.diffusion_conditioning": "collapsed:modules.diffusion_module",
           "modules.diffusion_module": "visible",
-          "modules.fourier_embedding": "excluded",
+          "modules.fourier_embedding": "collapsed:modules.diffusion_module",
           "modules.relative_position_encoding": "excluded",
           "modules.sampler_coordinate_initializer": "visible",
           "modules.sampler_gradient": "visible",
@@ -32566,7 +32700,7 @@ export const manifest = {
           "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_module",
           "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_module",
           "value_sites.final_sampled_atom_positions": "visible",
-          "value_sites.fourier_time_embedding": "excluded",
+          "value_sites.fourier_time_embedding": "collapsed:modules.diffusion_module",
           "value_sites.noise_level": "visible",
           "value_sites.noisy_atom_positions": "visible",
           "value_sites.pair_state_output": "visible",
@@ -32627,7 +32761,8 @@ export const manifest = {
           {
             "id": "update_t_hat",
             "ref": "value_sites.noise_level",
-            "label": "churned level t_hat",
+            "label": "churned level",
+            "notation": "t̂",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -32637,7 +32772,7 @@ export const manifest = {
           {
             "id": "update_gradient",
             "ref": "modules.sampler_gradient",
-            "label": "(noisy - estimate) / t_hat",
+            "label": "(noisy − estimate) / t̂",
             "prominence": "primary",
             "treatment": "compact",
             "density": "compact",
@@ -32658,6 +32793,7 @@ export const manifest = {
             "id": "update_next_level",
             "ref": "value_sites.sampler_next_level",
             "label": "next level",
+            "notation": "c_{τ}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -32667,7 +32803,7 @@ export const manifest = {
           {
             "id": "update_operator",
             "ref": "modules.sampler_update",
-            "label": "noisy + 1.5 × (next - t_hat) × direction",
+            "label": "noisy + 1.5 × (next − t̂) × direction",
             "prominence": "primary",
             "treatment": "block",
             "col": 4,
@@ -34116,7 +34252,7 @@ export const manifest = {
       {
         "id": "diffusion_module_detail",
         "title": "One Diffusion Module Denoising Step",
-        "summary": "Trunk states and Fourier noise features form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. This one-step denoised estimate returns to the sampler for its own update.",
+        "summary": "Trunk states and the current noise level form single and pair conditioning. A local atom encoder pools scaled noisy coordinates to tokens, a 24-block transformer refines those tokens, and a local atom decoder predicts a position update. This one-step denoised estimate returns to the sampler for its own update.",
         "parent": "sample_diffusion_detail",
         "subject_ref": "modules.diffusion_module",
         "expansion_depth": 1,
@@ -34124,6 +34260,7 @@ export const manifest = {
           "columns": 8,
           "rows": 7,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 28,
           "row_gap": 24
         },
@@ -34151,7 +34288,8 @@ export const manifest = {
           {
             "id": "step_noise_level",
             "ref": "value_sites.noise_level",
-            "label": "current noise level",
+            "label": "noise level",
+            "notation": "t̂",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -34176,16 +34314,6 @@ export const manifest = {
             "treatment": "chip",
             "density": "micro",
             "col": 1,
-            "row": 3
-          },
-          {
-            "id": "step_fourier_output",
-            "ref": "value_sites.fourier_time_embedding",
-            "label": "Fourier noise features",
-            "prominence": "context",
-            "treatment": "chip",
-            "density": "micro",
-            "col": 2,
             "row": 3
           },
           {
@@ -34233,6 +34361,7 @@ export const manifest = {
             "id": "step_conditioned_pair",
             "ref": "value_sites.diffusion_conditioned_pair",
             "label": "conditioned pairs",
+            "notation": "z_{ij}",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
@@ -34243,6 +34372,7 @@ export const manifest = {
             "id": "step_conditioned_single",
             "ref": "value_sites.diffusion_conditioned_single",
             "label": "conditioned singles",
+            "notation": "s_{i}",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
@@ -34647,30 +34777,6 @@ export const manifest = {
             }
           },
           {
-            "id": "projection_e8474e29dbff",
-            "from": "step_fourier_output",
-            "to": "step_conditioning",
-            "projection": "boundary",
-            "origin": "canonical",
-            "kind": "state_update",
-            "relation_path": [
-              "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
-            ],
-            "provenance_hops": [
-              {
-                "relation_ref": "relations.fourier_time_embedding_additively_injected_into_single_conditioning"
-              }
-            ],
-            "hidden_refs": [
-
-            ],
-            "carries": [
-              "representations.fourier_time_embedding"
-            ],
-            "presentation": {
-            }
-          },
-          {
             "id": "projection_fd03751ef8c5",
             "from": "step_locality_mask",
             "to": "step_locality_mask_value",
@@ -34738,6 +34844,30 @@ export const manifest = {
             ],
             "carries": [
               "representations.sequence_local_attention_mask"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_4feeeb33e8b5",
+            "from": "step_noise_level",
+            "to": "step_conditioning",
+            "projection": "boundary",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noise_level_enters_fourier_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noise_level_enters_fourier_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
             ],
             "presentation": {
             }
@@ -35110,6 +35240,7 @@ export const manifest = {
           "modules.atom_encoder_atom_transformer": "collapsed:modules.atom_attention_encoder_conditioned",
           "modules.diffusion_conditioning": "visible",
           "modules.diffusion_transformer_token_level": "visible",
+          "modules.fourier_embedding": "collapsed:modules.diffusion_conditioning",
           "modules.sampler_gradient": "excluded",
           "modules.sampler_update": "excluded",
           "modules.sequence_local_attention_mask": "visible",
@@ -35143,7 +35274,7 @@ export const manifest = {
           "value_sites.diffusion_token_block_input": "collapsed:modules.diffusion_transformer_token_level",
           "value_sites.diffusion_token_block_output": "collapsed:modules.diffusion_transformer_token_level",
           "value_sites.diffusion_token_transition_branch": "collapsed:modules.diffusion_transformer_token_level",
-          "value_sites.fourier_time_embedding": "visible",
+          "value_sites.fourier_time_embedding": "collapsed:modules.diffusion_conditioning",
           "value_sites.noise_level": "visible",
           "value_sites.noisy_atom_positions": "visible",
           "value_sites.pair_state_output": "visible",
@@ -35166,6 +35297,7 @@ export const manifest = {
           "columns": 4,
           "rows": 5,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 26,
           "row_gap": 22
         },
@@ -35548,8 +35680,9 @@ export const manifest = {
         "expansion_depth": 1,
         "grid": {
           "columns": 5,
-          "rows": 5,
+          "rows": 6,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 26,
           "row_gap": 22
         },
@@ -35595,6 +35728,17 @@ export const manifest = {
             "row": 5
           },
           {
+            "id": "cond_noise_level",
+            "ref": "value_sites.noise_level",
+            "label": "noise level",
+            "notation": "t̂",
+            "prominence": "context",
+            "treatment": "chip",
+            "density": "micro",
+            "col": 1,
+            "row": 6
+          },
+          {
             "id": "cond_module",
             "ref": "modules.diffusion_conditioning",
             "label": "concatenate and project",
@@ -35603,6 +35747,16 @@ export const manifest = {
             "density": "compact",
             "col": 2,
             "row": 3
+          },
+          {
+            "id": "cond_fourier_module",
+            "ref": "modules.fourier_embedding",
+            "label": "frozen Fourier features",
+            "prominence": "primary",
+            "treatment": "compact",
+            "density": "compact",
+            "col": 2,
+            "row": 6
           },
           {
             "id": "cond_pair_projected",
@@ -35618,6 +35772,7 @@ export const manifest = {
             "id": "cond_pair_final",
             "ref": "value_sites.diffusion_conditioned_pair",
             "label": "conditioned pairs",
+            "notation": "z_{ij}",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
@@ -35642,7 +35797,7 @@ export const manifest = {
             "treatment": "compact",
             "density": "compact",
             "col": 3,
-            "row": 5
+            "row": 6
           },
           {
             "id": "cond_single_injected",
@@ -35658,6 +35813,7 @@ export const manifest = {
             "id": "cond_single_final",
             "ref": "value_sites.diffusion_conditioned_single",
             "label": "conditioned singles",
+            "notation": "s_{i}",
             "prominence": "secondary",
             "treatment": "compact",
             "density": "compact",
@@ -35667,6 +35823,30 @@ export const manifest = {
         ],
         "projection_mode": "derived",
         "edges": [
+          {
+            "id": "projection_b60b7da695b2",
+            "from": "cond_fourier_module",
+            "to": "cond_fourier_value",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.fourier_embedding_produces_fourier_time_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.fourier_embedding_produces_fourier_time_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.fourier_time_embedding"
+            ],
+            "presentation": {
+            }
+          },
           {
             "id": "projection_4ddce0aa128b",
             "from": "cond_fourier_value",
@@ -35759,6 +35939,30 @@ export const manifest = {
             ],
             "carries": [
               "representations.diffusion_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
+          {
+            "id": "projection_f1c488845fe4",
+            "from": "cond_noise_level",
+            "to": "cond_fourier_module",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "data_flow",
+            "relation_path": [
+              "relations.noise_level_enters_fourier_embedding"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.noise_level_enters_fourier_embedding"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.noise_level"
             ],
             "presentation": {
             }
@@ -35910,12 +36114,14 @@ export const manifest = {
         ],
         "classifications": {
           "modules.diffusion_conditioning": "visible",
+          "modules.fourier_embedding": "visible",
           "value_sites.diffusion_conditioned_pair": "visible",
           "value_sites.diffusion_conditioned_single": "visible",
           "value_sites.diffusion_pair_conditioning_projected": "visible",
           "value_sites.diffusion_single_conditioning_fourier_injected": "visible",
           "value_sites.diffusion_single_conditioning_projected": "visible",
           "value_sites.fourier_time_embedding": "visible",
+          "value_sites.noise_level": "visible",
           "value_sites.pair_state_output": "visible",
           "value_sites.relative_position_encoding_output": "visible",
           "value_sites.s_inputs": "visible",
@@ -35952,6 +36158,7 @@ export const manifest = {
             "id": "token_conditioned_singles",
             "ref": "value_sites.diffusion_conditioned_single",
             "label": "single conditioning",
+            "notation": "s_{i}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -35962,6 +36169,7 @@ export const manifest = {
             "id": "token_conditioned_pairs",
             "ref": "value_sites.diffusion_conditioned_pair",
             "label": "pair conditioning",
+            "notation": "z_{ij}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -36375,6 +36583,7 @@ export const manifest = {
             "id": "enc_trunk_single",
             "ref": "value_sites.single_state_output",
             "label": "raw trunk singles",
+            "notation": "s^{trunk}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -36385,6 +36594,7 @@ export const manifest = {
             "id": "enc_conditioned_pair",
             "ref": "value_sites.diffusion_conditioned_pair",
             "label": "conditioned pairs",
+            "notation": "z_{ij}",
             "prominence": "context",
             "treatment": "chip",
             "density": "micro",
@@ -36563,6 +36773,30 @@ export const manifest = {
         ],
         "projection_mode": "derived",
         "edges": [
+          {
+            "id": "projection_f885a9e56dac",
+            "from": "enc_atom_conditioning",
+            "to": "enc_atom_pair",
+            "projection": "direct",
+            "origin": "canonical",
+            "kind": "state_update",
+            "relation_path": [
+              "relations.atom_conditioning_projected_into_atom_pairs"
+            ],
+            "provenance_hops": [
+              {
+                "relation_ref": "relations.atom_conditioning_projected_into_atom_pairs"
+              }
+            ],
+            "hidden_refs": [
+
+            ],
+            "carries": [
+              "representations.atom_single_conditioning"
+            ],
+            "presentation": {
+            }
+          },
           {
             "id": "projection_b546c1c120f0",
             "from": "enc_atom_conditioning",
@@ -36982,6 +37216,7 @@ export const manifest = {
           "columns": 5,
           "rows": 6,
           "column_sizing": "content",
+          "row_sizing": "content",
           "col_gap": 26,
           "row_gap": 22
         },

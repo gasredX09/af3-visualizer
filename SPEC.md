@@ -472,7 +472,10 @@ misrepresent that as three different things.
   SPEC.md's "Diffusion sampler scrubber" screen (a separate, not-yet-built
   interactive visualization with real tensors, outside the explainer tool
   entirely) is built, since the two share the most context and are easiest
-  to keep non-duplicative if designed together.
+  to keep non-duplicative if designed together. (Later superseded for the
+  explainer: the sampler loop was modeled as source-only boards on
+  2026-09-23; see "Source-only architecture coverage" below. The real-tensor
+  scrubber screen is still on hold.)
 - Chain-permutation/symmetry resolution and weighted rigid alignment/smooth
   LDDT are training-loss mechanics, not inference architecture — excluded,
   consistent with every module shipped so far modeling inference only.
@@ -589,7 +592,10 @@ uses the one-step denoiser and returns `final_sampled_atom_positions` after
 its own updates. Move the architecture output boundary to this new final
 sample and preserve `denoised_atom_positions` as the internal one-step
 estimate. Keep the noise schedule, pose augmentation, stochastic update,
-sampler scrubber, and training mini rollout for the later sampler pass. The
+sampler scrubber, and training mini rollout for the later sampler pass.
+(That pass later added the schedule, pose augmentation, and stochastic
+update as source-only boards; see "Source-only architecture coverage"
+below. The scrubber and the training mini rollout remain out of scope.) The
 wrapper's prose must state that the denoiser's one-step estimate feeds a
 sampler update; it is not itself the final sample or the next step's input.
 
@@ -638,7 +644,18 @@ call, and signed coordinate update. The schedule's `smax=160` and
 `smin=0.0004` are multiplied by `sigma_data=16`, giving actual initial and
 terminal noise levels of 2560 and 0.0064. The denoiser output is a
 clean-coordinate estimate used to update the sampler state, not the next
-state itself. These boards and the pseudocode are source-grounded teaching
+state itself. The update direction follows the released code,
+`(positions_noisy - positions_denoised) / t_hat`; the paper's Algorithm 18
+line 9 subtracts from the pre-churn position instead. The two agree
+whenever no churn noise is added, and the architecture records the
+difference as an open question rather than hiding it.
+
+In the recycling trunk, the Template Module's output is a fresh
+contribution added onto the pair state it was given (Algorithm 1 line 9,
+`z += TemplateEmbedder(...)`; the released code returns
+`pair_activations + template_act`). The MSA Module therefore starts from
+this pass's pair seed plus the template contribution, and the boards and
+pseudocode show both terms. These boards and the pseudocode are source-grounded teaching
 views, not real tensor playback. The input flow tracer and sampler scrubber
 still require the offline AF3 tensor dump and remain on hold.
 

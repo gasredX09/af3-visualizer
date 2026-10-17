@@ -45,6 +45,24 @@ export function summarizeMsaPair(sequences, firstColumn, secondColumn) {
   };
 }
 
+export function describeMsaPair(summary, firstColumn, secondColumn) {
+  const conserved = [firstColumn, secondColumn]
+    .filter((column) => summary.columns[column - 1].conservation === 1);
+  if (conserved.length === 2) {
+    return "Both columns are identical in every row. Neither varies, so there is no co-variation to detect.";
+  }
+  if (conserved.length === 1) {
+    return `Column ${conserved[0]} is identical in every row. A column that never varies cannot vary together with another, so this pair carries no co-variation signal.`;
+  }
+  if (summary.oneToOne) {
+    return "Each choice at i pairs with one choice at j in these toy rows. The columns vary together.";
+  }
+  if (summary.observedCombinations === summary.possibleCombinations) {
+    return "Every residue combination appears in these toy rows. This pair lacks the one-to-one pattern shown by columns 2 and 3.";
+  }
+  return "The selected columns have a partial pairing pattern in these toy rows. Compare their joint counts below.";
+}
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -143,13 +161,7 @@ export function createMsaPairWorkedExample(example) {
     });
     table.appendChild(body);
     result.appendChild(table);
-    if (summary.oneToOne) {
-      takeaway.textContent = "Each choice at i pairs with one choice at j in these toy rows. The columns vary together.";
-    } else if (summary.observedCombinations === summary.possibleCombinations) {
-      takeaway.textContent = "Every residue combination appears in these toy rows. This pair lacks the one-to-one pattern shown by columns 2 and 3.";
-    } else {
-      takeaway.textContent = "The selected columns have a partial pairing pattern in these toy rows. Compare their joint counts below.";
-    }
+    takeaway.textContent = describeMsaPair(summary, firstColumn, secondColumn);
     result.appendChild(element("p", "msa-example-observation",
       `${summary.observedCombinations} of ${summary.possibleCombinations} possible residue combinations appear in these ${summary.rowCount} synthetic rows.`));
     result.appendChild(element("p", "msa-example-caveat",

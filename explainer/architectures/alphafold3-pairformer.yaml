@@ -3014,7 +3014,7 @@ modules:
     label: Denoising Direction
     kind: operator
     mechanisms: [denoising_direction]
-    role: compute (positions_noisy minus positions_denoised) divided by t_hat; this points away from the denoiser estimate, while the following negative time step moves toward it
+    role: compute (positions_noisy minus positions_denoised) divided by t_hat, following the released code; this points away from the denoiser estimate, while the following negative time step moves toward it. The paper's Algorithm 18 line 9 instead subtracts from the pre-churn positions; see open_questions.sampler_direction_reference_point_paper_code_divergence
     scale: atom
     evidence:
       status: confirmed_from_code
@@ -3150,7 +3150,7 @@ modules:
     parent_ref: modules.diffusion_module
     decomposition:
       status: partial
-      reason: Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity rather than as further child modules, matching the depth already given to modules.outer_product_mean. FourierEmbedding itself (Algorithm 22) is modeled as its own sibling module, modules.fourier_embedding, rather than a child here, since it is a separately paper-named algorithm with its own distinguishing property (frozen, randomly-initialized, never trained) -- the same treatment modules.relative_position_encoding already gets despite also being "used inside" this module's pair branch.
+      reason: Real internal structure (two structurally parallel branches -- pair conditioning and single conditioning, each its own concatenate/project/refine sequence -- plus the Fourier time embedding's own additive injection into the single branch) is modeled at value-site granularity, matching the depth already given to modules.outer_product_mean. The one child module is modules.fourier_embedding (Algorithm 22), called only at Algorithm 21 line 8 and given its own module because it is a separately paper-named algorithm with a distinguishing property (frozen, randomly initialized, never trained). modules.relative_position_encoding stays a top-level sibling instead, because Algorithm 1 line 4 also calls it outside the diffusion module.
     label: Diffusion Conditioning
     kind: operator
     mechanisms: [feature_concatenation, layer_normalization, linear_projection, additive_conditioning, swiglu, residual_update]
@@ -3163,7 +3163,7 @@ modules:
           role: paper_evidence
           locator: Supplementary Algorithm 21 (DiffusionConditioning), full algorithm box (c_z=128, c_s=384 per the algorithm's own signature); Section 3.7.1
   - id: fourier_embedding
-    parent_ref: architecture
+    parent_ref: modules.diffusion_conditioning
     decomposition:
       status: leaf
     label: Fourier Embedding
@@ -4584,7 +4584,22 @@ relations:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's own returned contribution lands in z_ij before the MSA module reads its own entry state, taking over the role relations.z_init_initializes_template_module_pair_state's predecessor relation used to play for msa_module directly before this task retargeted it
+          locator: Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) precedes line 10 ({z_ij} += MsaModule({f_Si^msa}, {z_ij}, {s_i^inputs})) -- the template module's returned contribution u_ij is added onto the pair state it was given, not substituted for it; relations.pre_template_pair_state_carries_into_msa_module carries that unchanged base forward, so the MSA module's entry state is the recycled pair seed plus this contribution
+  - id: pre_template_pair_state_carries_into_msa_module
+    from: value_sites.pair_recycle_seed
+    to: value_sites.msa_module_pair_state_read
+    kind: state_update
+    carries: [representations.pair_state]
+    operation: carry_pre_template_pair_state_as_residual_base
+    evidence:
+      status: confirmed_from_code
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Algorithm 1 line 9 ({z_ij} += TemplateEmbedder({f*}, {z_ij})) -- a residual add. Algorithm 16 returns a fresh u_ij that starts at zero and never contains z_ij, so the pair state after line 9 is the line 8 state plus u_ij. Without this base, the graph would claim z_init and the recycled pair state reach the MSA module only through the template module's own conditioning input
+        - source_ref: af3_evoformer_code
+          role: implementation_evidence
+          locator: Evoformer._embed_template_pair, which returns pair_activations + template_act, so the pre-template pair activations pass through unchanged and the template output is added on top
   - id: pair_state_output_enters_diffusion_conditioning
     from: value_sites.pair_state_output
     to: modules.diffusion_conditioning
@@ -4857,7 +4872,19 @@ relations:
       refs:
         - source_ref: af3_2024
           role: paper_evidence
-          locator: Supplementary Algorithm 5 lines 13-14. In conditioned mode the c_l folded in here already carries line 9's trunk broadcast, so the pair tensor receives a second, denser context injection beyond the raw geometry features
+          locator: Supplementary Algorithm 5 lines 13-14. In conditioned mode the c_l folded in here already carries line 9's trunk broadcast, so the pair tensor receives a second, denser context injection beyond the raw geometry features; relations.atom_conditioning_projected_into_atom_pairs carries that c_l term itself
+  - id: atom_conditioning_projected_into_atom_pairs
+    from: value_sites.atom_single_conditioning_trunk_broadcast
+    to: value_sites.atom_pair_conditioning_refined
+    kind: state_update
+    carries: [representations.atom_single_conditioning]
+    operation: add_projected_endpoint_atom_conditioning_to_atom_pairs
+    evidence:
+      status: confirmed_from_paper
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 5 line 13 (p_lm += LinearNoBias(relu(c_l)) + LinearNoBias(relu(c_m))). Both endpoint atoms' conditioning vectors, which in conditioned mode already include line 9's trunk single broadcast, are projected and added to every atom pair
   - id: atom_conditioning_initializes_atom_query
     from: value_sites.atom_single_conditioning_base
     to: value_sites.atom_query_initial
@@ -5827,3 +5854,19 @@ open_questions:
         - source_ref: af3_atom_cross_attention_code
           role: implementation_evidence
           locator: atom_cross_attention.py atom_cross_att_encoder, which adds the projected trunk_single_cond into queries_single_cond and then sets queries_act to the projected positions plus queries_single_cond
+  - id: sampler_direction_reference_point_paper_code_divergence
+    question: Supplementary Algorithm 18 line 9 computes the denoising direction as (x_l - x_l^denoised) / t_hat, where x_l is the pose-augmented position before line 7 adds the churn noise. The released sampler instead computes grad = (positions_noisy - positions_denoised) / t_hat, from the churned position, which is also the form used by the published EDM stochastic sampler that Algorithm 18 otherwise follows. The two agree whenever gamma is zero (no churn noise is added) and differ during the high-noise steps where churn is active. This architecture models the released code, which is why modules.sampler_gradient reads value_sites.noisy_atom_positions rather than value_sites.sampler_augmented_positions.
+    status: deferred
+    affected_refs:
+      - modules.sampler_gradient
+      - value_sites.sampler_denoising_direction
+    resolution_criteria: Decide whether the paper's line 9 is a typo for x_l^noisy. The released code and the EDM reference sampler both use the churned position, so keeping the code reading is likely correct; if the paper's literal reading is preferred, retarget the direction's input from value_sites.noisy_atom_positions to value_sites.sampler_augmented_positions.
+    evidence:
+      status: open_question
+      refs:
+        - source_ref: af3_2024
+          role: paper_evidence
+          locator: Supplementary Algorithm 18 lines 6-9, where line 9 subtracts the denoised estimate from x_l rather than from x_l^noisy
+        - source_ref: af3_sampler_code
+          role: implementation_evidence
+          locator: "diffusion_head.py:349 (grad = (positions_noisy - positions_denoised) / t_hat)"
