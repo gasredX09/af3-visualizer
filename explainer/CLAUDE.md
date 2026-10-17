@@ -59,9 +59,10 @@ last:
 - New semantic traces use pseudocode-v0.2 scopes, canonical `statement_ref`
   links, and `code_bindings` to value sites. Do not copy tensor facts or a
   separate hover map into pseudocode YAML.
-- Reuse algorithm anatomy through standard-block-v0.2 instances. Bind ports to
-  canonical relations and state whether reuse is `exact`, `wrapped`, or
-  `reduced`; non-exact reuse requires a concrete difference summary.
+- Reuse algorithm anatomy through standard-block-v0.3 `block_instances`
+  (existing v0.2 blocks remain readable). Bind ports to canonical relations
+  and state whether reuse is `exact`, `wrapped`, or `reduced`; non-exact
+  reuse requires a concrete difference summary.
 
 ## After any YAML/view change
 
@@ -95,6 +96,14 @@ it; register new architectures there, never in the scripts. Sets:
 - `dit`: Diffusion Transformer (arXiv:2212.09748), evidence-graded; its view
   demonstrates `elide: true` edge contraction and derived conditioning
   badges.
+- `af2`: AlphaFold 2 monomer inference, from input search and embedding
+  through the Evoformer, Structure Module, and recycling.
+- `alphafold3`: AlphaFold 3 inference, from input embedding through the
+  recycling trunk (Template, MSA, and 48-block Pairformer), the 200-step
+  diffusion sampler around the one-step Diffusion Module, and the confidence
+  head. It uses standard-block-v0.3 instances for the shared attention and
+  transition blocks and records paper-versus-code differences as open
+  questions.
 - `genie2`: Genie 2 protein-backbone diffusion, including motif conditioning,
   invariant single/pair features, equivariant updates, and fixed DDPM
   sampling.
@@ -103,7 +112,7 @@ it; register new architectures there, never in the scripts. Sets:
   attention, and equivariant structure decoding.
 
 `comparisons/index.yaml` separately registers curated comparison lenses; it is
-not another owner of either architecture.
+not another owner of any architecture.
 
 Compiler/projector: Ruby (`renderer/architecture/build-manifest.rb` and
 `lib/*.rb`). Renderer: `renderer/architecture/renderer.js`, architecture

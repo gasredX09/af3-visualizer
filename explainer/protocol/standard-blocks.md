@@ -284,6 +284,11 @@ Current typed blocks:
 
 - `standard_blocks/pair-biased-attention.yaml` (`standard-block-v0.2`)
 - `standard_blocks/invariant-point-attention.yaml` (`standard-block-v0.3`)
+- `standard_blocks/structure-transition.yaml` (`standard-block-v0.3`)
+- `standard_blocks/single-to-pair-endpoint-update.yaml` (`standard-block-v0.3`)
+- `standard_blocks/pair-transition.yaml` (`standard-block-v0.3`)
+- `standard_blocks/attention-pair-bias.yaml` (`standard-block-v0.3`)
+- `standard_blocks/conditioned-transition-block.yaml` (`standard-block-v0.3`)
 
 Legacy v0.1 blocks remain in `standard_blocks/` until migrated when a concrete
 architecture needs typed reuse.

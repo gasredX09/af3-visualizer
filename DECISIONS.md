@@ -554,3 +554,21 @@ shown only through clearly identified toy rules. The real-output data-source
 decision remains in force for the later real-tensor tracer and sampler
 scrubber. A later trace-data adapter can replace toy previews with captured
 output without changing the architecture map.
+
+## 2026-10-17: Keep upstream analytics out of this deployment
+
+**Decision:** This repository's vendored copy of the Explainer does not load
+the Microsoft Clarity analytics snippet that upstream ships in `index.html`
+and `renderer/architecture/index.html`. The removal landed on 2026-09-19 in
+commit `ac469f0`; this entry records it. `explainer/test/pages_build_test.rb`
+asserts that neither published entry point loads the Clarity tag. Changes
+offered upstream keep upstream's snippet and test unchanged.
+
+**Options considered:** Keep the snippet as vendored; replace it with this
+project's own analytics; remove it.
+
+**Why:** The snippet reports traffic to the upstream author's own Clarity
+project, which is not where this deployment's visitors should be measured.
+The tool has no current need for its own analytics. This is a deliberate,
+deployment-specific divergence from upstream, so any sync between this copy
+and `ramithuh/explainer` must preserve it in both directions.
